@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { MOCK_VENDORS } from '@/lib/mockData'
-import { CATEGORIES } from '@gps-street-sellers/core/constants'
-import type { VendorCategory } from '@gps-street-sellers/core/types'
+import { CATEGORIES } from '@/lib/core/constants'
+import type { VendorCategory } from '@/lib/core/types'
 
 export default function EditProfilePage() {
   const router = useRouter()

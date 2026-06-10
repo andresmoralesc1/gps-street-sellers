@@ -1,7 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/Card'
-import type { Product } from '@gps-street-sellers/core/types'
+import type { Product } from '@/lib/core/types'
 
 interface VendorProductsProps {
   products: Product[]

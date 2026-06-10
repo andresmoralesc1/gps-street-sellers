@@ -1,4 +1,4 @@
-import type { Vendor, Product, Review, VendorLocation } from '@gps-street-sellers/core/types'
+import type { Vendor, Product, Review, VendorLocation } from '@/lib/core/types'
 
 // Vendedores mock con ubicaciones en Bogotá
 export const MOCK_VENDORS: Vendor[] = [

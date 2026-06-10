@@ -1,7 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/Card'
-import type { Review } from '@gps-street-sellers/core/types'
+import type { Review } from '@/lib/core/types'
 
 interface VendorReviewsProps {
   reviews: Review[]

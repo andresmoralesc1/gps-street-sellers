@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { MOCK_VENDORS, getVendorReviews } from '@/lib/mockData'
-import { getCategoryInfo } from '@gps-street-sellers/core/constants'
+import { getCategoryInfo } from '@/lib/core/constants'
 
 interface SellerDashboardProps {
   vendorId: string

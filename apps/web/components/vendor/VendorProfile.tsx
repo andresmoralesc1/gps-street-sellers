@@ -2,8 +2,8 @@
 
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import type { Vendor } from '@gps-street-sellers/core/types'
-import { getCategoryInfo } from '@gps-street-sellers/core/constants'
+import type { Vendor } from '@/lib/core/types'
+import { getCategoryInfo } from '@/lib/core/constants'
 
 interface VendorProfileProps {
   vendor: Vendor

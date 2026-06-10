@@ -15,7 +15,8 @@
     "leaflet": "^1.9.4",
     "zustand": "^4.5.0",
     "@supabase/supabase-js": "^2.43.0",
-    "clsx": "^2.1.0"
+    "clsx": "^2.1.0",
+    "@gps-street-sellers/core": "*"
   },
   "devDependencies": {
     "@types/node": "^20.12.0",

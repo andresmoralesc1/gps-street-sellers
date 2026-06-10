@@ -2,8 +2,8 @@
 
 import { clsx } from 'clsx'
 import { useStore } from '@/store/useStore'
-import { CATEGORIES } from '@gps-street-sellers/core/constants'
-import type { VendorCategory } from '@gps-street-sellers/core/types'
+import { CATEGORIES } from '@/lib/core/constants'
+import type { VendorCategory } from '@/lib/core/types'
 
 const DISTANCES = [
   { label: '500m', value: 500 },

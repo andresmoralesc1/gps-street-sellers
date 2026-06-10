@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import { VendorCard } from './VendorCard'
 import { useStore } from '@/store/useStore'
 import { MOCK_VENDORS, MOCK_LOCATIONS, getActiveVendors } from '@/lib/mockData'
-import type { Vendor } from '@gps-street-sellers/core/types'
+import type { Vendor } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
 
 // Fix para íconos de Leaflet en Next.js

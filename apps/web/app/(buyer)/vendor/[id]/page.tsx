@@ -8,7 +8,7 @@ import { VendorProducts } from '@/components/vendor/VendorProducts'
 import { VendorReviews } from '@/components/vendor/VendorReviews'
 import { MOCK_VENDORS, getVendorProducts, getVendorReviews } from '@/lib/mockData'
 import { useStore } from '@/store/useStore'
-import type { Vendor, Product, Review } from '@gps-street-sellers/core/types'
+import type { Vendor, Product, Review } from '@/lib/core/types'
 
 export default function VendorDetailPage() {
   const params = useParams()

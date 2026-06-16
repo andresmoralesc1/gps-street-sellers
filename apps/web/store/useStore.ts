@@ -40,6 +40,12 @@ interface AppState {
   isSellerActive: boolean
   setSellerActive: (active: boolean) => void
 
+  // Notificaciones
+  pushNotificationsEnabled: boolean
+  setPushNotifications: (enabled: boolean) => void
+  proximityNotificationsEnabled: boolean
+  setProximityNotifications: (enabled: boolean) => void
+
   // UI
   selectedVendorId: string | null
   setSelectedVendorId: (id: string | null) => void
@@ -82,6 +88,12 @@ export const useStore = create<AppState>((set, get) => ({
   // Seller activo
   isSellerActive: false,
   setSellerActive: (active) => set({ isSellerActive: active }),
+
+  // Notificaciones
+  pushNotificationsEnabled: true,
+  setPushNotifications: (enabled) => set({ pushNotificationsEnabled: enabled }),
+  proximityNotificationsEnabled: true,
+  setProximityNotifications: (enabled) => set({ proximityNotificationsEnabled: enabled }),
 
   // UI
   selectedVendorId: null,

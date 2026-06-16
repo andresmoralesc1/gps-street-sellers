@@ -1,14 +1,20 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Toggle } from '@/components/ui/Toggle'
 import { useStore } from '@/store/useStore'
 
 export default function SettingsPage() {
   const router = useRouter()
   const user = useStore((s) => s.user)
   const setUser = useStore((s) => s.setUser)
+  const pushNotifications = useStore((s) => s.pushNotificationsEnabled)
+  const setPushNotifications = useStore((s) => s.setPushNotifications)
+  const proximityNotifications = useStore((s) => s.proximityNotificationsEnabled)
+  const setProximityNotifications = useStore((s) => s.setProximityNotifications)
 
   const handleLogout = () => {
     setUser(null)
@@ -27,7 +33,7 @@ export default function SettingsPage() {
         <Card variant="outlined" className="p-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-3xl">
- 👤
+              👤
             </div>
             <div>
               <h3 className="font-semibold text-lg">{user?.fullName || 'Usuario'}</h3>
@@ -44,15 +50,17 @@ export default function SettingsPage() {
           <h3 className="font-semibold mb-3">🔔 Notificaciones</h3>
           <div className="flex items-center justify-between py-2">
             <span className="text-gray-700">Notificaciones push</span>
-            <button className="w-12 h-7 rounded-full bg-secondary relative">
-              <div className="absolute top-0.5 right-1 w-5 h-5 rounded-full bg-white shadow" />
-            </button>
+            <Toggle
+              enabled={pushNotifications}
+              onChange={setPushNotifications}
+            />
           </div>
           <div className="flex items-center justify-between py-2">
             <span className="text-gray-700">Notificaciones de proximidad</span>
-            <button className="w-12 h-7 rounded-full bg-secondary relative">
-              <div className="absolute top-0.5 right-1 w-5 h-5 rounded-full bg-white shadow" />
-            </button>
+            <Toggle
+              enabled={proximityNotifications}
+              onChange={setProximityNotifications}
+            />
           </div>
         </Card>
 
@@ -90,6 +98,22 @@ export default function SettingsPage() {
           Cerrar Sesión
         </Button>
       </div>
+
+      {/* Bottom Nav */}
+      <nav className="bg-white border-t flex justify-around py-3">
+        <Link href="/map" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+          <span className="text-2xl">🗺️</span>
+          <span className="text-xs">Mapa</span>
+        </Link>
+        <Link href="/favorites" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+          <span className="text-2xl">❤️</span>
+          <span className="text-xs">Favoritos</span>
+        </Link>
+        <Link href="/settings" className="flex flex-col items-center text-primary">
+          <span className="text-2xl">⚙️</span>
+          <span className="text-xs">Ajustes</span>
+        </Link>
+      </nav>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { VendorCard } from './VendorCard'
 import { useStore } from '@/store/useStore'
@@ -75,6 +75,23 @@ export function MapView() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* Indicador de ubicación del usuario */}
+        {userLocation && (
+          <CircleMarker
+            center={[userLocation.lat, userLocation.lng]}
+            radius={10}
+            pathOptions={{
+              color: '#3B82F6',
+              fillColor: '#3B82F6',
+              fillOpacity: 0.5,
+              weight: 3,
+            }}
+          >
+            <Popup>Tu ubicación</Popup>
+          </CircleMarker>
+        )}
+
         <MapUpdater center={{ lat: center[0], lng: center[1] } as LatLng} />
 
         {activeVendors.map((vendor) => {

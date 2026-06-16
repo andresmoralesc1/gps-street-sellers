@@ -18,11 +18,13 @@ export function Input({ className, label, error, id, ...props }: InputProps) {
       )}
       <input
         id={inputId}
+        disabled={props.disabled}
         className={clsx(
           'w-full px-4 py-2 rounded-lg border border-gray-300',
           'focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
           'placeholder:text-gray-400',
           error && 'border-accent focus:ring-accent',
+          props.disabled && 'bg-gray-100 cursor-not-allowed opacity-60',
           className
         )}
         {...props}

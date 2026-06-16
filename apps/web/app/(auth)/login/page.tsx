@@ -14,12 +14,30 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setIsLoading(true)
 
-    // Mock login - siempre succeeds
+    // Validación básica
+    if (!email || !password) {
+      setError('Por favor completa todos los campos')
+      setIsLoading(false)
+      return
+    }
+
+    if (!email.includes('@')) {
+      setError('Por favor ingresa un email válido')
+      setIsLoading(false)
+      return
+    }
+
+    // Simular delay de red
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    // Mock login
     setUser({
       id: 'user-1',
       email,
@@ -28,6 +46,7 @@ export default function LoginPage() {
       avatarUrl: '',
     })
 
+    setIsLoading(false)
     router.push('/role-select')
   }
 
@@ -46,6 +65,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@email.com"
+            disabled={isLoading}
             required
           />
           <Input
@@ -54,13 +74,19 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
+            disabled={isLoading}
             required
           />
 
           {error && <p className="text-accent text-sm">{error}</p>}
 
-          <Button type="submit" className="w-full" size="lg">
-            Iniciar Sesión
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
           </Button>
         </form>
 

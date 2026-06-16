@@ -11,10 +11,12 @@ export function Button({
   variant = 'primary',
   size = 'md',
   children,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
     <button
+      disabled={disabled}
       className={clsx(
         'rounded-lg font-semibold transition-all duration-200',
         'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
@@ -29,6 +31,7 @@ export function Button({
           'px-4 py-2 text-base': size === 'md',
           'px-6 py-3 text-lg': size === 'lg',
         },
+        disabled && 'opacity-60 cursor-not-allowed hover:scale-100',
         className
       )}
       {...props}

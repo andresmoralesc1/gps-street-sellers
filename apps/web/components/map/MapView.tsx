@@ -94,31 +94,43 @@ export function MapView() {
 
         <MapUpdater center={{ lat: center[0], lng: center[1] } as LatLng} />
 
-        {activeVendors.map((vendor) => {
-          const loc = MOCK_LOCATIONS[vendor.id]
-          if (!loc) return null
+        {activeVendors.length === 0 ? (
+          <Marker position={center}>
+            <Popup>
+              <div className="text-center p-2">
+                <span className="text-3xl">😔</span>
+                <p className="font-semibold mt-2">No hay vendedores activos</p>
+                <p className="text-sm text-gray-500">Intenta con otro filtro</p>
+              </div>
+            </Popup>
+          </Marker>
+        ) : (
+          activeVendors.map((vendor) => {
+            const loc = MOCK_LOCATIONS[vendor.id]
+            if (!loc) return null
 
-          return (
-            <Marker
-              key={vendor.id}
-              position={[loc.lat, loc.lng]}
-              eventHandlers={{
-                click: () => setSelectedVendor(vendor),
-              }}
-            >
-              <Popup>
-                <VendorCard
-                  vendor={vendor}
-                  compact
-                  distance={userLocation
-                    ? calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)
-                    : undefined
-                  }
-                />
-              </Popup>
-            </Marker>
-          )
-        })}
+            return (
+              <Marker
+                key={vendor.id}
+                position={[loc.lat, loc.lng]}
+                eventHandlers={{
+                  click: () => setSelectedVendor(vendor),
+                }}
+              >
+                <Popup>
+                  <VendorCard
+                    vendor={vendor}
+                    compact
+                    distance={userLocation
+                      ? calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)
+                      : undefined
+                    }
+                  />
+                </Popup>
+              </Marker>
+            )
+          })
+        )}
       </MapContainer>
 
       {/* Vendor Card Overlay */}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { Heart, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
@@ -56,9 +57,12 @@ export default function VendorDetailPage() {
         <h1 className="text-lg font-bold">{vendor.name}</h1>
         <button
           onClick={toggleFavorite}
-          className="ml-auto text-2xl"
+          className="ml-auto"
         >
-          {isFavorite ? '❤️' : '🤍'}
+          <Heart
+            size={28}
+            className={isFavorite ? 'fill-accent text-accent' : 'text-gray-400'}
+          />
         </button>
       </header>
 
@@ -72,8 +76,9 @@ export default function VendorDetailPage() {
           <p className="text-gray-600 text-sm mb-3">
             Recibe una notificación cuando este vendedor esté cerca de ti
           </p>
-          <Button variant="secondary" className="w-full">
-            🔔 Notificarme cuando esté cerca
+          <Button variant="secondary" className="w-full flex items-center justify-center gap-2">
+            <Bell size={18} />
+            Notificarme cuando esté cerca
           </Button>
         </div>
       </div>

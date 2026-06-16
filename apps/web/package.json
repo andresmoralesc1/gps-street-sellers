@@ -8,24 +8,25 @@
     "start": "next start"
   },
   "dependencies": {
+    "@gps-street-sellers/core": "*",
+    "@supabase/supabase-js": "^2.43.0",
+    "clsx": "^2.1.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.20.0",
     "next": "14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-leaflet": "^4.2.1",
-    "leaflet": "^1.9.4",
-    "zustand": "^4.5.0",
-    "@supabase/supabase-js": "^2.43.0",
-    "clsx": "^2.1.0",
-    "@gps-street-sellers/core": "*"
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.8",
     "@types/node": "^20.12.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/leaflet": "^1.9.8",
-    "typescript": "^5.4.0",
-    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.19"
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0"
   }
 }

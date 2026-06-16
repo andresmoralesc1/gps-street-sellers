@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Camera, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -9,6 +10,15 @@ import { Badge } from '@/components/ui/Badge'
 import { MOCK_VENDORS } from '@/lib/mockData'
 import { CATEGORIES } from '@/lib/core/constants'
 import type { VendorCategory } from '@/lib/core/types'
+
+const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
+  frutas: Apple,
+  comida: UtensilsCrossed,
+  bebidas: CupSoda,
+  artesanias: Palette,
+  ropa: Shirt,
+  otros: Package,
+}
 
 export default function EditProfilePage() {
   const router = useRouter()
@@ -38,8 +48,8 @@ export default function EditProfilePage() {
         {/* Foto */}
         <Card variant="outlined" className="p-4">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl bg-primary/20 flex items-center justify-center text-4xl">
-              📸
+            <div className="w-20 h-20 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Camera size={40} className="text-primary" />
             </div>
             <div>
               <Button variant="outline" size="sm">
@@ -62,16 +72,20 @@ export default function EditProfilePage() {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Categoría</label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <Badge
-                  key={cat.id}
-                  variant={category === cat.id ? 'primary' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => setCategory(cat.id as VendorCategory)}
-                >
-                  {cat.icon} {cat.label}
-                </Badge>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const IconComponent = CategoryIconMap[cat.id]
+                return (
+                  <Badge
+                    key={cat.id}
+                    variant={category === cat.id ? 'primary' : 'outline'}
+                    className="cursor-pointer flex items-center gap-1"
+                    onClick={() => setCategory(cat.id as VendorCategory)}
+                  >
+                    <IconComponent size={14} />
+                    {cat.label}
+                  </Badge>
+                )
+              })}
             </div>
           </div>
 

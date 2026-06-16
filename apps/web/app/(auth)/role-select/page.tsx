@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { ShoppingCart, MapPin } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { useStore } from '@/store/useStore'
 import type { UserRole } from '@/types'
@@ -37,7 +38,9 @@ export default function RoleSelectPage() {
             className="cursor-pointer hover:scale-105 transition-transform p-8 text-center"
             onClick={() => selectRole('buyer')}
           >
-            <div className="text-6xl mb-4">🛒</div>
+            <div className="mb-4">
+              <ShoppingCart size={64} className="text-primary mx-auto" strokeWidth={1.5} />
+            </div>
             <h2 className="text-xl font-bold mb-2">Comprador</h2>
             <p className="text-gray-600 text-sm">
               Encuentra vendedores cercanos a ti
@@ -50,7 +53,9 @@ export default function RoleSelectPage() {
             className="cursor-pointer hover:scale-105 transition-transform p-8 text-center"
             onClick={() => selectRole('seller')}
           >
-            <div className="text-6xl mb-4">📍</div>
+            <div className="mb-4">
+              <MapPin size={64} className="text-secondary mx-auto" strokeWidth={1.5} />
+            </div>
             <h2 className="text-xl font-bold mb-2">Vendedor</h2>
             <p className="text-gray-600 text-sm">
               Muestra tu ubicación y reach más clientes

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { MapPin, Heart, Settings } from 'lucide-react'
 import { FilterBar } from '@/components/map/FilterBar'
 import { useStore } from '@/store/useStore'
 import { useEffect } from 'react'
@@ -16,7 +16,6 @@ const MapView = dynamic(
 
 export default function MapPage() {
   const setVendors = useStore((s) => s.setVendors)
-  const pathname = usePathname()
 
   useEffect(() => {
     setVendors(MOCK_VENDORS)
@@ -42,16 +41,16 @@ export default function MapPage() {
       {/* Bottom Nav */}
       <nav className="bg-white border-t flex justify-around py-3">
         <Link href="/map" className="flex flex-col items-center text-primary">
-          <span className="text-2xl">🗺️</span>
-          <span className="text-xs">Mapa</span>
+          <MapPin size={24} />
+          <span className="text-xs mt-1">Mapa</span>
         </Link>
         <Link href="/favorites" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">❤️</span>
-          <span className="text-xs">Favoritos</span>
+          <Heart size={24} />
+          <span className="text-xs mt-1">Favoritos</span>
         </Link>
         <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">⚙️</span>
-          <span className="text-xs">Ajustes</span>
+          <Settings size={24} />
+          <span className="text-xs mt-1">Ajustes</span>
         </Link>
       </nav>
     </div>

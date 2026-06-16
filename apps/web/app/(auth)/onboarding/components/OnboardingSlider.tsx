@@ -1,23 +1,24 @@
 'use client'
 
 import { useState } from 'react'
+import { MapPin, ShoppingCart, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 const SLIDES = [
   {
     title: 'Encuentra vendedores cercanos',
     description: 'Descubre vendedores informales cerca de ti en tiempo real',
-    emoji: '📍',
+    Icon: MapPin,
   },
   {
     title: 'Activa tu negocio',
     description: 'Como vendedor, muestra tu ubicación y reach más clientes',
-    emoji: '🛒',
+    Icon: ShoppingCart,
   },
   {
     title: 'Califica y favorito',
     description: 'Guarda tus vendedores favoritos y recíbelo cuando esté cerca',
-    emoji: '❤️',
+    Icon: Heart,
   },
 ]
 
@@ -37,6 +38,7 @@ export function OnboardingSlider({ onComplete }: OnboardingSliderProps) {
   }
 
   const slide = SLIDES[current]
+  const IconComponent = slide.Icon
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6">
@@ -48,7 +50,9 @@ export function OnboardingSlider({ onComplete }: OnboardingSliderProps) {
         Omitir
       </button>
 
-      <div className="text-8xl mb-8">{slide.emoji}</div>
+      <div className="mb-8">
+        <IconComponent size={80} className="text-primary" strokeWidth={1.5} />
+      </div>
       <h1 className="text-3xl font-bold text-center mb-4 text-gray-800">
         {slide.title}
       </h1>

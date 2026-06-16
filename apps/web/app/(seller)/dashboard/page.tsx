@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { BarChart3, Package, Settings, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ActiveToggle } from '@/components/seller/ActiveToggle'
@@ -33,7 +34,7 @@ export default function SellerDashboardPage() {
           </p>
         </div>
         <Button variant="ghost" onClick={() => router.push('/profile/edit')}>
-          ✏️
+          <Edit3 size={20} />
         </Button>
       </header>
 
@@ -48,7 +49,7 @@ export default function SellerDashboardPage() {
         <Link href="/profile/edit">
           <Card variant="outlined" className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">✏️</span>
+              <Edit3 size={24} className="text-gray-600" />
               <span className="font-semibold">Editar perfil y productos</span>
             </div>
             <span>→</span>
@@ -59,16 +60,16 @@ export default function SellerDashboardPage() {
       {/* Bottom Nav */}
       <nav className="bg-white border-t flex justify-around py-3">
         <Link href="/dashboard" className="flex flex-col items-center text-primary">
-          <span className="text-2xl">📊</span>
-          <span className="text-xs">Dashboard</span>
+          <BarChart3 size={24} />
+          <span className="text-xs mt-1">Dashboard</span>
         </Link>
         <Link href="/products" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">📦</span>
-          <span className="text-xs">Productos</span>
+          <Package size={24} />
+          <span className="text-xs mt-1">Productos</span>
         </Link>
         <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">⚙️</span>
-          <span className="text-xs">Ajustes</span>
+          <Settings size={24} />
+          <span className="text-xs mt-1">Ajustes</span>
         </Link>
       </nav>
     </div>

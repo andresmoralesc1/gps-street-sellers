@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { MapPin, Heart, Settings } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { MOCK_VENDORS, MOCK_LOCATIONS } from '@/lib/mockData'
 import { VendorCard } from '@/components/map/VendorCard'
@@ -32,7 +33,7 @@ export default function FavoritesPage() {
       <div className="p-4">
         {favoriteVendors.length === 0 ? (
           <Card variant="outlined" className="p-8 text-center">
-            <span className="text-5xl mb-4 block">❤️</span>
+            <Heart size={48} className="mx-auto mb-4 text-gray-300" />
             <h2 className="text-xl font-bold mb-2">No tienes favoritos</h2>
             <p className="text-gray-500 mb-4">
               Guarda vendedores como favoritos para verlos rápidamente
@@ -67,16 +68,16 @@ export default function FavoritesPage() {
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3">
         <Link href="/map" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">🗺️</span>
-          <span className="text-xs">Mapa</span>
+          <MapPin size={24} />
+          <span className="text-xs mt-1">Mapa</span>
         </Link>
         <Link href="/favorites" className="flex flex-col items-center text-primary">
-          <span className="text-2xl">❤️</span>
-          <span className="text-xs">Favoritos</span>
+          <Heart size={24} />
+          <span className="text-xs mt-1">Favoritos</span>
         </Link>
         <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">⚙️</span>
-          <span className="text-xs">Ajustes</span>
+          <Settings size={24} />
+          <span className="text-xs mt-1">Ajustes</span>
         </Link>
       </nav>
     </div>

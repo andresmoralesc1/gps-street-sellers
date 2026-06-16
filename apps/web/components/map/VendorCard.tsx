@@ -3,8 +3,27 @@
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import type { Vendor } from '@/lib/core/types'
+import {
+  Apple,
+  UtensilsCrossed,
+  CupSoda,
+  Palette,
+  Shirt,
+  Package,
+  MapPin,
+  Star,
+} from 'lucide-react'
+import type { Vendor, VendorCategory } from '@/lib/core/types'
 import { getCategoryInfo } from '@/lib/core/constants'
+
+const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
+  frutas: Apple,
+  comida: UtensilsCrossed,
+  bebidas: CupSoda,
+  artesanias: Palette,
+  ropa: Shirt,
+  otros: Package,
+}
 
 interface VendorCardProps {
   vendor: Vendor
@@ -23,15 +42,16 @@ function formatDistance(meters: number): string {
 
 export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }: VendorCardProps) {
   const category = getCategoryInfo(vendor.category)
+  const IconComponent = CategoryIconMap[vendor.category]
 
   if (compact) {
     return (
       <div className="flex items-center gap-3 p-2 min-w-[200px]">
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+          className="w-12 h-12 rounded-full flex items-center justify-center"
           style={{ background: category.color }}
         >
-          {category.icon}
+          <IconComponent size={24} className="text-white" />
         </div>
         <div>
           <h3 className="font-semibold">{vendor.name}</h3>
@@ -50,10 +70,10 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }
     <Card variant="elevated" className="p-4">
       <div className="flex gap-4">
         <div
-          className="w-20 h-20 rounded-xl flex items-center justify-center text-4xl flex-shrink-0"
+          className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: category.color }}
         >
-          {category.icon}
+          <IconComponent size={32} className="text-white" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -63,12 +83,15 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }
               <div className="flex items-center gap-2">
                 <Badge variant="primary">{category.label}</Badge>
                 {distance !== undefined && (
-                  <Badge variant="secondary">📍 {formatDistance(distance)}</Badge>
+                  <Badge variant="secondary">
+                    <MapPin size={12} className="inline mr-1" />
+                    {formatDistance(distance)}
+                  </Badge>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-yellow-500">★</span>
+              <Star size={16} className="text-yellow-500 fill-yellow-500" />
               <span className="font-semibold">{vendor.ratingAvg.toFixed(1)}</span>
             </div>
           </div>

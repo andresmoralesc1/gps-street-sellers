@@ -1,24 +1,19 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import { Frown } from 'lucide-react'
 import { VendorCard } from './VendorCard'
 import { useStore } from '@/store/useStore'
-import { MOCK_VENDORS, MOCK_LOCATIONS, getActiveVendors } from '@/lib/mockData'
-import { calculateDistance } from '@/lib/core/utils'
+import { getActiveVendors, MOCK_LOCATIONS } from '@/lib/mockData'
+import { useVendorDistances } from '@/hooks/useVendorDistance'
 import type { Vendor } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
 
-// Fix para íconos de Leaflet en Next.js
-import L from 'leaflet'
-delete (L.Icon.Default.prototype as any)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-})
+// Fix para íconos de Leaflet en Next.js (debe importarse primero)
+import '@/lib/leaflet-icon-fix'
 
 function MapUpdater({ center }: { center: LatLng }) {
   const map = useMap()
@@ -55,13 +50,14 @@ export function MapView() {
     return true
   })
 
-  // Calcular distancia del vendor seleccionado al usuario
-  const selectedVendorDistance = useMemo(() => {
-    if (!selectedVendor || !userLocation) return undefined
-    const loc = MOCK_LOCATIONS[selectedVendor.id]
-    if (!loc) return undefined
-    return calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)
-  }, [selectedVendor, userLocation])
+  // Usar hook para distancias de todos los vendors activos
+  const vendorDistances = useVendorDistances(
+    activeVendors.map((v) => v.id),
+    userLocation
+  )
+
+  // Distancia del vendor seleccionado
+  const selectedVendorDistance = selectedVendor ? vendorDistances[selectedVendor.id] : undefined
 
   return (
     <div className="relative w-full h-full">
@@ -98,15 +94,15 @@ export function MapView() {
           <Marker position={center}>
             <Popup>
               <div className="text-center p-2">
-                <span className="text-3xl">😔</span>
-                <p className="font-semibold mt-2">No hay vendedores activos</p>
+                <Frown size={32} className="mx-auto text-gray-400 mb-2" />
+                <p className="font-semibold">No hay vendedores activos</p>
                 <p className="text-sm text-gray-500">Intenta con otro filtro</p>
               </div>
             </Popup>
           </Marker>
         ) : (
           activeVendors.map((vendor) => {
-            const loc = MOCK_LOCATIONS[vendor.id]
+            const loc = MOCK_LOCATIONS[vendor.id as keyof typeof MOCK_LOCATIONS]
             if (!loc) return null
 
             return (
@@ -121,10 +117,7 @@ export function MapView() {
                   <VendorCard
                     vendor={vendor}
                     compact
-                    distance={userLocation
-                      ? calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)
-                      : undefined
-                    }
+                    distance={vendorDistances[vendor.id]}
                   />
                 </Popup>
               </Marker>

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Package, BarChart3, Settings, Edit3 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { MOCK_PRODUCTS } from '@/lib/mockData'
@@ -25,7 +26,7 @@ export default function ProductsPage() {
       <div className="p-4">
         {myProducts.length === 0 ? (
           <Card variant="outlined" className="p-8 text-center">
-            <span className="text-5xl mb-4 block">📦</span>
+            <Package size={48} className="mx-auto mb-4 text-gray-300" />
             <h2 className="text-xl font-bold mb-2">Sin productos</h2>
             <p className="text-gray-500 mb-4">
               Agrega productos para que los compradores vean qué ofreces
@@ -37,8 +38,8 @@ export default function ProductsPage() {
             {myProducts.map((product) => (
               <Card key={product.id} variant="outlined" className="p-4">
                 <div className="flex gap-4">
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center text-3xl">
-                    📦
+                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Package size={32} className="text-gray-400" />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{product.name}</h3>
@@ -47,7 +48,9 @@ export default function ProductsPage() {
                       ${product.price.toLocaleString('es-CO')}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm">✏️</Button>
+                  <Button variant="ghost" size="sm">
+                    <Edit3 size={18} />
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -62,16 +65,16 @@ export default function ProductsPage() {
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3">
         <Link href="/dashboard" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">📊</span>
-          <span className="text-xs">Dashboard</span>
+          <BarChart3 size={24} />
+          <span className="text-xs mt-1">Dashboard</span>
         </Link>
         <Link href="/products" className="flex flex-col items-center text-primary">
-          <span className="text-2xl">📦</span>
-          <span className="text-xs">Productos</span>
+          <Package size={24} />
+          <span className="text-xs mt-1">Productos</span>
         </Link>
         <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">⚙️</span>
-          <span className="text-xs">Ajustes</span>
+          <Settings size={24} />
+          <span className="text-xs mt-1">Ajustes</span>
         </Link>
       </nav>
     </div>

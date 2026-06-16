@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { MapPin, Heart, Settings, User, Bell, Lock, Globe, Smartphone } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Toggle } from '@/components/ui/Toggle'
@@ -32,8 +33,8 @@ export default function SettingsPage() {
         {/* Perfil */}
         <Card variant="outlined" className="p-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-3xl">
-              👤
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+              <User size={32} className="text-primary" />
             </div>
             <div>
               <h3 className="font-semibold text-lg">{user?.fullName || 'Usuario'}</h3>
@@ -47,7 +48,9 @@ export default function SettingsPage() {
 
         {/* Notificaciones */}
         <Card variant="outlined" className="p-4">
-          <h3 className="font-semibold mb-3">🔔 Notificaciones</h3>
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Bell size={18} /> Notificaciones
+          </h3>
           <div className="flex items-center justify-between py-2">
             <span className="text-gray-700">Notificaciones push</span>
             <Toggle
@@ -66,7 +69,9 @@ export default function SettingsPage() {
 
         {/* Privacidad */}
         <Card variant="outlined" className="p-4">
-          <h3 className="font-semibold mb-3">🔒 Privacidad</h3>
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Lock size={18} /> Privacidad
+          </h3>
           <p className="text-gray-600 text-sm mb-3">
             Cómo usamos tu información
           </p>
@@ -79,11 +84,11 @@ export default function SettingsPage() {
         <Card variant="outlined" className="p-4">
           <div className="space-y-2">
             <button className="w-full flex items-center justify-between py-2 text-gray-700">
-              <span>🌐 Idioma</span>
+              <span className="flex items-center gap-2"><Globe size={18} /> Idioma</span>
               <span>Español →</span>
             </button>
             <button className="w-full flex items-center justify-between py-2 text-gray-700">
-              <span>📱 Versión</span>
+              <span className="flex items-center gap-2"><Smartphone size={18} /> Versión</span>
               <span className="text-gray-500">1.0.0</span>
             </button>
           </div>
@@ -102,16 +107,16 @@ export default function SettingsPage() {
       {/* Bottom Nav */}
       <nav className="bg-white border-t flex justify-around py-3">
         <Link href="/map" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">🗺️</span>
-          <span className="text-xs">Mapa</span>
+          <MapPin size={24} />
+          <span className="text-xs mt-1">Mapa</span>
         </Link>
         <Link href="/favorites" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <span className="text-2xl">❤️</span>
-          <span className="text-xs">Favoritos</span>
+          <Heart size={24} />
+          <span className="text-xs mt-1">Favoritos</span>
         </Link>
         <Link href="/settings" className="flex flex-col items-center text-primary">
-          <span className="text-2xl">⚙️</span>
-          <span className="text-xs">Ajustes</span>
+          <Settings size={24} />
+          <span className="text-xs mt-1">Ajustes</span>
         </Link>
       </nav>
     </div>

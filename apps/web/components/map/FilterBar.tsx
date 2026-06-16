@@ -1,9 +1,28 @@
 'use client'
 
 import { clsx } from 'clsx'
+import {
+  Apple,
+  UtensilsCrossed,
+  CupSoda,
+  Palette,
+  Shirt,
+  Package,
+  MapPin,
+} from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { CATEGORIES } from '@/lib/core/constants'
 import type { VendorCategory } from '@/lib/core/types'
+
+// Mapeo de categorías a iconos Lucide
+const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
+  frutas: Apple,
+  comida: UtensilsCrossed,
+  bebidas: CupSoda,
+  artesanias: Palette,
+  ropa: Shirt,
+  otros: Package,
+}
 
 const DISTANCES = [
   { label: '500m', value: 500 },
@@ -22,7 +41,7 @@ export function FilterBar() {
         <button
           onClick={() => setFilters({ category: null })}
           className={clsx(
-            'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+            'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
             filters.category === null
               ? 'bg-primary text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -30,21 +49,25 @@ export function FilterBar() {
         >
           Todos
         </button>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setFilters({ category: cat.id as VendorCategory })}
-            className={clsx(
-              'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
-              filters.category === cat.id
-                ? 'text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            )}
-            style={filters.category === cat.id ? { background: cat.color } : {}}
-          >
-            {cat.icon} {cat.label}
-          </button>
-        ))}
+        {CATEGORIES.map((cat) => {
+          const IconComponent = CategoryIconMap[cat.id]
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setFilters({ category: cat.id as VendorCategory })}
+              className={clsx(
+                'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
+                filters.category === cat.id
+                  ? 'text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              )}
+              style={filters.category === cat.id ? { background: cat.color } : {}}
+            >
+              <IconComponent size={16} />
+              {cat.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Distancia */}
@@ -54,13 +77,14 @@ export function FilterBar() {
             key={dist.value}
             onClick={() => setFilters({ maxDistanceMeters: dist.value })}
             className={clsx(
-              'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+              'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5',
               filters.maxDistanceMeters === dist.value
                 ? 'bg-secondary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             )}
           >
-            📍 {dist.label}
+            <MapPin size={14} />
+            {dist.label}
           </button>
         ))}
       </div>

@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { BarChart3, Package, Settings, Edit3 } from 'lucide-react'
+import { BarChart3, Package, Settings, Edit3, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ActiveToggle } from '@/components/seller/ActiveToggle'
@@ -52,7 +52,7 @@ export default function SellerDashboardPage() {
               <Edit3 size={24} className="text-gray-600" />
               <span className="font-semibold">Editar perfil y productos</span>
             </div>
-            <span>→</span>
+            <ChevronRight size={20} className="text-gray-400" />
           </Card>
         </Link>
       </div>

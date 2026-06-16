@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Heart, Bell } from 'lucide-react'
+import { Heart, Bell, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
@@ -52,7 +52,7 @@ export default function VendorDetailPage() {
       {/* Header */}
       <header className="bg-white shadow-sm p-4 flex items-center gap-4">
         <Button variant="ghost" onClick={() => router.back()}>
-          ←
+          <ChevronLeft size={20} />
         </Button>
         <h1 className="text-lg font-bold">{vendor.name}</h1>
         <button

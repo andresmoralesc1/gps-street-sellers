@@ -1,6 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/Card'
+import { Star, User } from 'lucide-react'
 import type { Review } from '@/lib/core/types'
 
 interface VendorReviewsProps {
@@ -27,17 +28,16 @@ export function VendorReviews({ reviews }: VendorReviewsProps) {
           <Card key={review.id} variant="outlined" className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                👤
+                <User size={16} className="text-primary" />
               </div>
               <div>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <span
+                    <Star
                       key={i}
-                      className={i < review.rating ? 'text-yellow-500' : 'text-gray-300'}
-                    >
-                      ★
-                    </span>
+                      size={14}
+                      className={i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}
+                    />
                   ))}
                 </div>
                 <span className="text-xs text-gray-500">

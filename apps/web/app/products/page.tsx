@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Package, BarChart3, Settings, Edit3 } from 'lucide-react'
+import { Package, BarChart3, Settings, Edit3, ChevronLeft } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { MOCK_PRODUCTS } from '@/lib/mockData'
@@ -15,7 +15,7 @@ export default function ProductsPage() {
       {/* Header */}
       <header className="bg-white shadow-sm p-4 flex items-center gap-4">
         <Link href="/dashboard">
-          <Button variant="ghost">←</Button>
+          <Button variant="ghost"><ChevronLeft size={20} /></Button>
         </Link>
         <div>
           <h1 className="text-xl font-bold">Mis Productos</h1>

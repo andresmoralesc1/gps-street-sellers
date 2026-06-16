@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package } from 'lucide-react'
+import { Camera, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -39,7 +39,7 @@ export default function EditProfilePage() {
       {/* Header */}
       <header className="bg-white shadow-sm p-4 flex items-center gap-4">
         <Button variant="ghost" onClick={() => router.back()}>
-          ←
+          <ChevronLeft size={20} />
         </Button>
         <h1 className="text-lg font-bold">Editar Perfil</h1>
       </header>

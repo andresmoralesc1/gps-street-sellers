@@ -9,11 +9,19 @@ import { getCategoryInfo } from '@/lib/core/constants'
 interface VendorCardProps {
   vendor: Vendor
   compact?: boolean
+  distance?: number // distancia en metros
   onClose?: () => void
   onViewDetails?: () => void
 }
 
-export function VendorCard({ vendor, compact, onClose, onViewDetails }: VendorCardProps) {
+function formatDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)}m`
+  }
+  return `${(meters / 1000).toFixed(1)}km`
+}
+
+export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }: VendorCardProps) {
   const category = getCategoryInfo(vendor.category)
 
   if (compact) {
@@ -27,7 +35,12 @@ export function VendorCard({ vendor, compact, onClose, onViewDetails }: VendorCa
         </div>
         <div>
           <h3 className="font-semibold">{vendor.name}</h3>
-          <p className="text-sm text-gray-500">{category.label}</p>
+          <p className="text-sm text-gray-500">
+            {category.label}
+            {distance !== undefined && (
+              <span className="ml-2 text-secondary font-medium">• {formatDistance(distance)}</span>
+            )}
+          </p>
         </div>
       </div>
     )
@@ -47,7 +60,12 @@ export function VendorCard({ vendor, compact, onClose, onViewDetails }: VendorCa
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-lg font-bold">{vendor.name}</h3>
-              <Badge variant="primary">{category.label}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="primary">{category.label}</Badge>
+                {distance !== undefined && (
+                  <Badge variant="secondary">📍 {formatDistance(distance)}</Badge>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-yellow-500">★</span>

@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { VendorCard } from './VendorCard'
 import { useStore } from '@/store/useStore'
 import { MOCK_VENDORS, MOCK_LOCATIONS, getActiveVendors } from '@/lib/mockData'
+import { calculateDistance } from '@/lib/core/utils'
 import type { Vendor } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
 
@@ -54,6 +55,14 @@ export function MapView() {
     return true
   })
 
+  // Calcular distancia del vendor seleccionado al usuario
+  const selectedVendorDistance = useMemo(() => {
+    if (!selectedVendor || !userLocation) return undefined
+    const loc = MOCK_LOCATIONS[selectedVendor.id]
+    if (!loc) return undefined
+    return calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)
+  }, [selectedVendor, userLocation])
+
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -81,7 +90,14 @@ export function MapView() {
               }}
             >
               <Popup>
-<VendorCard vendor={vendor} compact />
+                <VendorCard
+                  vendor={vendor}
+                  compact
+                  distance={userLocation
+                    ? calculateDistance(userLocation.lat, userLocation.lng, loc.lat, loc.lng)
+                    : undefined
+                  }
+                />
               </Popup>
             </Marker>
           )
@@ -93,6 +109,7 @@ export function MapView() {
         <div className="absolute bottom-4 left-4 right-4 z-[1000]">
           <VendorCard
             vendor={selectedVendor}
+            distance={selectedVendorDistance}
             onClose={() => setSelectedVendor(null)}
             onViewDetails={() => {
               router.push(`/vendor/${selectedVendor.id}`)

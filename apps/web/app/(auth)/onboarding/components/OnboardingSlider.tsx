@@ -40,6 +40,14 @@ export function OnboardingSlider({ onComplete }: OnboardingSliderProps) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6">
+      {/* Skip button */}
+      <button
+        onClick={onComplete}
+        className="absolute top-6 right-6 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
+      >
+        Omitir
+      </button>
+
       <div className="text-8xl mb-8">{slide.emoji}</div>
       <h1 className="text-3xl font-bold text-center mb-4 text-gray-800">
         {slide.title}

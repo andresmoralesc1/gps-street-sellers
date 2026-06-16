@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { VendorCard } from './VendorCard'
@@ -29,6 +30,7 @@ function MapUpdater({ center }: { center: LatLng }) {
 const BOGOTA_CENTER: [number, number] = [4.6097, -74.0817]
 
 export function MapView() {
+  const router = useRouter()
   const [center, setCenter] = useState<[number, number]>(BOGOTA_CENTER)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const filters = useStore((s) => s.filters)
@@ -93,7 +95,7 @@ export function MapView() {
             vendor={selectedVendor}
             onClose={() => setSelectedVendor(null)}
             onViewDetails={() => {
-              window.location.href = `/vendor/${selectedVendor.id}`
+              router.push(`/vendor/${selectedVendor.id}`)
             }}
           />
         </div>

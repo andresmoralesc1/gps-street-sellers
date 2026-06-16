@@ -1,6 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { FilterBar } from '@/components/map/FilterBar'
 import { useStore } from '@/store/useStore'
 import { useEffect } from 'react'
@@ -14,6 +16,7 @@ const MapView = dynamic(
 
 export default function MapPage() {
   const setVendors = useStore((s) => s.setVendors)
+  const pathname = usePathname()
 
   useEffect(() => {
     setVendors(MOCK_VENDORS)
@@ -38,18 +41,18 @@ export default function MapPage() {
 
       {/* Bottom Nav */}
       <nav className="bg-white border-t flex justify-around py-3">
-        <button className="flex flex-col items-center text-primary">
+        <Link href="/map" className="flex flex-col items-center text-primary">
           <span className="text-2xl">🗺️</span>
           <span className="text-xs">Mapa</span>
-        </button>
-        <button className="flex flex-col items-center text-gray-400">
+        </Link>
+        <Link href="/favorites" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
           <span className="text-2xl">❤️</span>
           <span className="text-xs">Favoritos</span>
-        </button>
-        <button className="flex flex-col items-center text-gray-400">
+        </Link>
+        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
           <span className="text-2xl">⚙️</span>
           <span className="text-xs">Ajustes</span>
-        </button>
+        </Link>
       </nav>
     </div>
   )

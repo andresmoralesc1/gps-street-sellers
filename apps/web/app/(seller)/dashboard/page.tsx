@@ -58,18 +58,18 @@ export default function SellerDashboardPage() {
 
       {/* Bottom Nav */}
       <nav className="bg-white border-t flex justify-around py-3">
-        <button className="flex flex-col items-center text-primary">
+        <Link href="/dashboard" className="flex flex-col items-center text-primary">
           <span className="text-2xl">📊</span>
           <span className="text-xs">Dashboard</span>
-        </button>
-        <button className="flex flex-col items-center text-gray-400">
+        </Link>
+        <Link href="/products" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
           <span className="text-2xl">📦</span>
           <span className="text-xs">Productos</span>
-        </button>
-        <button className="flex flex-col items-center text-gray-400">
+        </Link>
+        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
           <span className="text-2xl">⚙️</span>
           <span className="text-xs">Ajustes</span>
-        </button>
+        </Link>
       </nav>
     </div>
   )

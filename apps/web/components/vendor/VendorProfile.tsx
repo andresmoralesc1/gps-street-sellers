@@ -49,7 +49,7 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
           <div className="flex items-center gap-2 mt-3">
             <Star size={20} className="text-yellow-500 fill-yellow-500" />
             <span className="text-xl font-bold">{vendor.ratingAvg.toFixed(1)}</span>
-            <span className="text-gray-500">({Math.floor(Math.random() * 50 + 10)} reseñas)</span>
+            <span className="text-gray-500">({vendor.reviewCount} reseñas)</span>
           </div>
 
           <p className="text-gray-600 mt-4">{vendor.description}</p>

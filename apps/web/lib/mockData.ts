@@ -11,6 +11,7 @@ export const MOCK_VENDORS: Vendor[] = [
     photoUrl: 'https://images.unsplash.com/photo-1595855759920-9b5a9f0e2e0e?w=400',
     isActive: true,
     ratingAvg: 4.5,
+    reviewCount: 2,
     createdAt: '2024-01-15T10:00:00Z',
   },
   {
@@ -22,6 +23,7 @@ export const MOCK_VENDORS: Vendor[] = [
     photoUrl: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400',
     isActive: true,
     ratingAvg: 4.8,
+    reviewCount: 1,
     createdAt: '2024-02-20T14:30:00Z',
   },
   {
@@ -33,6 +35,7 @@ export const MOCK_VENDORS: Vendor[] = [
     photoUrl: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400',
     isActive: true,
     ratingAvg: 4.2,
+    reviewCount: 0,
     createdAt: '2024-03-05T09:15:00Z',
   },
   {
@@ -44,6 +47,7 @@ export const MOCK_VENDORS: Vendor[] = [
     photoUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
     isActive: false,
     ratingAvg: 4.9,
+    reviewCount: 0,
     createdAt: '2024-01-10T11:45:00Z',
   },
   {
@@ -55,6 +59,7 @@ export const MOCK_VENDORS: Vendor[] = [
     photoUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400',
     isActive: true,
     ratingAvg: 4.6,
+    reviewCount: 0,
     createdAt: '2024-04-01T16:00:00Z',
   },
 ]

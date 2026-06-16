@@ -17,6 +17,7 @@ export interface Vendor {
   photoUrl: string
   isActive: boolean
   ratingAvg: number
+  reviewCount: number
   createdAt: string
 }
 

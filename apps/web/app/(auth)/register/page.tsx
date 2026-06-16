@@ -15,12 +15,36 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setIsLoading(true)
 
-    // Mock register - siempre succeeds
+    // Validación básica
+    if (!fullName || !email || !password) {
+      setError('Por favor completa todos los campos')
+      setIsLoading(false)
+      return
+    }
+
+    if (!email.includes('@')) {
+      setError('Por favor ingresa un email válido')
+      setIsLoading(false)
+      return
+    }
+
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres')
+      setIsLoading(false)
+      return
+    }
+
+    // Simular delay de red
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    // Mock register
     setUser({
       id: 'user-new',
       email,
@@ -29,6 +53,7 @@ export default function RegisterPage() {
       avatarUrl: '',
     })
 
+    setIsLoading(false)
     router.push('/role-select')
   }
 
@@ -47,6 +72,7 @@ export default function RegisterPage() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Juan Pérez"
+            disabled={isLoading}
             required
           />
           <Input
@@ -55,6 +81,7 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@email.com"
+            disabled={isLoading}
             required
           />
           <Input
@@ -63,13 +90,19 @@ export default function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
+            disabled={isLoading}
             required
           />
 
           {error && <p className="text-accent text-sm">{error}</p>}
 
-          <Button type="submit" className="w-full" size="lg">
-            Crear Cuenta
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
           </Button>
         </form>
 

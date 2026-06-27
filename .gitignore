@@ -3,3 +3,9 @@ node_modules/
 dist/
 .env.local
 .env*.local
+apps/web/.env
+apps/web/out/
+apps/web/tsconfig.tsbuildinfo
+data.db
+*.log
+.DS_Store

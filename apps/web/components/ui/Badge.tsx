@@ -9,12 +9,12 @@ export function Badge({ className, variant = 'default', children, ...props }: Ba
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+        'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200',
         {
-          'bg-gray-100 text-gray-700': variant === 'default',
-          'bg-primary/10 text-primary': variant === 'primary',
-          'bg-secondary/10 text-secondary': variant === 'secondary',
-          'border border-current': variant === 'outline',
+          'bg-stone-100 text-stone-700': variant === 'default',
+          'bg-primary/10 text-primary-700 shadow-sm': variant === 'primary',
+          'bg-secondary/10 text-secondary-700 shadow-sm': variant === 'secondary',
+          'border border-current text-stone-600': variant === 'outline',
         },
         className
       )}

@@ -16,9 +16,14 @@ export interface Vendor {
   description: string
   photoUrl: string
   isActive: boolean
+  isVerified?: boolean
   ratingAvg: number
   reviewCount: number
   createdAt: string
+  // ponytail: lat/lng from API, add to type for convenience
+  latitude?: number
+  longitude?: number
+  location_updated_at?: string
 }
 
 export interface VendorLocation {

@@ -1,9 +1,11 @@
 import { clsx } from 'clsx'
 import type { ButtonHTMLAttributes } from 'react'
+import { Loader2 } from 'lucide-react'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
+  isLoading?: boolean
 }
 
 export function Button({
@@ -12,30 +14,32 @@ export function Button({
   size = 'md',
   children,
   disabled,
+  isLoading,
   ...props
 }: ButtonProps) {
   return (
     <button
-      disabled={disabled}
+      disabled={disabled || isLoading}
       className={clsx(
-        'rounded-lg font-semibold transition-all duration-200',
-        'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+        'relative inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200',
+        'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2',
+        'disabled:opacity-60 disabled:cursor-not-allowed',
         {
-          'bg-primary text-white hover:bg-primary-dark active:scale-95': variant === 'primary',
-          'bg-secondary text-white hover:bg-secondary-dark active:scale-95': variant === 'secondary',
-          'border-2 border-primary text-primary hover:bg-primary hover:text-white': variant === 'outline',
-          'text-gray-600 hover:bg-gray-100': variant === 'ghost',
+          'bg-gradient-to-b from-primary to-primary-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0': variant === 'primary',
+          'bg-gradient-to-b from-secondary to-secondary-dark text-white shadow-lg shadow-secondary/25 hover:shadow-xl hover:shadow-secondary/30 hover:-translate-y-0.5 active:translate-y-0': variant === 'secondary',
+          'border-2 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 active:bg-primary/10': variant === 'outline',
+          'text-stone-600 hover:bg-stone-100 hover:text-stone-900 active:bg-stone-200': variant === 'ghost',
         },
         {
-          'px-3 py-1.5 text-sm': size === 'sm',
-          'px-4 py-2 text-base': size === 'md',
-          'px-6 py-3 text-lg': size === 'lg',
+          'px-3 py-1.5 text-sm rounded-lg': size === 'sm',
+          'px-5 py-2.5 text-sm': size === 'md',
+          'px-7 py-3.5 text-base': size === 'lg',
         },
-        disabled && 'opacity-60 cursor-not-allowed hover:scale-100',
         className
       )}
       {...props}
     >
+      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
       {children}
     </button>
   )

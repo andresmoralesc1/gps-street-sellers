@@ -1,20 +1,46 @@
 import { create } from 'zustand'
-import type { Vendor, VendorCategory, UserRole } from '@/types'
+import { persist } from 'zustand/middleware'
+import type { Vendor, VendorCategory, UserRole, Product } from '../lib/core/types'
+import { DEFAULT_CITY } from '../lib/core/constants'
+import type { City } from '../lib/core/constants'
 
-interface User {
+export interface User {
   id: string
   email: string
   role: UserRole | null
   fullName: string
   avatarUrl: string
+  phone?: string
+  cityId?: string
 }
 
 interface Filters {
   category: VendorCategory | null
   maxDistanceMeters: number
+  searchQuery: string
+}
+
+export interface CartItem {
+  product: Product
+  quantity: number
+}
+
+export interface Order {
+  id: string
+  buyerId: string
+  vendorId: string
+  status: 'pending' | 'accepted' | 'ready' | 'completed' | 'cancelled'
+  total: number
+  createdAt: string
+  items?: CartItem[]
+  vendorName?: string
 }
 
 interface AppState {
+  // Hydration flag — wait for this before showing auth-dependent content
+  _hasHydrated: boolean
+  setHasHydrated: (v: boolean) => void
+
   // Usuario
   user: User | null
   setUser: (user: User | null) => void
@@ -36,6 +62,10 @@ interface AppState {
   userLocation: { lat: number; lng: number } | null
   setUserLocation: (location: { lat: number; lng: number } | null) => void
 
+  // Ciudad seleccionada
+  selectedCity: City
+  setSelectedCity: (city: City) => void
+
   // Estado del vendedor
   isSellerActive: boolean
   setSellerActive: (active: boolean) => void
@@ -49,53 +79,177 @@ interface AppState {
   // UI
   selectedVendorId: string | null
   setSelectedVendorId: (id: string | null) => void
+
+  // Cart
+  cart: CartItem[]
+  cartOpen: boolean
+  setCartOpen: (open: boolean) => void
+  addToCart: (product: Product) => void
+  removeFromCart: (productId: string) => void
+  updateCartQuantity: (productId: string, quantity: number) => void
+  clearCart: () => void
+  getCartTotal: () => number
+
+  // Orders
+  orders: Order[]
+  setOrders: (orders: Order[]) => void
+
+  // Vendor state (set after login)
+  vendorId: string | null
+  setVendorId: (id: string | null) => void
+  vendorProducts: any[]
+  setVendorProducts: (products: any[]) => void
+
+  // Logout
+  logout: () => void
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  // Usuario
-  user: null,
-  setUser: (user) => set({ user }),
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
+      // Hydration
+      _hasHydrated: false,
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
-  // Vendedores
-  vendors: [],
-  setVendors: (vendors) => set({ vendors }),
+      // Usuario
+      user: null,
+      setUser: (user) => set({ user }),
 
-  // Filtros
-  filters: {
-    category: null,
-    maxDistanceMeters: 2000,
-  },
-  setFilters: (filters) =>
-    set((state) => ({ filters: { ...state.filters, ...filters } })),
+      // Vendedores
+      vendors: [],
+      setVendors: (vendors) => set({ vendors }),
 
-  // Favoritos
-  favoriteIds: [],
-  addFavorite: (vendorId) =>
-    set((state) => {
-      if (state.favoriteIds.length >= 10) return state
-      if (state.favoriteIds.includes(vendorId)) return state
-      return { favoriteIds: [...state.favoriteIds, vendorId] }
+      // Filtros
+      filters: {
+        category: null,
+        maxDistanceMeters: 2000,
+        searchQuery: '',
+      },
+      setFilters: (filters) =>
+        set((state) => ({ filters: { ...state.filters, ...filters } })),
+
+      // Favoritos
+      favoriteIds: [],
+      addFavorite: (vendorId) =>
+        set((state) => {
+          if (state.favoriteIds.length >= 10) return state
+          if (state.favoriteIds.includes(vendorId)) return state
+          return { favoriteIds: [...state.favoriteIds, vendorId] }
+        }),
+      removeFavorite: (vendorId) =>
+        set((state) => ({
+          favoriteIds: state.favoriteIds.filter((id) => id !== vendorId),
+        })),
+
+      // Ubicación
+      userLocation: null,
+      setUserLocation: (location) => set({ userLocation: location }),
+
+      // Ciudad
+      selectedCity: DEFAULT_CITY,
+      setSelectedCity: (city) => set({ selectedCity: city }),
+
+      // Seller activo
+      isSellerActive: false,
+      setSellerActive: (active) => set({ isSellerActive: active }),
+
+      // Notificaciones
+      pushNotificationsEnabled: true,
+      setPushNotifications: (enabled) => set({ pushNotificationsEnabled: enabled }),
+      proximityNotificationsEnabled: true,
+      setProximityNotifications: (enabled) => set({ proximityNotificationsEnabled: enabled }),
+
+      // UI
+      selectedVendorId: null,
+      setSelectedVendorId: (id) => set({ selectedVendorId: id }),
+
+      // Cart
+      cart: [],
+      cartOpen: false,
+      setCartOpen: (open) => set({ cartOpen: open }),
+      addToCart: (product) =>
+        set((state) => {
+          const existing = state.cart.find((item) => item.product.id === product.id)
+          if (existing) {
+            return {
+              cart: state.cart.map((item) =>
+                item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+              ),
+            }
+          }
+          return { cart: [...state.cart, { product, quantity: 1 }] }
+        }),
+      removeFromCart: (productId) =>
+        set((state) => ({
+          cart: state.cart.filter((item) => item.product.id !== productId),
+        })),
+      updateCartQuantity: (productId, quantity) =>
+        set((state) => ({
+          cart: state.cart.map((item) =>
+            item.product.id === productId ? { ...item, quantity } : item
+          ),
+        })),
+      clearCart: () => set({ cart: [] }),
+      getCartTotal: () => {
+        // getter needs get, handled at call site
+        return 0
+      },
+
+      // Orders
+      orders: [],
+      setOrders: (orders) => set({ orders }),
+
+      // Vendor state
+      vendorId: null,
+      setVendorId: (id) => set({ vendorId: id }),
+      vendorProducts: [],
+      setVendorProducts: (products) => set({ vendorProducts: products }),
+
+      // Logout
+      logout: async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' })
+        } catch {
+          // ignore network errors — still clear client state
+        }
+        localStorage.removeItem('barriotech-store')
+        set({ user: null, vendorId: null, cart: [], orders: [], favoriteIds: [] })
+      },
     }),
-  removeFavorite: (vendorId) =>
-    set((state) => ({
-      favoriteIds: state.favoriteIds.filter((id) => id !== vendorId),
-    })),
+    {
+      name: 'barriotech-store',
+      // Only persist cart, favorites, orders, city, filters — NOT user or internal flags (auth lives in cookie)
+      partialize: (state) => ({
+        vendorId: state.vendorId,
+        cart: state.cart,
+        favoriteIds: state.favoriteIds,
+        orders: state.orders,
+        selectedCity: state.selectedCity,
+        filters: state.filters,
+        pushNotificationsEnabled: state.pushNotificationsEnabled,
+        proximityNotificationsEnabled: state.proximityNotificationsEnabled,
+        // _hasHydrated and user are NOT persisted — always restored from cookie at runtime
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        // Signal that hydration is in progress — components should wait
+        state.setHasHydrated(false)
 
-  // Ubicación
-  userLocation: null,
-  setUserLocation: (location) => set({ userLocation: location }),
-
-  // Seller activo
-  isSellerActive: false,
-  setSellerActive: (active) => set({ isSellerActive: active }),
-
-  // Notificaciones
-  pushNotificationsEnabled: true,
-  setPushNotifications: (enabled) => set({ pushNotificationsEnabled: enabled }),
-  proximityNotificationsEnabled: true,
-  setProximityNotifications: (enabled) => set({ proximityNotificationsEnabled: enabled }),
-
-  // UI
-  selectedVendorId: null,
-  setSelectedVendorId: (id) => set({ selectedVendorId: id }),
-}))
+        // After rehydrating from localStorage, check if user is logged in via cookie
+        // This handles page refreshes and direct navigation after login
+        fetch('/api/auth/me', { credentials: 'include' })
+          .then((res) => {
+            if (res.ok) return res.json()
+            return null
+          })
+          .then((user) => {
+            if (user) state.setUser(user)
+          })
+          .catch(() => { /* ignore — user stays null (logged out) */ })
+          .finally(() => {
+            state.setHasHydrated(true)
+          })
+      },
+    }
+  )
+)

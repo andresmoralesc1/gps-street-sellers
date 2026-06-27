@@ -1,15 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package, ChevronLeft } from 'lucide-react'
+import Link from 'next/link'
+import { Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { MOCK_VENDORS } from '@/lib/mockData'
+import { ImageUpload } from '@/components/ui/ImageUpload'
 import { CATEGORIES } from '@/lib/core/constants'
 import type { VendorCategory } from '@/lib/core/types'
+import { useStore } from '@/store/useStore'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -22,25 +24,126 @@ const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
 
 export default function EditProfilePage() {
   const router = useRouter()
-  const vendor = MOCK_VENDORS.find((v) => v.id === 'v2') // Mock vendor
+  const user = useStore((s) => s.user)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [vendorId, setVendorId] = useState<string | null>(null)
 
-  const [name, setName] = useState(vendor?.name || '')
-  const [description, setDescription] = useState(vendor?.description || '')
-  const [category, setCategory] = useState<VendorCategory>(vendor?.category as VendorCategory || 'comida')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState<VendorCategory>('comida')
+  const [phone, setPhone] = useState('')
+  const [photoUrl, setPhotoUrl] = useState('')
 
-  const handleSave = () => {
-    // Mock save - en producción esto iría a Supabase
-    alert('Perfil guardado (mock)')
-    router.push('/dashboard')
+  useEffect(() => {
+    if (user?.role !== 'seller') {
+      router.push('/role-select')
+      return
+    }
+
+    // First get vendorId from /api/vendors/me
+    fetch('/api/vendors/me', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.vendor) {
+          setLoading(false)
+          return
+        }
+        setVendorId(data.vendor.id)
+
+        // Then fetch full vendor data
+        return fetch(`/api/vendors/${data.vendor.id}`, {
+          credentials: 'include',
+        })
+      })
+      .then((r) => r?.json())
+      .then((data) => {
+        if (data?.vendor) {
+          setName(data.vendor.name || '')
+          setDescription(data.vendor.description || '')
+          setCategory(data.vendor.category || 'comida')
+          setPhone(data.vendor.phone || '')
+          setPhotoUrl(data.vendor.photo_url || '')
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [router])
+
+  const handleSave = async () => {
+    if (!vendorId) return
+
+    setSaving(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/vendors/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name,
+          description,
+          category,
+          phone,
+          photo_url: photoUrl,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Error al guardar')
+      }
+
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Error al guardar')
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background-cream flex items-center justify-center">
+        <p className="text-gray-500">Cargando...</p>
+      </div>
+    )
+  }
+
+  if (!vendorId) {
+    return (
+      <div className="min-h-screen bg-background-cream">
+        <header className="bg-white shadow-sm p-4 flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost"><ChevronLeft size={20} /></Button>
+          </Link>
+          <h1 className="text-lg font-bold">Editar Perfil</h1>
+        </header>
+        <div className="p-4">
+          <Card variant="outlined" className="p-8 text-center">
+            <p className="text-gray-500 mb-4">No tienes perfil de vendedor</p>
+            <p className="text-sm text-gray-400 mb-6">
+              Crea tu perfil para empezar a recibir pedidos
+            </p>
+            <Link href="/dashboard">
+              <Button>Volver al dashboard</Button>
+            </Link>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background-cream">
       {/* Header */}
       <header className="bg-white shadow-sm p-4 flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()}>
-          <ChevronLeft size={20} />
-        </Button>
+        <Link href="/dashboard">
+          <Button variant="ghost"><ChevronLeft size={20} /></Button>
+        </Link>
         <h1 className="text-lg font-bold">Editar Perfil</h1>
       </header>
 
@@ -48,14 +151,14 @@ export default function EditProfilePage() {
         {/* Foto */}
         <Card variant="outlined" className="p-4">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Camera size={40} className="text-primary" />
-            </div>
+            <ImageUpload
+              value={photoUrl}
+              onChange={setPhotoUrl}
+              folder="vendors"
+            />
             <div>
-              <Button variant="outline" size="sm">
-                Cambiar foto
-              </Button>
-              <p className="text-xs text-gray-500 mt-1">PNG o JPG, máx 2MB</p>
+              <p className="text-sm font-medium text-gray-700">Foto del negocio</p>
+              <p className="text-xs text-gray-400">PNG o JPG, máx 5MB</p>
             </div>
           </div>
         </Card>
@@ -67,6 +170,14 @@ export default function EditProfilePage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Don Juan's Empanadas"
+          />
+
+          <Input
+            label="Teléfono"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Ej: 300 123 4567"
           />
 
           <div className="flex flex-col gap-1">
@@ -101,9 +212,13 @@ export default function EditProfilePage() {
           </div>
         </Card>
 
+        {error && (
+          <p className="text-red-500 text-sm text-center">{error}</p>
+        )}
+
         {/* Guardar */}
-        <Button onClick={handleSave} size="lg" className="w-full">
-          Guardar Cambios
+        <Button onClick={handleSave} size="lg" className="w-full" disabled={saving}>
+          {saving ? 'Guardando...' : 'Guardar Cambios'}
         </Button>
       </div>
     </div>

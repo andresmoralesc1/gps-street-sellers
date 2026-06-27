@@ -9,5 +9,8 @@
     "dev": "cd apps/web && npm run dev",
     "build": "npm run build:core && cd apps/web && npm run build",
     "build:core": "cd packages/core && npm run build"
+  },
+  "dependencies": {
+    "jose": "^6.2.3"
   }
 }

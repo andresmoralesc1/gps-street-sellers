@@ -16,7 +16,9 @@ export interface Vendor {
   description: string
   photoUrl: string
   isActive: boolean
+  isVerified: boolean
   ratingAvg: number
+  reviewCount?: number
   createdAt: string
 }
 

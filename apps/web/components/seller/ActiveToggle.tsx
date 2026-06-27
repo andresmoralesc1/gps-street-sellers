@@ -2,10 +2,58 @@
 
 import { clsx } from 'clsx'
 import { useStore } from '@/store/useStore'
+import { useEffect, useRef } from 'react'
 
-export function ActiveToggle() {
+interface ActiveToggleProps {
+  vendorId: string
+}
+
+export function ActiveToggle({ vendorId }: ActiveToggleProps) {
   const isActive = useStore((s) => s.isSellerActive)
   const setSellerActive = useStore((s) => s.setSellerActive)
+  const userLocation = useStore((s) => s.userLocation)
+  const locationIntervalRef = useRef<NodeJS.Timeout>()
+
+  // Sync with backend when isActive changes
+  useEffect(() => {
+    if (!vendorId) return
+
+    fetch(`/api/vendors/${vendorId}/location`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        isActive,
+        latitude: userLocation?.lat,
+        longitude: userLocation?.lng,
+      }),
+    }).catch(console.error)
+  }, [isActive, vendorId, userLocation])
+
+  // Update location periodically when active
+  useEffect(() => {
+    if (isActive && userLocation) {
+      locationIntervalRef.current = setInterval(() => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              useStore.getState().setUserLocation({
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+              })
+            },
+            () => {}
+          )
+        }
+      }, 10000) // Update every 10 seconds
+    }
+
+    return () => {
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current)
+      }
+    }
+  }, [isActive, userLocation])
 
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm">

@@ -1,5 +1,6 @@
 'use client'
 
+import { clsx } from 'clsx'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Star, Circle, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package } from 'lucide-react'
@@ -26,8 +27,22 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
   return (
     <Card variant="elevated" className="p-6">
       <div className="flex items-start gap-4">
+        {vendor.photoUrl ? (
+          <img
+            src={vendor.photoUrl}
+            alt={vendor.name}
+            className="w-24 h-24 rounded-2xl object-cover flex-shrink-0"
+            onError={(e) => {
+              ;(e.target as HTMLImageElement).style.display = 'none'
+              ;(e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden')
+            }}
+          />
+        ) : null}
         <div
-          className="w-24 h-24 rounded-2xl flex items-center justify-center flex-shrink-0"
+          className={clsx(
+            'w-24 h-24 rounded-2xl flex items-center justify-center flex-shrink-0',
+            !vendor.photoUrl && 'hidden'
+          )}
           style={{ background: category.color }}
         >
           <IconComponent size={48} className="text-white" />
@@ -35,7 +50,12 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
 
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <h2 className="text-2xl font-bold">{vendor.name}</h2>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              {vendor.name}
+              {vendor.isVerified && (
+                <span title="Vendedor verificado" className="text-xl">✅</span>
+              )}
+            </h2>
             {vendor.isActive && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Circle size={8} fill="currentColor" className="text-green-500" />

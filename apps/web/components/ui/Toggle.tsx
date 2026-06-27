@@ -6,18 +6,21 @@ interface ToggleProps {
   enabled: boolean
   onChange: (enabled: boolean) => void
   label?: string
+  disabled?: boolean
 }
 
-export function Toggle({ enabled, onChange, label }: ToggleProps) {
+export function Toggle({ enabled, onChange, label, disabled }: ToggleProps) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={enabled}
-      onClick={() => onChange(!enabled)}
+      onClick={() => !disabled && onChange(!enabled)}
+      disabled={disabled}
       className={clsx(
         'relative w-12 h-7 rounded-full transition-colors',
-        enabled ? 'bg-secondary' : 'bg-gray-300'
+        enabled ? 'bg-secondary' : 'bg-gray-300',
+        disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
       <div

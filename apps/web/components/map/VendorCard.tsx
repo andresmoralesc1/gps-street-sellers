@@ -1,5 +1,7 @@
 'use client'
 
+import { clsx } from 'clsx'
+import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -44,17 +46,33 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }
   const category = getCategoryInfo(vendor.category)
   const IconComponent = CategoryIconMap[vendor.category]
 
+  const [imgFailed, setImgFailed] = useState(false)
+
+  const showPhoto = vendor.photoUrl && !imgFailed
+
   if (compact) {
     return (
       <div className="flex items-center gap-3 p-2 min-w-[200px]">
-        <div
-          className="w-12 h-12 rounded-full flex items-center justify-center"
-          style={{ background: category.color }}
-        >
-          <IconComponent size={24} className="text-white" />
-        </div>
+        {showPhoto ? (
+          <img
+            src={vendor.photoUrl}
+            alt={vendor.name}
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: category.color }}
+          >
+            <IconComponent size={24} className="text-white" />
+          </div>
+        )}
         <div>
-          <h3 className="font-semibold">{vendor.name}</h3>
+          <h3 className="font-semibold flex items-center gap-1">
+            {vendor.name}
+            {vendor.isVerified && <span title="Vendedor verificado">✅</span>}
+          </h3>
           <p className="text-sm text-gray-500">
             {category.label}
             {distance !== undefined && (
@@ -69,17 +87,29 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }
   return (
     <Card variant="elevated" className="p-4">
       <div className="flex gap-4">
-        <div
-          className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: category.color }}
-        >
-          <IconComponent size={32} className="text-white" />
-        </div>
+        {showPhoto ? (
+          <img
+            src={vendor.photoUrl}
+            alt={vendor.name}
+            className="w-20 h-20 rounded-xl object-cover flex-shrink-0"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div
+            className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: category.color }}
+          >
+            <IconComponent size={32} className="text-white" />
+          </div>
+        )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-lg font-bold">{vendor.name}</h3>
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  {vendor.name}
+                  {vendor.isVerified && <span title="Vendedor verificado" className="text-lg">✅</span>}
+                </h3>
               <div className="flex items-center gap-2">
                 <Badge variant="primary">{category.label}</Badge>
                 {distance !== undefined && (

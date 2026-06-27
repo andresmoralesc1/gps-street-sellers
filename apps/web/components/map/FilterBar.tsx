@@ -1,6 +1,7 @@
 'use client'
 
 import { clsx } from 'clsx'
+import { Search, X } from 'lucide-react'
 import {
   Apple,
   UtensilsCrossed,
@@ -34,10 +35,36 @@ export function FilterBar() {
   const filters = useStore((s) => s.filters)
   const setFilters = useStore((s) => s.setFilters)
 
+  const hasActiveFilters = filters.category !== null || filters.maxDistanceMeters !== 2000 || filters.searchQuery !== ''
+
+  const clearFilters = () => {
+    setFilters({ category: null, maxDistanceMeters: 2000, searchQuery: '' })
+  }
+
   return (
-    <div className="bg-white rounded-xl shadow-md p-4">
+    <div className="bg-white rounded-xl shadow-md p-4 space-y-4">
+      {/* Buscador */}
+      <div className="relative">
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar vendedores por nombre..."
+          value={filters.searchQuery}
+          onChange={(e) => setFilters({ searchQuery: e.target.value })}
+          className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+        />
+        {filters.searchQuery && (
+          <button
+            onClick={() => setFilters({ searchQuery: '' })}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
       {/* Categorías */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+      <div className="flex gap-2 overflow-x-auto pb-2">
         <button
           onClick={() => setFilters({ category: null })}
           className={clsx(
@@ -71,22 +98,33 @@ export function FilterBar() {
       </div>
 
       {/* Distancia */}
-      <div className="flex gap-2">
-        {DISTANCES.map((dist) => (
+      <div className="flex gap-2 items-center">
+        <div className="flex gap-2">
+          {DISTANCES.map((dist) => (
+            <button
+              key={dist.value}
+              onClick={() => setFilters({ maxDistanceMeters: dist.value })}
+              className={clsx(
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5',
+                filters.maxDistanceMeters === dist.value
+                  ? 'bg-secondary text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              )}
+            >
+              <MapPin size={14} />
+              {dist.label}
+            </button>
+          ))}
+        </div>
+        {hasActiveFilters && (
           <button
-            key={dist.value}
-            onClick={() => setFilters({ maxDistanceMeters: dist.value })}
-            className={clsx(
-              'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5',
-              filters.maxDistanceMeters === dist.value
-                ? 'bg-secondary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            )}
+            onClick={clearFilters}
+            className="ml-auto px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1.5"
           >
-            <MapPin size={14} />
-            {dist.label}
+            <X size={14} />
+            Limpiar filtros
           </button>
-        ))}
+        )}
       </div>
     </div>
   )

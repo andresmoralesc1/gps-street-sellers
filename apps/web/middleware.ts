@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { jwtVerify } from 'jose'
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-)
-const JWT_SECRET_PREVIOUS = process.env.JWT_SECRET_PREVIOUS
-  ? new TextEncoder().encode(process.env.JWT_SECRET_PREVIOUS)
-  : null
+import { getTokenFromRequest, verifyTokenEdge } from '@/lib/auth'
 
 // Routes that require authentication
 const PROTECTED_ROUTES = [
@@ -24,39 +17,6 @@ const SELLER_ROUTES = ['/dashboard', '/profile/edit']
 
 // Routes that should redirect to /login if unauthenticated
 const AUTH_ROUTES = ['/favorites', '/orders', '/settings', '/notifications']
-
-function extractToken(req: NextRequest): string | null {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) {
-    return auth.slice(7)
-  }
-  const cookies = req.cookies.getAll()
-  const tokenCookie = cookies.find((c) => c.name === 'token')
-  return tokenCookie?.value || null
-}
-
-async function verifyToken(token: string): Promise<{ userId: string; role: string; tokenVersion: number } | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    return {
-      userId: payload.userId as string,
-      role: payload.role as string,
-      tokenVersion: payload.tokenVersion as number,
-    }
-  } catch {
-    if (!JWT_SECRET_PREVIOUS) return null
-    try {
-      const { payload } = await jwtVerify(token, JWT_SECRET_PREVIOUS)
-      return {
-        userId: payload.userId as string,
-        role: payload.role as string,
-        tokenVersion: payload.tokenVersion as number,
-      }
-    } catch {
-      return null
-    }
-  }
-}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -83,7 +43,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = extractToken(req)
+  const token = getTokenFromRequest(req)
 
   // Redirect unauthenticated users from protected app routes to login
   if (!token) {
@@ -96,7 +56,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const decoded = await verifyToken(token)
+  const decoded = await verifyTokenEdge(token)
 
   if (!decoded) {
     // Invalid or revoked token — clear cookie and redirect to login

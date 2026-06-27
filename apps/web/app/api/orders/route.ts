@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-
-function getToken(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  return req.cookies.get('token')?.value || null
-}
 
 // GET /api/orders — buyer sees own orders, vendor sees own orders
 export async function GET(req: NextRequest) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role?: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
@@ -80,18 +72,17 @@ export async function GET(req: NextRequest) {
 // POST /api/orders — create order, buyerId comes from token
 export async function POST(req: NextRequest) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     // Get buyer profile from userId
     const profileRes = await pool.query(

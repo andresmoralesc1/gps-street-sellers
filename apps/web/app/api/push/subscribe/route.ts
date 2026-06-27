@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-
-function getToken(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  return req.cookies.get('token')?.value || null
-}
 
 // POST /api/push/subscribe — save push subscription for user
 export async function POST(req: NextRequest) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const { endpoint, keys } = await req.json()
 
@@ -49,18 +41,17 @@ export async function POST(req: NextRequest) {
 // DELETE /api/push/subscribe — remove push subscription
 export async function DELETE(req: NextRequest) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const { endpoint } = await req.json()
 

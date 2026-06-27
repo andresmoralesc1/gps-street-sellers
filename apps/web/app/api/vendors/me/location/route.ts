@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
 
 // PATCH /api/vendors/me/location — update vendor GPS coordinates
 export async function PATCH(req: NextRequest) {
@@ -21,12 +20,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const { latitude, longitude } = await req.json()
 

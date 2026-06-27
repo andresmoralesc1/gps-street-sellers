@@ -1,35 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import pool from '@/lib/db'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-const JWT_SECRET_PREVIOUS = process.env.JWT_SECRET_PREVIOUS || ''
-
-// ── In-memory rate limiter (IP-based, per-process) ──
-const attempts = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000   // 15 min
-const MAX_ATTEMPTS = 10
-
-function rateLimit(ip: string): { allowed: boolean; remaining: number; retryAfter?: number } {
-  const now = Date.now()
-  const record = attempts.get(ip)
-  if (!record || now > record.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
-    return { allowed: true, remaining: MAX_ATTEMPTS - 1 }
-  }
-  if (record.count >= MAX_ATTEMPTS) {
-    return { allowed: false, remaining: 0, retryAfter: Math.ceil((record.resetAt - now) / 1000) }
-  }
-  record.count++
-  return { allowed: true, remaining: MAX_ATTEMPTS - record.count }
-}
+import { signTokenSync } from '@/lib/auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
     || 'unknown'
-  const { allowed, remaining, retryAfter } = rateLimit(ip)
+  const { allowed, remaining, retryAfter } = await checkRateLimit(ip, 'login', 10, 15 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(
       { error: 'Demasiados intentos. Intenta de nuevo más tarde.', retryAfter },
@@ -65,11 +44,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
     }
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, tokenVersion: user.token_version || 1 },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const token = signTokenSync({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      tokenVersion: user.token_version || 1,
+    })
 
     const response = NextResponse.json({
       token,

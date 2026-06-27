@@ -1,29 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-
-function getToken(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  return req.cookies.get('token')?.value || null
-}
 
 // POST /api/reviews — submit a review (buyer only)
 export async function POST(req: NextRequest) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    let decoded: { userId: string; role: string }
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     if (decoded.role !== 'buyer') {
       return NextResponse.json({ error: 'Solo compradores pueden dejar reseñas' }, { status: 403 })

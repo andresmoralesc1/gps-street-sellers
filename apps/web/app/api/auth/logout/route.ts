@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-const JWT_SECRET_PREVIOUS = process.env.JWT_SECRET_PREVIOUS || ''
+import { verifyToken } from '@/lib/auth'
 
 function clearCookie(response: NextResponse) {
   response.cookies.set('token', '', {
@@ -17,38 +15,27 @@ function clearCookie(response: NextResponse) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value
+
+    // No token — nothing to revoke
     if (!token) {
       const response = NextResponse.json({ success: true })
       clearCookie(response)
       return response
     }
 
-    const jwt = require('jsonwebtoken') as any
-    let decoded: { userId: string } | null = null
+    const decoded = verifyToken(token)
 
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-    } catch {
-      if (JWT_SECRET_PREVIOUS) {
-        try {
-          decoded = jwt.verify(token, JWT_SECRET_PREVIOUS) as { userId: string }
-        } catch {
-          // Token invalid with both secrets — clear cookie
-          const response = NextResponse.json({ success: true })
-          clearCookie(response)
-          return response
-        }
-      } else {
-        const response = NextResponse.json({ success: true })
-        clearCookie(response)
-        return response
-      }
+    // Invalid/expired token — just clear the cookie
+    if (!decoded) {
+      const response = NextResponse.json({ success: true })
+      clearCookie(response)
+      return response
     }
 
-    // Revoke: increment token_version
+    // Revoke: increment token_version so existing tokens become invalid
     await pool.query(
       'UPDATE profiles SET token_version = token_version + 1 WHERE user_id = $1',
-      [decoded!.userId]
+      [decoded.userId]
     )
 
     const response = NextResponse.json({ success: true })

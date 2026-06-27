@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -30,12 +29,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    let decoded: { userId: string; role: string }
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     const { name, description, price, photo_url } = await req.json()
 
@@ -100,12 +95,8 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    let decoded: { userId: string; role: string }
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     if (!productId) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })

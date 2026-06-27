@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-
-function getToken(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  return req.cookies.get('token')?.value || null
-}
 
 // GET /api/orders/[id] — buyer or vendor of this order only
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     // Get user's profile to check role
     const profileRes = await pool.query(
@@ -74,18 +66,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 // PATCH /api/orders/[id] — vendor of this order can update status
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const profileRes = await pool.query(
       'SELECT id, role FROM profiles WHERE user_id = $1',

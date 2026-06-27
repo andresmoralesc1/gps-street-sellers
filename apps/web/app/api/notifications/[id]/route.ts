@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
 
 // PATCH /api/notifications/[id] — mark as read
 export async function PATCH(req: NextRequest) {
@@ -23,12 +22,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    let decoded: { userId: string }
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     if (!notifId) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })

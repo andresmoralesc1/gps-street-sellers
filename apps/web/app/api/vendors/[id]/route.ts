@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-
-function getToken(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  return req.cookies.get('token')?.value || null
-}
 
 type RouteContext = {
   params: { id: string }
@@ -47,13 +40,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     // Track view
     try {
-      const token = getToken(req)
+      const token = getTokenFromRequest(req)
       let userId: string | null = null
       if (token) {
-        try {
-          const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-          userId = decoded.userId
-        } catch {}
+        const decoded = verifyToken(token)
+        if (decoded) userId = decoded.userId
       }
       await pool.query(
         'INSERT INTO vendor_views (vendor_id, user_id) VALUES ($1, $2)',
@@ -97,12 +88,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    let decoded: { userId: string; role: string }
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     // Verify ownership
     const ownerCheck = await pool.query(

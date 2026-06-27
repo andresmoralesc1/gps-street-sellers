@@ -1,33 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
 import pool from '@/lib/db'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-const JWT_SECRET_PREVIOUS = process.env.JWT_SECRET_PREVIOUS || ''
-
-function verifyToken(token: string): { userId: string; role: string; tokenVersion: number } | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string; role: string; tokenVersion: number }
-  } catch {
-    if (!JWT_SECRET_PREVIOUS) return null
-    try {
-      return jwt.verify(token, JWT_SECRET_PREVIOUS) as { userId: string; role: string; tokenVersion: number }
-    } catch {
-      return null
-    }
-  }
-}
-
-function getTokenFromRequest(req: NextRequest): string | null {
-  // Try Authorization header first
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  // Fall back to cookie
-  const cookies = req.cookies.getAll()
-  const tokenCookie = cookies.find((c) => c.name === 'token')
-  return tokenCookie?.value || null
-}
-
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { isTokenRevoked } from '@/lib/auth-db'
 async function getUserFromDb(userId: string) {
   const result = await pool.query(
     'SELECT id, email, name, role, phone, city_id, is_active FROM users WHERE id = $1',
@@ -56,12 +30,7 @@ export async function GET(req: NextRequest) {
     const decoded = verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
-    // Verify token hasn't been revoked
-    const profileResult = await pool.query(
-      'SELECT token_version FROM profiles WHERE user_id = $1',
-      [decoded.userId]
-    )
-    if (profileResult.rows.length > 0 && decoded.tokenVersion !== profileResult.rows[0].token_version) {
+    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
       return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
     }
 
@@ -78,39 +47,13 @@ export async function GET(req: NextRequest) {
 // PATCH /api/auth/me — update user profile (name, phone, cityId)
 export async function PATCH(req: NextRequest) {
   try {
-    // Accept Authorization header OR cookie token
-    let token: string | null = null
-    const authHeader = req.headers.get('Authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.slice(7)
-    } else {
-      token = req.cookies.get('token')?.value || null
-    }
+    const token = getTokenFromRequest(req)
+    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
-    let decoded: any
-    try {
-      decoded = jwt.verify(token, JWT_SECRET)
-    } catch {
-      if (JWT_SECRET_PREVIOUS) {
-        try {
-          decoded = jwt.verify(token, JWT_SECRET_PREVIOUS)
-        } catch {
-          return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-        }
-      } else {
-        return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-      }
-    }
-
-    const profileResult = await pool.query(
-      'SELECT token_version FROM profiles WHERE user_id = $1',
-      [decoded.userId]
-    )
-    if (profileResult.rows.length > 0 && decoded.tokenVersion !== profileResult.rows[0].token_version) {
+    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
       return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
     }
 

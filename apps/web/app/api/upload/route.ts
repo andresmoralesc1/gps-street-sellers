@@ -1,35 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
-import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
 const STORAGE_DIR = path.join(process.cwd(), 'storage')
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
-function getToken(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  return req.cookies.get('token')?.value || null
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const token = getToken(req)
+    const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    let decoded: { userId: string; role: string }
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     const formData = await req.formData()
     const file = formData.get('file') as File | null

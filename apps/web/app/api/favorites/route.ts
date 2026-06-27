@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
-const JWT_SECRET_PREVIOUS = process.env.JWT_SECRET_PREVIOUS || ''
 
-function verifyToken(token: string): { userId: string; role: string; tokenVersion: number } | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string; role: string; tokenVersion: number }
-  } catch {
-    if (!JWT_SECRET_PREVIOUS) return null
-    try {
-      return jwt.verify(token, JWT_SECRET_PREVIOUS) as { userId: string; role: string; tokenVersion: number }
-    } catch {
-      return null
-    }
-  }
-}
 
-function getTokenFromRequest(req: NextRequest): string | null {
-  const auth = req.headers.get('authorization')
-  if (auth?.startsWith('Bearer ')) return auth.slice(7)
-  const cookies = req.cookies.getAll()
-  const tokenCookie = cookies.find((c) => c.name === 'token')
-  return tokenCookie?.value || null
-}
 
 // POST /api/favorites — add a vendor to favorites
 export async function POST(req: NextRequest) {

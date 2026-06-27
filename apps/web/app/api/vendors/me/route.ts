@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyToken } from '@/lib/auth'
 import pool from '@/lib/db'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gps-street-sellers-secret-key-change-in-production'
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +18,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
 
     const result = await pool.query(
       `SELECT v.*, c.label as category_label
@@ -77,12 +79,11 @@ export async function POST(req: NextRequest) {
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const { name, description, category, phone, cityId } = await req.json()
 
@@ -160,12 +161,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     let userId: string
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-      userId = decoded.userId
-    } catch {
+    const decoded = verifyToken(token)
+    if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
+    userId = decoded.userId
 
     const body = await req.json()
 

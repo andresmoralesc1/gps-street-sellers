@@ -83,6 +83,9 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/orders — create order, buyerId comes from token
+// SECURITY: prices are NEVER trusted from the client. We re-fetch each product
+// from the DB, validate that every product belongs to the requested vendor,
+// and compute the total server-side. The client's price field is ignored.
 export async function POST(req: NextRequest) {
   try {
     const token = getTokenFromRequest(req)
@@ -113,26 +116,92 @@ export async function POST(req: NextRequest) {
 
     const { vendorId, items } = await req.json()
 
-    if (!vendorId || !items || items.length === 0) {
+    if (!vendorId || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const total = items.reduce((sum: number, item: { price: number; quantity: number }) => {
-      return sum + item.price * item.quantity
-    }, 0)
+    // Validate item shape (productId + quantity, both required)
+    for (const item of items) {
+      if (!item.productId || typeof item.quantity !== 'number' || item.quantity < 1 || item.quantity > 999) {
+        return NextResponse.json({ error: 'Cada item debe tener productId y quantity (1-999)' }, { status: 400 })
+      }
+    }
 
-    const orderResult = await pool.query(
-      `INSERT INTO orders (buyer_id, vendor_id, total) VALUES ($1, $2, $3) RETURNING *`,
-      [profile.id, vendorId, total]
+    // SECURITY: fetch real prices + validate ownership in one query.
+    // We DO NOT trust item.price from the client.
+    // NOTE: products table does not currently have stock or is_active columns,
+    // so we only validate vendor_id here. Stock/active checks should be re-added
+    // when those columns exist in the schema.
+    const productIds = items.map((i: any) => i.productId)
+    const productsRes = await pool.query(
+      `SELECT id, vendor_id, price
+       FROM products
+       WHERE id = ANY($1::uuid[])`,
+      [productIds]
     )
-    const order = orderResult.rows[0]
 
-    const itemsResult = await pool.query(
-      `INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ${items.map((_: any, i: number) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(', ')} RETURNING *`,
-      items.flatMap((item: { productId: string; quantity: number; price: number }) => [order.id, item.productId, item.quantity, item.price])
-    )
+    if (productsRes.rows.length !== productIds.length) {
+      return NextResponse.json({ error: 'Uno o más productos no existen' }, { status: 400 })
+    }
 
-    return NextResponse.json({ order: { ...order, items: itemsResult.rows } }, { status: 201 })
+    // Build a price map AND validate ownership
+    const priceMap = new Map<string, { price: number; vendorId: string }>()
+    for (const p of productsRes.rows) {
+      priceMap.set(p.id, {
+        price: parseFloat(p.price),
+        vendorId: p.vendor_id,
+      })
+    }
+
+    // Compute total server-side using DB prices
+    let total = 0
+    for (const item of items) {
+      const product = priceMap.get(item.productId)
+      if (!product) {
+        return NextResponse.json({ error: `Producto ${item.productId} no encontrado` }, { status: 400 })
+      }
+      if (product.vendorId !== vendorId) {
+        return NextResponse.json({ error: `Producto ${item.productId} no pertenece al vendedor` }, { status: 400 })
+      }
+      total += product.price * item.quantity
+    }
+
+    // Transaction: create order + insert items atomically
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      const orderResult = await client.query(
+        `INSERT INTO orders (buyer_id, vendor_id, total) VALUES ($1, $2, $3) RETURNING *`,
+        [profile.id, vendorId, total]
+      )
+      const order = orderResult.rows[0]
+
+      // Build items insert using server-side prices
+      const itemsValues: any[] = []
+      const placeholders: string[] = []
+      let paramIdx = 1
+      for (const item of items) {
+        const serverPrice = priceMap.get(item.productId)!.price
+        placeholders.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3})`)
+        itemsValues.push(order.id, item.productId, item.quantity, serverPrice)
+        paramIdx += 4
+      }
+
+      const itemsResult = await client.query(
+        `INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ${placeholders.join(', ')} RETURNING *`,
+        itemsValues
+      )
+
+      await client.query('COMMIT')
+
+      return NextResponse.json({ order: { ...order, items: itemsResult.rows } }, { status: 201 })
+    } catch (txErr) {
+      await client.query('ROLLBACK')
+      throw txErr
+    } finally {
+      client.release()
+    }
   } catch (err) {
     console.error('Orders POST error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

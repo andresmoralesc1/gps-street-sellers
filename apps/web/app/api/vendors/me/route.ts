@@ -193,7 +193,8 @@ export async function PATCH(req: NextRequest) {
     const vendorId = vendorRes.rows[0].id
 
     // Build update query dynamically for allowed fields
-    const allowedFields = ['name', 'description', 'category', 'phone', 'city_id', 'is_active', 'is_verified', 'photo_url']
+    // NOTE: 'is_verified' is intentionally NOT here — only admins can verify vendors.
+    const allowedFields = ['name', 'description', 'category', 'phone', 'city_id', 'is_active', 'photo_url']
     const updates: string[] = []
     const values: any[] = []
     let paramIndex = 1

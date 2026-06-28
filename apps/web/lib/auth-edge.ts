@@ -16,10 +16,10 @@ export interface TokenPayload {
 }
 
 const JWT_SECRET_RAW = process.env.JWT_SECRET
-if (!JWT_SECRET_RAW && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET is required in production')
+if (!JWT_SECRET_RAW) {
+  throw new Error('JWT_SECRET environment variable is required. Generate one with: openssl rand -base64 64')
 }
-const JWT_SECRET: string = JWT_SECRET_RAW || 'gps-street-sellers-secret-key-change-in-production'
+const JWT_SECRET: string = JWT_SECRET_RAW
 const JWT_SECRET_PREVIOUS: string = process.env.JWT_SECRET_PREVIOUS || ''
 
 const secretKey = new TextEncoder().encode(JWT_SECRET)

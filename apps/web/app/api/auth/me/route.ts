@@ -59,14 +59,15 @@ export async function PATCH(req: NextRequest) {
 
     const { role, name, phone, cityId } = await req.json()
 
+    // SECURITY: 'role' is intentionally NOT updatable here. Role changes must
+    // go through /api/auth/role-select (separate flow) to prevent privilege
+    // escalation via PATCH /api/auth/me.
+    void role
+
     const updates: string[] = []
     const values: any[] = []
     let paramCount = 1
 
-    if (role !== undefined) {
-      updates.push(`role = $${paramCount++}`)
-      values.push(role)
-    }
     if (name !== undefined) {
       updates.push(`name = $${paramCount++}`)
       values.push(name)

@@ -67,7 +67,9 @@ export async function POST(req: NextRequest) {
       [user.id, user.email, user.name, roleValue]
     )
 
-    const token = signTokenSync({ userId: user.id, email: user.email, role: user.role, tokenVersion: 1 })
+    const tokenPayload = { userId: user.id, email: user.email, role: user.role, tokenVersion: 1 }
+    const token = signTokenSync(tokenPayload, '15m')
+    const refreshToken = signTokenSync(tokenPayload, '7d')
 
     const response = NextResponse.json({
       token,
@@ -82,12 +84,20 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    const isProd = process.env.NODE_ENV === 'production'
     response.cookies.set('token', token, {
       httpOnly: true,
       path: '/',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 15, // 15 minutes — matches access token expiry
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
+    })
+    response.cookies.set('refresh-token', refreshToken, {
+      httpOnly: true,
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax',
+      secure: isProd,
     })
 
     return response

@@ -16,10 +16,10 @@ export type { TokenPayload } from './auth-edge'
 export { getTokenFromRequest } from './auth-edge'
 
 const JWT_SECRET_RAW = process.env.JWT_SECRET
-if (!JWT_SECRET_RAW && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET is required in production')
+if (!JWT_SECRET_RAW) {
+  throw new Error('JWT_SECRET environment variable is required. Generate one with: openssl rand -base64 64')
 }
-const JWT_SECRET: string = JWT_SECRET_RAW || 'gps-street-sellers-secret-key-change-in-production'
+const JWT_SECRET: string = JWT_SECRET_RAW
 const JWT_SECRET_PREVIOUS: string = process.env.JWT_SECRET_PREVIOUS || ''
 
 const secretKey = new TextEncoder().encode(JWT_SECRET)
@@ -50,10 +50,15 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
  * Synchronous HS256 signer (jsonwebtoken). Issues a token compatible with the
  * existing fleet of tokens already in cookies — same algorithm, same secret.
  *
+ * SECURITY: default expiry is 15 minutes (access token). For longer-lived
+ * tokens (e.g. refresh tokens), pass a longer `expiresIn` explicitly.
  * Use in login/register routes to mint new tokens.
  */
-export function signTokenSync(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+export function signTokenSync(
+  payload: Omit<TokenPayload, 'iat' | 'exp'>,
+  expiresIn: string | number = '15m'
+): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions)
 }
 
 /**

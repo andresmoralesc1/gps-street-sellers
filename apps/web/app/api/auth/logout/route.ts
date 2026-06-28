@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 
-function clearCookie(response: NextResponse) {
+function clearCookies(response: NextResponse) {
+  const isProd = process.env.NODE_ENV === 'production'
   response.cookies.set('token', '', {
     httpOnly: true,
     path: '/',
     maxAge: 0,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd,
+  })
+  response.cookies.set('refresh-token', '', {
+    httpOnly: true,
+    path: '/',
+    maxAge: 0,
+    sameSite: 'lax',
+    secure: isProd,
   })
 }
 
@@ -19,7 +27,7 @@ export async function POST(req: NextRequest) {
     // No token — nothing to revoke
     if (!token) {
       const response = NextResponse.json({ success: true })
-      clearCookie(response)
+      clearCookies(response)
       return response
     }
 
@@ -28,7 +36,7 @@ export async function POST(req: NextRequest) {
     // Invalid/expired token — just clear the cookie
     if (!decoded) {
       const response = NextResponse.json({ success: true })
-      clearCookie(response)
+      clearCookies(response)
       return response
     }
 
@@ -39,12 +47,12 @@ export async function POST(req: NextRequest) {
     )
 
     const response = NextResponse.json({ success: true })
-    clearCookie(response)
+    clearCookies(response)
     return response
   } catch (err) {
     console.error('Logout error:', err)
     const response = NextResponse.json({ success: true })
-    clearCookie(response)
+    clearCookies(response)
     return response
   }
 }

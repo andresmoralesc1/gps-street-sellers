@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return response
     }
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
 
     // Invalid/expired token — just clear the cookie
     if (!decoded) {

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const token = getTokenFromRequest(req)
     if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     const profileResult = await pool.query(
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     const token = getTokenFromRequest(req)
     if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     // Verify token hasn't been revoked
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 
     const result = await pool.query(
       `SELECT f.id, f.vendor_id, v.name as vendor_name, v.category, v.photo_url as image_url,
-              v.rating_avg, v.review_count
+              v.rating, v.review_count
        FROM favorites f
        JOIN vendors v ON f.vendor_id = v.id
        JOIN profiles pr ON f.buyer_id = pr.id
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       vendorName: row.vendor_name,
       category: row.category,
       imageUrl: row.image_url,
-      ratingAvg: parseFloat(row.rating_avg) || 0,
+      ratingAvg: parseFloat(row.rating) || 0,
       reviewCount: row.review_count || 0,
     }))
 
@@ -100,7 +100,7 @@ export async function DELETE(req: NextRequest) {
     const token = getTokenFromRequest(req)
     if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     // Verify token hasn't been revoked

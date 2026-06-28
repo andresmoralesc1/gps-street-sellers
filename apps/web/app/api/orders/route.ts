@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     let userId: string
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
@@ -52,15 +52,28 @@ export async function GET(req: NextRequest) {
 
     const result = await pool.query(query, params)
 
-    const ordersWithItems = await Promise.all(
-      result.rows.map(async (order) => {
-        const itemsResult = await pool.query(
-          'SELECT oi.*, pr.name as product_name FROM order_items oi JOIN products pr ON oi.product_id = pr.id WHERE oi.order_id = $1',
-          [order.id]
-        )
-        return { ...order, items: itemsResult.rows }
-      })
-    )
+    // Get all items in one query, grouped by order_id, then merge in JS.
+    // Avoids N+1 — one query for all items instead of one per order.
+    const orderIds = result.rows.map((o) => o.id)
+    const itemsByOrder = new Map()
+    if (orderIds.length > 0) {
+      const itemsResult = await pool.query(
+        `SELECT oi.order_id, oi.id, oi.product_id, oi.quantity, oi.unit_price,
+                pr.name as product_name
+         FROM order_items oi
+         JOIN products pr ON oi.product_id = pr.id
+         WHERE oi.order_id = ANY($1::uuid[])`,
+        [orderIds]
+      )
+      for (const item of itemsResult.rows) {
+        if (!itemsByOrder.has(item.order_id)) itemsByOrder.set(item.order_id, [])
+        itemsByOrder.get(item.order_id).push(item)
+      }
+    }
+    const ordersWithItems = result.rows.map((order) => ({
+      ...order,
+      items: itemsByOrder.get(order.id) || [],
+    }))
 
     return NextResponse.json({ orders: ordersWithItems })
   } catch (err) {
@@ -78,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     let userId: string
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }

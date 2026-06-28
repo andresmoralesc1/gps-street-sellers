@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     let userId: string
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }

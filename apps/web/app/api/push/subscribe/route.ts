@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     let userId: string
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
@@ -47,7 +47,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     let userId: string
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }

@@ -26,6 +26,27 @@ function loadEnv() {
 
 loadEnv()
 
+// Reset rate limit so tests aren't blocked by prior runs.
+// Each test run starts fresh — useful when iterating locally.
+async function resetRateLimit() {
+  const { Client } = require('pg')
+  const c = new Client({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'gps_street_sellers',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+  })
+  try {
+    await c.connect()
+    await c.query("DELETE FROM rate_limit_attempts WHERE bucket IN ('login', 'register')")
+  } catch (e) {
+    // table might not exist yet — non-fatal
+  } finally {
+    await c.end()
+  }
+}
+
 // Compile the TS file to JS via require hook (use tsx or pre-compile?)
 // For simplicity we test via the running Next.js endpoint — see test file #2.
 // Here we test the JS-only pieces.
@@ -41,6 +62,7 @@ async function fetchJSON(path, options = {}) {
 }
 
 test('POST /api/auth/login with valid creds returns 200 + token', async () => {
+  await resetRateLimit()
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

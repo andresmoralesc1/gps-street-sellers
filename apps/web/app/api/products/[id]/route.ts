@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     const { name, description, price, photo_url } = await req.json()
@@ -95,7 +95,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     if (!productId) {

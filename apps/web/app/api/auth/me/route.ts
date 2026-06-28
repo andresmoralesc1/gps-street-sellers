@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const token = getTokenFromRequest(req)
     if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
     const token = getTokenFromRequest(req)
     if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {

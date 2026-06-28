@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       const token = getTokenFromRequest(req)
       let userId: string | null = null
       if (token) {
-        const decoded = verifyToken(token)
+        const decoded = await verifyToken(token)
         if (decoded) userId = decoded.userId
       }
       await pool.query(
@@ -88,7 +88,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
+    const decoded = await verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     // Verify ownership

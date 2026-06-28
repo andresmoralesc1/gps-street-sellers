@@ -17,8 +17,9 @@ const MIME_TYPES: Record<string, string> = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params: paramsPromise }: { params: Promise<{ path: string[] }> }
 ) {
+  const params = await paramsPromise
   try {
     const filepath = path.join(STORAGE_DIR, ...params.path);
 

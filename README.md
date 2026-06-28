@@ -1,4 +1,4 @@
-# GPS Street Sellers
+# GPS Street Sellers (BarrioTech)
 
 Plataforma que conecta vendedores informales de calle con consumidores cercanos usando geolocalización en tiempo real.
 
@@ -6,7 +6,8 @@ Plataforma que conecta vendedores informales de calle con consumidores cercanos 
 
 ### Requisitos
 - Node.js 18+
-- npm o yarn
+- PostgreSQL 14+
+- npm
 
 ### Instalación
 
@@ -14,23 +15,18 @@ Plataforma que conecta vendedores informales de calle con consumidores cercanos 
 # Instalar dependencias
 npm install
 
-# Copiar variables de entorno
-cp apps/web/.env.example apps/web/.env.local
+# Configurar variables de entorno
+cp apps/web/.env.example apps/web/.env
+# Editar apps/web/.env con tus credenciales (DB, JWT_SECRET, etc.)
 
-# Editar .env.local con tus credenciales de Supabase
+# Aplicar migraciones
+npm run migrate
 
 # Iniciar desarrollo
 npm run dev
 ```
 
-La app estará disponible en `http://localhost:3000`
-
-### Variables de Entorno
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-```
+La app estará disponible en `http://localhost:3000` (configurable via `PORT`).
 
 ## 📁 Estructura del Proyecto
 
@@ -40,7 +36,10 @@ gps-street-sellers/
 │   └── web/              # Next.js 14 App Router
 ├── packages/
 │   └── core/             # Tipos y utilidades compartidas
-└── docs/
+├── migrations/           # SQL migrations (numeradas, idempotentes)
+└── scripts/
+    ├── migrate.js        # Migration runner
+    └── tests/            # node:test integration suite
 ```
 
 ## 🎨 Stack Técnico
@@ -48,8 +47,73 @@ gps-street-sellers/
 - **Frontend:** Next.js 14, React 18, Tailwind CSS
 - **Mapas:** React-Leaflet + OpenStreetMap
 - **Estado:** Zustand
-- **Backend:** Supabase (PostgreSQL + Auth + Realtime)
+- **Backend:** Next.js API routes + PostgreSQL (direct via `pg`)
+- **Auth:** JWT (jose para edge/middleware, jsonwebtoken para node routes)
 - **Mobile:** Expo (próximamente)
+
+## 🛠️ Scripts Útiles
+
+```bash
+npm run dev               # Development server
+npm run build             # Production build (core + web)
+npm run migrate           # Apply pending DB migrations
+npm run migrate:status    # Show migration status
+npm test                  # Run integration tests
+```
+
+## 🗄️ Base de Datos
+
+Las migraciones viven en `/migrations` como archivos `NNN_description.sql` numerados.
+El runner (`scripts/migrate.js`) las aplica en orden lexicográfico y registra
+los nombres aplicados en la tabla `migrations`.
+
+Para agregar una nueva migración:
+
+1. Crea `migrations/NNN_descripcion.sql` con `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ADD COLUMN IF NOT EXISTS`, etc.
+2. Hazla idempotente (segura de correr 2+ veces).
+3. Corre `npm run migrate`.
+
+## 🔐 Auth
+
+- `lib/auth-edge.ts` — funciones seguras para middleware (edge runtime)
+- `lib/auth.ts` — funciones para API routes (node runtime, incluye `jsonwebtoken`)
+- `lib/auth-db.ts` — helpers que tocan DB (`isTokenRevoked`)
+- `lib/rate-limit.ts` — rate limiter persistente en Postgres
+
+**Secret:** `JWT_SECRET` en `apps/web/.env`. Genera con `openssl rand -base64 64`.
+
+## 🧪 Tests
+
+Integration tests escritos con `node:test` (sin deps externas).
+Cada test corre contra el deployment en vivo (`https://gps.neuralflow.space`).
+
+```bash
+npm test                  # all tests
+npm run test:auth         # solo auth
+npm run test:vendors      # solo vendors/products
+```
+
+Cada test resetea `rate_limit_attempts` antes de empezar para no depender de runs previas.
+
+## 📋 Reglas de Negocio
+
+- Vendedores activos con GPS < 5 min aparecen en el mapa
+- Frecuencia de GPS: cada 15-30 segundos
+- Máximo 10 favoritos por comprador
+- Notificaciones solo si el usuario las habilita
+- Rate limit: 5 intentos de login / 5 min por IP
+
+## 🚢 Deploy
+
+```bash
+npm run build
+pm2 start "npm run start" --name gps
+# or use pm2 ecosystem.config.js
+```
+
+## 📜 CI/CD
+
+`.github/workflows/ci.yml` corre build + tests en cada PR a `main`/`master`.
 
 ## 📱 Pantallas
 
@@ -62,16 +126,10 @@ gps-street-sellers/
 7. **Editar perfil** - Datos y productos del vendedor
 8. **Configuración** - Notificaciones y preferencias
 
-## 📋 Reglas de Negocio
-
-- Vendedores activos con GPS < 5 min aparecen en el mapa
-- Frecuencia de GPS: cada 15-30 segundos
-- Máximo 10 favoritos por comprador
-- Notificaciones solo si el usuario las habilita
-
 ## 🔜 Roadmap
 
 - [ ] Realtime GPS tracking
 - [ ] Push notifications
 - [ ] Mobile app (Expo)
 - [ ] Pagos integrados
+- [ ] Next.js 16 upgrade

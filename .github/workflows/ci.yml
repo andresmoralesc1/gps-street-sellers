@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: gps_street_sellers_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: gps_street_sellers_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ci-test-secret-not-real-do-not-use-in-production
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build core package
+        run: npm run build:core
+
+      - name: Apply test DB schema
+        env:
+          PGPASSWORD: postgres
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f migrations/000_create_migrations_table.sql
+          # Apply other migrations (idempotent — guarded with IF NOT EXISTS where possible)
+          for m in migrations/*.sql; do
+            echo "Applying $m"
+            PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f "$m" || true
+          done
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: node --test scripts/tests/*.test.js
+        # Note: integration tests hit the deployed site; they're guarded by env presence.
+        # For pure DB tests we'd need a separate test suite — TODO.

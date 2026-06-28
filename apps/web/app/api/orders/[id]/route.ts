@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
+import { notify } from '@/lib/push'
 
 
 // GET /api/orders/[id] — buyer or vendor of this order only
@@ -119,8 +120,49 @@ export async function PATCH(req: NextRequest, { params: paramsPromise }: { param
       'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
       [status, params.id]
     )
+    const updatedOrder = result.rows[0]
 
-    return NextResponse.json({ order: result.rows[0] })
+    // Push notification to the buyer when the order status changes.
+    // Buyer-facing messages only — cancellation/acceptance/ready/completed.
+    const STATUS_MESSAGES: Record<string, { title: string; body: string; url: string }> = {
+      accepted: {
+        title: '✅ Pedido aceptado',
+        body: 'Tu vendedor aceptó tu pedido. Te avisaremos cuando esté listo.',
+        url: '/orders',
+      },
+      ready: {
+        title: '🎉 Pedido listo',
+        body: 'Tu pedido está listo para recoger. ¡Pasa por él!',
+        url: '/orders',
+      },
+      completed: {
+        title: '✓ Pedido completado',
+        body: 'Tu pedido fue entregado. ¡Gracias por usar BarrioTech!',
+        url: '/orders',
+      },
+      cancelled: {
+        title: '✗ Pedido cancelado',
+        body: 'Tu vendedor canceló tu pedido.',
+        url: '/orders',
+      },
+    }
+
+    const message = STATUS_MESSAGES[status]
+    if (message) {
+      // Resolve buyer.users_id from order.buyer_id (FK to profiles.id).
+      const buyerRes = await pool.query(
+        'SELECT user_id FROM profiles WHERE id = $1',
+        [updatedOrder.buyer_id]
+      )
+      if (buyerRes.rows.length > 0) {
+        // Fire-and-forget — push failures must not fail the order update.
+        void notify(buyerRes.rows[0].user_id, message).catch((err) => {
+          console.error('[orders] push notify failed:', err)
+        })
+      }
+    }
+
+    return NextResponse.json({ order: updatedOrder })
   } catch (err) {
     console.error('Order PATCH error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

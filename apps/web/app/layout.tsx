@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Providers } from './providers'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
+import { CookieBanner } from '@/components/CookieBanner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default function RootLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <CookieBanner />
         </Providers>
       </body>
     </html>

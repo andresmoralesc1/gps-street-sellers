@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, password, name, phone, cityId, role } = await req.json()
+    const { email, password, name, phone, cityId, role, acceptedTerms, acceptedPrivacy } = await req.json()
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -26,6 +26,16 @@ export async function POST(req: NextRequest) {
 
     if (!phone || phone.replace(/\D/g, '').length < 7) {
       return NextResponse.json({ error: 'Ingresa un número de teléfono válido' }, { status: 400 })
+    }
+
+    // Ley 1581/2012 art. 9 — consent must be explicit and informed.
+    // The frontend must send acceptedTerms and acceptedPrivacy = true
+    // after the user ticked the boxes. We refuse registration otherwise.
+    if (!acceptedTerms || !acceptedPrivacy) {
+      return NextResponse.json(
+        { error: 'Debes aceptar los Términos y la Política de Tratamiento de Datos Personales' },
+        { status: 400 }
+      )
     }
 
     // Validate cityId if provided (cities are static config, not in DB)
@@ -66,6 +76,24 @@ export async function POST(req: NextRequest) {
        ON CONFLICT (user_id) DO NOTHING`,
       [user.id, user.email, user.name, roleValue]
     )
+
+    // Ley 1581/2012 — record the consent the user gave at registration.
+    // The frontend already validated that the boxes were checked (we 400'd
+    // earlier otherwise). Logged for audit / ARCO rights requests.
+    // We do NOT block registration if this insert fails — it's an audit log,
+    // not part of the user identity. A failure is logged for ops to follow up.
+    try {
+      const policyVersion = process.env.POLICY_VERSION || 'v1.0'
+      await pool.query(
+        `INSERT INTO consent_logs
+          (user_id, consent_type, policy_version, granted, ip_address, user_agent)
+         VALUES ($1, 'terms', $2, true, $3, $4),
+                ($1, 'privacy', $2, true, $3, $4)`,
+        [user.id, policyVersion, ip, req.headers.get('user-agent')]
+      )
+    } catch (err) {
+      console.error('[register] consent log failed (non-fatal):', err)
+    }
 
     const tokenPayload = { userId: user.id, email: user.email, role: user.role, tokenVersion: 1 }
     const token = signTokenSync(tokenPayload, '15m')

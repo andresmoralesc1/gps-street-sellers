@@ -17,6 +17,8 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState('')
   const [cityId, setCityId] = useState('')
   const [password, setPassword] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -50,11 +52,26 @@ export default function RegisterPage() {
       return
     }
 
+    // Ley 1581/2012 art. 9 — consent must be explicit and informed.
+    if (!acceptedTerms || !acceptedPrivacy) {
+      setError('Debes aceptar los Términos y la Política de Tratamiento de Datos Personales para continuar.')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name: fullName, phone: cleanPhone, cityId }),
+        body: JSON.stringify({
+          email,
+          password,
+          name: fullName,
+          phone: cleanPhone,
+          cityId,
+          acceptedTerms,
+          acceptedPrivacy,
+        }),
       })
 
       const data = await res.json()
@@ -135,6 +152,46 @@ export default function RegisterPage() {
             disabled={isLoading}
             required
           />
+
+          {/* Ley 1581/2012 — explicit, informed consent. Boxes are unchecked
+              by default (pre-checked would violate the law). */}
+          <div className="space-y-2 pt-2 border-t border-gray-100">
+            <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                disabled={isLoading}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                required
+              />
+              <span>
+                Acepto los{' '}
+                <Link href="/terminos" className="text-primary underline" target="_blank">
+                  Términos y Condiciones
+                </Link>
+                .
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedPrivacy}
+                onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                disabled={isLoading}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                required
+              />
+              <span>
+                Acepto la{' '}
+                <Link href="/privacidad" className="text-primary underline" target="_blank">
+                  Política de Tratamiento de Datos Personales
+                </Link>{' '}
+                (Ley 1581/2012) y autorizo el tratamiento de mis datos para las
+                finalidades descritas allí.
+              </span>
+            </label>
+          </div>
 
           {error && <p className="text-accent text-sm">{error}</p>}
 

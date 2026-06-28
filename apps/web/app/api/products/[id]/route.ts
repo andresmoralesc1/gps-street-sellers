@@ -6,13 +6,12 @@ import pool from '@/lib/db'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type RouteContext = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-// PATCH /api/products/[id] — update product
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const productId = context.params.id
+    const { id: productId } = await context.params
 
     if (!productId || !UUID_RE.test(productId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -78,7 +77,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 // DELETE /api/products/[id]
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
-    const productId = context.params.id
+    const { id: productId } = await context.params
 
     if (!productId || !UUID_RE.test(productId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })

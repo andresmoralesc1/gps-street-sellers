@@ -4,7 +4,9 @@ import pool from '@/lib/db'
 
 
 // PUT /api/vendors/[id]/location — update vendor location (owner only)
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+
   try {
     const token = getTokenFromRequest(req)
     if (!token) {

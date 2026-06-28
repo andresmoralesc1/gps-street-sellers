@@ -4,13 +4,13 @@ import pool from '@/lib/db'
 
 
 type RouteContext = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 // GET /api/vendors/[id]
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
-    const vendorId = context.params.id
+    const { id: vendorId } = await context.params
 
     const vendorResult = await pool.query(
       `SELECT v.*, c.label as category_label
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 // PATCH /api/vendors/[id] — update vendor profile (owner only)
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const vendorId = context.params.id
+    const { id: vendorId } = await context.params
 
     let token: string | null = null
     const authHeader = req.headers.get('authorization')

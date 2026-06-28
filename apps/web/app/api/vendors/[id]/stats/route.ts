@@ -4,7 +4,9 @@ import pool from '@/lib/db'
 
 
 // GET /api/vendors/[id]/stats — owner-only vendor stats
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+
   try {
     const token = getTokenFromRequest(req)
     if (!token) {

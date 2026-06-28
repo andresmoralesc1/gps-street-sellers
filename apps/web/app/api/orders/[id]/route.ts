@@ -4,7 +4,9 @@ import pool from '@/lib/db'
 
 
 // GET /api/orders/[id] — buyer or vendor of this order only
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+
   try {
     const token = getTokenFromRequest(req)
     if (!token) {
@@ -64,7 +66,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PATCH /api/orders/[id] — vendor of this order can update status
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+
   try {
     const token = getTokenFromRequest(req)
     if (!token) {

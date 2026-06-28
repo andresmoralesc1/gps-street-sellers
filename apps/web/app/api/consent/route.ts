@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import pool from '@/lib/db'
 
 /**
@@ -64,6 +65,21 @@ export async function POST(request: NextRequest) {
   if (token) {
     const payload = await verifyToken(token)
     if (payload) userId = payload.userId
+  }
+
+  // 2.5. Rate limit by IP — 20/hour. Public endpoint per Ley 1581/2012,
+  // but unauthenticated callers could otherwise pollute consent_logs.
+  // For authenticated callers this also blocks programmatic abuse.
+  const rlIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  const { allowed, retryAfter } = await checkRateLimit(rlIp, 'consent', 20, 60 * 60 * 1000)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Intenta más tarde.', retryAfter },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+    )
   }
 
   // For anonymous consent, require an email so we can de-duplicate + audit.

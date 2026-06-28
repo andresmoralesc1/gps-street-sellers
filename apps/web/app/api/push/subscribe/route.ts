@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 
 // POST /api/push/subscribe — save push subscription for user
 export async function POST(req: NextRequest) {
+  // Rate limit by IP — 10 attempts/hour. Authenticated, but a compromised
+  // session shouldn't be able to spam subscriptions to fill push_subscriptions.
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || 'unknown'
+  const { allowed, retryAfter } = await checkRateLimit(ip, 'push_subscribe', 10, 60 * 60 * 1000)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Intenta más tarde.', retryAfter },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+    )
+  }
+
   try {
     const token = getTokenFromRequest(req)
     if (!token) {

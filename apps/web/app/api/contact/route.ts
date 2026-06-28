@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  // Rate limit BEFORE doing any work — 5 messages per IP per hour.
+  // Contact form is public; without this an attacker can flood contact_messages.
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || 'unknown'
+  const { allowed, retryAfter } = await checkRateLimit(ip, 'contact', 5, 60 * 60 * 1000)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados mensajes. Intenta más tarde.', retryAfter },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+    )
+  }
+
   try {
     const { name, email, subject, message } = await req.json()
 

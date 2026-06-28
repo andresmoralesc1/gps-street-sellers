@@ -165,10 +165,29 @@ test('POST /api/auth/register rejects invalid city', async () => {
       name: 'Test',
       phone: '3001234567',
       cityId: 'atlantis', // not in COLOMBIA_CITIES
+      acceptedTerms: true,   // Ley 1581/2012 — Etapa 4
+      acceptedPrivacy: true,
     }),
   })
   assert.equal(res.status, 400)
   assert.equal(res.body.error, 'Ciudad inválida')
+})
+
+test('POST /api/auth/register rejects when consent checkboxes missing', async () => {
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'no-consent-' + Date.now() + '@test.local',
+      password: 'Password123',
+      name: 'Test',
+      phone: '3001234567',
+      cityId: 'bog',
+      // missing acceptedTerms + acceptedPrivacy
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /Términos|Tratamiento/i)
 })
 
 test('PATCH /api/products/[id] rejects malformed UUID', async () => {

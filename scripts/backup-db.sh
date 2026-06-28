@@ -22,17 +22,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$PROJECT_DIR/apps/web/.env"
 
-# ---- Config (env overrides) -------------------------------------------------
+# Source .env so cron jobs (which run with a minimal env) can see DB creds.
+# We only pick up PG/DB style vars; everything else is left untouched.
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
 
+# Map common DB_* vars to PG* so the script works with both naming schemes.
+PGHOST="${PGHOST:-${DB_HOST:-localhost}}"
+PGPORT="${PGPORT:-${DB_PORT:-5432}}"
+PGUSER="${PGUSER:-${DB_USER:-postgres}}"
+PGDATABASE="${PGDATABASE:-${DB_NAME:-gps_street_sellers}}"
+export PGPASSWORD="${PGPASSWORD:-${DB_PASSWORD:-}}"
+
+if [[ -z "$PGPASSWORD" ]]; then
+  echo "[backup] FAIL — neither PGPASSWORD nor DB_PASSWORD set (check $ENV_FILE)" >&2
+  exit 1
+fi
+
+# Defaults that can be overridden AFTER .env sourcing.
 BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
 BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
 BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
 BACKUP_S3_BUCKET="${BACKUP_S3_BUCKET:-}" # empty = skip upload
-PGHOST="${PGHOST:-localhost}"
-PGPORT="${PGPORT:-5432}"
-PGUSER="${PGUSER:-postgres}"
-PGDATABASE="${PGDATABASE:-gps_street_sellers}"
-export PGPASSWORD="${PGPASSWORD:-postgres}"
 
 mkdir -p "$BACKUP_DIR"
 

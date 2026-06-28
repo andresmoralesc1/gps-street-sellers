@@ -8,4 +8,7 @@ apps/web/out/
 apps/web/tsconfig.tsbuildinfo
 data.db
 *.log
+backups/
+*.sql
+*.sql.gz
 .DS_Store

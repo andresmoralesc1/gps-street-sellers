@@ -33,6 +33,7 @@ interface VendorCardProps {
   distance?: number // distancia en metros
   onClose?: () => void
   onViewDetails?: () => void
+  isSponsored?: boolean
 }
 
 function formatDistance(meters: number): string {
@@ -42,7 +43,7 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)}km`
 }
 
-export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }: VendorCardProps) {
+export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, isSponsored }: VendorCardProps) {
   const category = getCategoryInfo(vendor.category)
   const IconComponent = CategoryIconMap[vendor.category]
 
@@ -72,6 +73,14 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails }
           <h3 className="font-semibold flex items-center gap-1">
             {vendor.name}
             {vendor.isVerified && <span title="Vendedor verificado">✅</span>}
+            {isSponsored && (
+              <span
+                title="Vendedor destacado — aparece primero"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500 text-white"
+              >
+                ⭐ DESTACADO
+              </span>
+            )}
           </h3>
           <p className="text-sm text-gray-500">
             {category.label}

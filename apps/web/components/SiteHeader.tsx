@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { Menu, X, MapPin, User, LogIn, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { NotificationBell } from './notifications/NotificationBell'
+import { ThemeToggle } from './ThemeToggle'
 import { useStore } from '@/store/useStore'
 
 export function SiteHeader() {
@@ -86,6 +87,7 @@ export function SiteHeader() {
 
           {/* Desktop Auth */}
           <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
             <NotificationBell />
             {isLoggedIn ? (
               <div className="relative">

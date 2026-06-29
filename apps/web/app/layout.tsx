@@ -3,6 +3,7 @@ import { Providers } from './providers'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
 import { CookieBanner } from '@/components/CookieBanner'
+import { OnboardingTour } from '@/components/OnboardingTour'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <SiteFooter />
           <CookieBanner />
+          <OnboardingTour />
         </Providers>
       </body>
     </html>

@@ -194,7 +194,12 @@ export async function PATCH(req: NextRequest) {
 
     // Build update query dynamically for allowed fields
     // NOTE: 'is_verified' is intentionally NOT here — only admins can verify vendors.
-    const allowedFields = ['name', 'description', 'category', 'phone', 'city_id', 'is_active', 'photo_url']
+    // vehicle_type + vehicle_photo_url let vendors show what cart/vehicle they use
+    // (used for the "anunciate en el carrito" revenue stream and buyer trust).
+    const allowedFields = [
+      'name', 'description', 'category', 'phone', 'city_id', 'is_active',
+      'photo_url', 'vehicle_type', 'vehicle_photo_url',
+    ]
     const updates: string[] = []
     const values: any[] = []
     let paramIndex = 1

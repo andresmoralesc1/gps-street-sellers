@@ -188,6 +188,11 @@ export function MapView() {
             }
             const emoji = catMap[cat] || '📦'
             const catColor = getCategoryInfo(cat).color
+            // Sponsored vendors get a gold ring + star badge to differentiate
+            // from organic placement. Same icon, different border treatment.
+            const sponsored = (vendor as any).isSponsored
+            const ringColor = sponsored ? '#F59E0B' : 'white'
+            const ringWidth = sponsored ? 4 : 3
             const markerIcon = new L.DivIcon({
               html: `<div style="
                 background: ${catColor};
@@ -195,13 +200,16 @@ export function MapView() {
                 height: 42px;
                 border-radius: 50% 50% 50% 0;
                 transform: rotate(-45deg);
-                border: 3px solid white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                border: ${ringWidth}px solid ${ringColor};
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3)${sponsored ? ', 0 0 12px rgba(245, 158, 11, 0.6)' : ''};
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 20px;
-              "><span style="transform: rotate(45deg);">${emoji}</span></div>`,
+                position: relative;
+              "><span style="transform: rotate(45deg);">${emoji}</span>${
+                sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
+              }</div>`,
               className: 'vendor-category-marker',
               iconSize: [42, 42],
               iconAnchor: [21, 42],
@@ -222,6 +230,7 @@ export function MapView() {
                     vendor={vendor}
                     compact
                     distance={getVendorDistance(vendor)}
+                    isSponsored={sponsored}
                   />
                 </Popup>
               </Marker>

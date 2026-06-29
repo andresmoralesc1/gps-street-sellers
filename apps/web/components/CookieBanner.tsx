@@ -20,23 +20,37 @@ const POLICY_VERSION = 'v1.0'
  * (a) comply with the "inform about cookies" requirement, (b) give users
  * the option to clear localStorage non-essentials if any are added later,
  * (c) create an audit trail of consent.
+ *
+ * UX note: the banner only appears AFTER the user has interacted with the page
+ * (scroll, click, or keypress) to avoid covering the registration form CTA
+ * on the very first render — that form is the highest-conversion surface.
  */
 export function CookieBanner() {
   const [visible, setVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
+    // Wait for first user signal before showing — non-intrusive.
+    const show = () => {
+      if (visible) return
+      setVisible(true)
+    }
+    const events = ['scroll', 'click', 'keydown', 'touchstart']
     // Defer to next tick so we never block first paint.
     const t = setTimeout(() => {
       try {
         const stored = localStorage.getItem(STORAGE_KEY)
-        if (!stored) setVisible(true)
-      } catch {
-        // localStorage might be blocked — show the banner anyway.
-        setVisible(true)
-      }
+        if (stored) {
+          setVisible(false)
+          return
+        }
+        events.forEach((ev) => window.addEventListener(ev, show, { once: true, passive: true }))
+      } catch {}
     }, 500)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      events.forEach((ev) => window.removeEventListener(ev, show))
+    }
   }, [])
 
   const recordConsent = async (
@@ -92,9 +106,9 @@ export function CookieBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Aviso de cookies"
-      className="fixed bottom-0 inset-x-0 z-50 p-4 bg-white border-t border-gray-200 shadow-lg"
+      className="fixed bottom-4 right-4 max-w-sm w-[calc(100vw-2rem)] md:w-96 z-50 p-4 bg-white border border-gray-200 rounded-xl shadow-2xl"
     >
-      <div className="max-w-3xl mx-auto">
+      <div>
         <p className="text-sm text-gray-700 mb-3">
           🍪 <strong>Usamos cookies.</strong> BarrioTech solo utiliza cookies
           estrictamente necesarias para mantener tu sesión iniciada y recordar

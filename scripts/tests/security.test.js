@@ -87,12 +87,15 @@ test('CSP allows Supabase connections (for push + storage)', async () => {
   assert.match(csp, /worker-src[^;]*'self'/)
 })
 
-test('Permissions-Policy only enables geolocation + notifications', async () => {
+test('Permissions-Policy only enables geolocation (notifications is invalid feature)', async () => {
+  // 'notifications' is NOT a valid feature in the Permissions-Policy spec — using
+  // it triggers a browser warning. Notifications fall under the system, not
+  // permissions. Keep only geolocation and block everything else.
   const cfg = require('../../apps/web/next.config.js')
   const result = await cfg.headers()
   const pp = result[0].headers.find((h) => h.key === 'Permissions-Policy').value
   assert.match(pp, /geolocation=\(self\)/)
-  assert.match(pp, /notifications=\(self\)/)
+  assert.doesNotMatch(pp, /notifications=/, "notifications should not be in Permissions-Policy")
   assert.match(pp, /camera=\(\)/)
   assert.match(pp, /microphone=\(\)/)
 })

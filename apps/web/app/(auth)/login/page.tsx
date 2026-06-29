@@ -8,7 +8,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useStore } from '@/store/useStore'
-import { COLOMBIA_CITIES } from '@/lib/core/constants'
+import { CityInput } from '@/components/ui/CityInput'
 
 function AuthPageContent() {
   const router = useRouter()
@@ -286,19 +286,12 @@ function AuthPageContent() {
 
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">Ciudad</label>
-            <select
+            <CityInput
               value={cityId}
-              onChange={(e) => setCityId(e.target.value)}
+              onChange={setCityId}
               disabled={isLoading}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            >
-              <option value="">Selecciona tu ciudad</option>
-              {COLOMBIA_CITIES.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name} — {city.department}
-                </option>
-              ))}
-            </select>
+              placeholder="Busca tu ciudad..."
+            />
           </div>
 
           <div>

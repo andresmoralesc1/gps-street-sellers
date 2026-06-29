@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/Input'
 import { ActiveToggle } from '@/components/seller/ActiveToggle'
 import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { useStore } from '@/store/useStore'
-import { CATEGORIES, COLOMBIA_CITIES } from '@/lib/core/constants'
+import { CATEGORIES } from '@/lib/core/constants'
+import { CityInput } from '@/components/ui/CityInput'
 import type { VendorCategory } from '@/lib/core/types'
 
 interface Product {
@@ -276,18 +277,12 @@ export default function SellerDashboardPage() {
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Ciudad</label>
-              <select
+              <CityInput
                 value={createCityId}
-                onChange={(e) => setCreateCityId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="">Selecciona tu ciudad</option>
-                {COLOMBIA_CITIES.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name} — {city.department}
-                  </option>
-                ))}
-              </select>
+                onChange={setCreateCityId}
+                placeholder="Busca tu ciudad..."
+                rounded="lg"
+              />
             </div>
 
             <div className="flex flex-col gap-1">

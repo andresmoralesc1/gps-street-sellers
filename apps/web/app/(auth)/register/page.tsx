@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { useStore } from '@/store/useStore'
-import { COLOMBIA_CITIES } from '@/lib/core/constants'
+import { CityInput } from '@/components/ui/CityInput'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -129,19 +129,13 @@ export default function RegisterPage() {
           />
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Ciudad</label>
-            <select
+            <CityInput
               value={cityId}
-              onChange={(e) => setCityId(e.target.value)}
+              onChange={setCityId}
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            >
-              <option value="">Selecciona tu ciudad</option>
-              {COLOMBIA_CITIES.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name} — {city.department}
-                </option>
-              ))}
-            </select>
+              placeholder="Busca tu ciudad..."
+              rounded="lg"
+            />
           </div>
           <Input
             label="Contraseña"

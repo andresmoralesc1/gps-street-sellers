@@ -13,7 +13,7 @@ export function Badge({ className, variant = 'default', children, ...props }: Ba
         {
           'bg-stone-100 text-stone-700': variant === 'default',
           'bg-primary/10 text-primary-700 shadow-sm': variant === 'primary',
-          'bg-secondary/10 text-secondary-700 shadow-sm': variant === 'secondary',
+          'bg-secondary/10 text-secondary-dark shadow-sm': variant === 'secondary',
           'border border-current text-stone-600': variant === 'outline',
         },
         className

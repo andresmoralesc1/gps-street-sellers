@@ -23,9 +23,9 @@ const config: Config = {
           DEFAULT: '#F97316',
         },
         secondary: {
-          DEFAULT: '#3B82F6',
-          light: '#60A5FA',
-          dark: '#2563EB',
+          DEFAULT: '#FB923C',
+          light: '#FDBA74',
+          dark: '#EA580C',
         },
         background: {
           cream: '#FFFBEB',

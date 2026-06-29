@@ -27,7 +27,7 @@ const FEATURES_BUYERS = [
   { icon: Star, title: 'Reseñas verificadas', desc: 'Lee opiniones reales de otros compradores antes de pedir', color: 'bg-yellow-100 text-yellow-600' },
 ]
 const FEATURES_VENDORS = [
-  { icon: TrendingUp, title: 'Más visibilidad', desc: 'Aparece en el mapa para miles de compradores cerca de ti', color: 'bg-blue-100 text-blue-600' },
+  { icon: TrendingUp, title: 'Más visibilidad', desc: 'Aparece en el mapa para miles de compradores cerca de ti', color: 'bg-primary-100 text-primary-600' },
   { icon: Clock, title: 'Gestiona tu tiempo', desc: 'Activa o desactiva tu ubicación cuando quieras trabajar', color: 'bg-green-100 text-green-600' },
   { icon: Shield, title: 'Sin comisiones', desc: 'Sin cobros por aparecer en el mapa. Tú controlas tu negocio', color: 'bg-purple-100 text-purple-600' },
 ]
@@ -169,11 +169,11 @@ export default function HomePage() {
       </section>
 
       {/* Para vendedores */}
-      <section className="py-16 px-4 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <section className="py-16 px-4 bg-gradient-to-br from-primary-50 to-primary-100">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <TrendingUp size={20} className="text-blue-600" />
+            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
+              <TrendingUp size={20} className="text-primary-600" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">Para vendedores</h2>

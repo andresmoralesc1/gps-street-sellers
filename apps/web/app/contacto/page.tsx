@@ -74,8 +74,8 @@ export default function ContactPage() {
             </Card>
             <Card variant="outlined" className="p-5">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Phone size={20} className="text-blue-600" />
+                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Phone size={20} className="text-primary-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-1">Teléfono</h3>

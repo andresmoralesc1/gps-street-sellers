@@ -11,7 +11,7 @@ import { useStore } from '@/store/useStore'
 
 const STATUS_CONFIG = {
   pending: { label: 'Pendiente', bg: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  confirmed: { label: 'Confirmado', bg: 'bg-blue-100 text-blue-700', icon: Clock },
+  confirmed: { label: 'Confirmado', bg: 'bg-primary-100 text-primary-700', icon: Clock },
   delivered: { label: 'Entregado', bg: 'bg-green-100 text-green-700', icon: CheckCircle },
   cancelled: { label: 'Cancelado', bg: 'bg-red-100 text-red-700', icon: XCircle },
 }

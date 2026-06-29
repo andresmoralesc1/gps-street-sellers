@@ -8,6 +8,15 @@
   "scripts": {
     "dev": "cd apps/web && npm run dev",
     "build": "npm run build:core && cd apps/web && npm run build",
-    "build:core": "cd packages/core && npm run build"
+    "build:core": "cd packages/core && npm run build",
+    "migrate": "node scripts/migrate.js",
+    "migrate:status": "node scripts/migrate.js --status",
+    "generate-vapid": "node scripts/generate-vapid.js",
+    "test": "node --test scripts/tests/*.test.js",
+    "test:auth": "node --test scripts/tests/auth.test.js",
+    "test:vendors": "node --test scripts/tests/vendors.test.js"
+  },
+  "dependencies": {
+    "jose": "^6.2.3"
   }
 }

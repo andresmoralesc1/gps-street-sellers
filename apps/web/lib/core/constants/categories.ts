@@ -1,19 +1,19 @@
 import type { VendorCategory } from '../types'
 
-// Usamos lucide-react icons via el componente IconRenderer
 export interface CategoryInfo {
   id: VendorCategory
   label: string
   color: string
+  emoji: string
 }
 
 export const CATEGORIES: CategoryInfo[] = [
-  { id: 'frutas', label: 'Frutas', color: '#10B981' },
-  { id: 'comida', label: 'Comida caliente', color: '#F59E0B' },
-  { id: 'bebidas', label: 'Bebidas', color: '#3B82F6' },
-  { id: 'artesanias', label: 'Artesanías', color: '#8B5CF6' },
-  { id: 'ropa', label: 'Ropa', color: '#EC4899' },
-  { id: 'otros', label: 'Otros', color: '#6B7280' },
+  { id: 'frutas', label: 'Frutas', color: '#10B981', emoji: '🥑' },
+  { id: 'comida', label: 'Comida caliente', color: '#F59E0B', emoji: '🍳' },
+  { id: 'bebidas', label: 'Bebidas', color: '#3B82F6', emoji: '🧃' },
+  { id: 'artesanias', label: 'Artesanías', color: '#8B5CF6', emoji: '🎨' },
+  { id: 'ropa', label: 'Ropa', color: '#EC4899', emoji: '👕' },
+  { id: 'otros', label: 'Otros', color: '#6B7280', emoji: '📦' },
 ]
 
 export const getCategoryInfo = (id: VendorCategory): CategoryInfo => {

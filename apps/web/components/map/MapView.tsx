@@ -1,18 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet'
+import { useEffect, useState, useCallback } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Frown } from 'lucide-react'
 import { VendorCard } from './VendorCard'
 import { useStore } from '@/store/useStore'
-import { getActiveVendors, MOCK_LOCATIONS } from '@/lib/mockData'
-import { useVendorDistances } from '@/hooks/useVendorDistance'
-import type { Vendor } from '@/lib/core/types'
+import { calculateDistance } from '@/lib/core/utils/geo'
+import { getCategoryInfo, COLOMBIA_CITIES } from '@/lib/core/constants'
+import type { Vendor, VendorCategory } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
+import L from 'leaflet'
 
-// Fix para íconos de Leaflet en Next.js (debe importarse primero)
+// Fix para íconos de Leaflet en Next.js
 import '@/lib/leaflet-icon-fix'
 
 function MapUpdater({ center }: { center: LatLng }) {
@@ -23,21 +23,71 @@ function MapUpdater({ center }: { center: LatLng }) {
   return null
 }
 
-const BOGOTA_CENTER: [number, number] = [4.6097, -74.0817]
-
 export function MapView() {
-  const router = useRouter()
-  const [center, setCenter] = useState<[number, number]>(BOGOTA_CENTER)
+  const selectedCity = useStore((s) => s.selectedCity)
+  const setSelectedCity = useStore((s) => s.setSelectedCity)
+  const [center, setCenter] = useState<[number, number]>(selectedCity.center)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [activeVendors, setActiveVendors] = useState<Vendor[]>([])
   const filters = useStore((s) => s.filters)
   const userLocation = useStore((s) => s.userLocation)
 
+  // Persist city selection to localStorage
   useEffect(() => {
-    // Simular ubicación del usuario (Bogotá)
-    if (!userLocation) {
-      useStore.getState().setUserLocation({ lat: 4.6097, lng: -74.0817 })
+    const saved = localStorage.getItem('selectedCityId')
+    if (saved) {
+      const city = COLOMBIA_CITIES.find((c) => c.id === saved)
+      if (city) setSelectedCity(city)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Save city to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('selectedCityId', selectedCity.id)
+    // When city changes, clear user location so map centers on city center
+    useStore.getState().setUserLocation(null)
+  }, [selectedCity])
+
+  const fetchActiveVendors = useCallback(async () => {
+    try {
+      const cityId = selectedCity.id
+      const res = await fetch(`/api/vendors?active=true&withLocation=true&cityId=${encodeURIComponent(cityId)}`)
+      const data = await res.json()
+      if (data.vendors) {
+        setActiveVendors(data.vendors)
+      }
+    } catch (err) {
+      console.error('Failed to fetch vendors:', err)
+    }
+  }, [selectedCity.id])
+
+  useEffect(() => {
+    if (!userLocation) {
+      // Try to get real location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            useStore.getState().setUserLocation({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            })
+          },
+          () => {
+            useStore.getState().setUserLocation({ lat: selectedCity.center[0], lng: selectedCity.center[1] })
+          }
+        )
+      } else {
+        useStore.getState().setUserLocation({ lat: selectedCity.center[0], lng: selectedCity.center[1] })
+      }
+    }
+  }, [selectedCity])
+
+  useEffect(() => {
+    fetchActiveVendors()
+    const interval = setInterval(fetchActiveVendors, 30000)
+    return () => clearInterval(interval)
+  }, [fetchActiveVendors])
 
   useEffect(() => {
     if (userLocation) {
@@ -45,19 +95,31 @@ export function MapView() {
     }
   }, [userLocation])
 
-  const activeVendors = getActiveVendors().filter((v) => {
+  useEffect(() => {
+    setCenter(selectedCity.center)
+  }, [selectedCity])
+
+  const filteredVendors = activeVendors.filter((v) => {
     if (filters.category && v.category !== filters.category) return false
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase()
+      if (!v.name?.toLowerCase().includes(query)) return false
+    }
+    if (userLocation && v.latitude && v.longitude) {
+      const dist = calculateDistance(userLocation.lat, userLocation.lng, v.latitude, v.longitude)
+      if (dist > filters.maxDistanceMeters) return false
+    }
     return true
   })
 
-  // Usar hook para distancias de todos los vendors activos
-  const vendorDistances = useVendorDistances(
-    activeVendors.map((v) => v.id),
-    userLocation
+  const getVendorDistance = useCallback(
+    (vendor: Vendor) => {
+      if (!userLocation || !vendor.latitude || !vendor.longitude) return undefined
+      return calculateDistance(userLocation.lat, userLocation.lng, vendor.latitude, vendor.longitude)
+    },
+    [userLocation]
   )
 
-  // Distancia del vendor seleccionado
-  const selectedVendorDistance = selectedVendor ? vendorDistances[selectedVendor.id] : undefined
 
   return (
     <div className="relative w-full h-full">
@@ -72,7 +134,6 @@ export function MapView() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Indicador de ubicación del usuario */}
         {userLocation && (
           <CircleMarker
             center={[userLocation.lat, userLocation.lng]}
@@ -90,25 +151,74 @@ export function MapView() {
 
         <MapUpdater center={{ lat: center[0], lng: center[1] } as LatLng} />
 
-        {activeVendors.length === 0 ? (
+        {filteredVendors.length === 0 ? (
           <Marker position={center}>
             <Popup>
-              <div className="text-center p-2">
-                <Frown size={32} className="mx-auto text-gray-400 mb-2" />
-                <p className="font-semibold">No hay vendedores activos</p>
-                <p className="text-sm text-gray-500">Intenta con otro filtro</p>
+              <div className="text-center p-3 min-w-[200px]">
+                <Frown size={36} className="mx-auto text-gray-400 mb-3" />
+                <p className="font-semibold text-gray-800">No hay vendedores</p>
+                {filters.searchQuery ? (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No encontramos &quot;{filters.searchQuery}&quot;
+                  </p>
+                ) : filters.category ? (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No hay vendedores de esta categoría
+                  </p>
+                ) : filters.maxDistanceMeters !== 2000 ? (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No hay vendedores en este radio
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Intenta con otro filtro o cambia de zona
+                  </p>
+                )}
               </div>
             </Popup>
           </Marker>
         ) : (
-          activeVendors.map((vendor) => {
-            const loc = MOCK_LOCATIONS[vendor.id as keyof typeof MOCK_LOCATIONS]
-            if (!loc) return null
+          filteredVendors.map((vendor) => {
+            if (!vendor.latitude || !vendor.longitude) return null
+            const cat = (vendor.category as VendorCategory) || 'otros'
+            const catMap: Record<string, string> = {
+              frutas: '🥑', comida: '🍳', bebidas: '🧃', artesanias: '🎨', ropa: '👕', otros: '📦',
+            }
+            const emoji = catMap[cat] || '📦'
+            const catColor = getCategoryInfo(cat).color
+            // Sponsored vendors get a gold ring + star badge to differentiate
+            // from organic placement. Same icon, different border treatment.
+            const sponsored = (vendor as any).isSponsored
+            const ringColor = sponsored ? '#F59E0B' : 'white'
+            const ringWidth = sponsored ? 4 : 3
+            const markerIcon = new L.DivIcon({
+              html: `<div style="
+                background: ${catColor};
+                width: 42px;
+                height: 42px;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                border: ${ringWidth}px solid ${ringColor};
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3)${sponsored ? ', 0 0 12px rgba(245, 158, 11, 0.6)' : ''};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                position: relative;
+              "><span style="transform: rotate(45deg);">${emoji}</span>${
+                sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
+              }</div>`,
+              className: 'vendor-category-marker',
+              iconSize: [42, 42],
+              iconAnchor: [21, 42],
+              popupAnchor: [0, -44],
+            })
 
             return (
               <Marker
                 key={vendor.id}
-                position={[loc.lat, loc.lng]}
+                position={[vendor.latitude, vendor.longitude]}
+                icon={markerIcon}
                 eventHandlers={{
                   click: () => setSelectedVendor(vendor),
                 }}
@@ -117,7 +227,11 @@ export function MapView() {
                   <VendorCard
                     vendor={vendor}
                     compact
-                    distance={vendorDistances[vendor.id]}
+                    distance={getVendorDistance(vendor)}
+                    isSponsored={sponsored}
+                    onViewDetails={() => {
+                      window.location.href = `/vendor/${vendor.slug || vendor.id}`
+                    }}
                   />
                 </Popup>
               </Marker>
@@ -126,16 +240,15 @@ export function MapView() {
         )}
       </MapContainer>
 
-      {/* Vendor Card Overlay */}
       {selectedVendor && (
         <div className="absolute bottom-4 left-4 right-4 z-[1000]">
           <VendorCard
             vendor={selectedVendor}
-            distance={selectedVendorDistance}
+            distance={getVendorDistance(selectedVendor)}
             onClose={() => setSelectedVendor(null)}
-            onViewDetails={() => {
-              router.push(`/vendor/${selectedVendor.id}`)
-            }}
+              onViewDetails={() => {
+                window.location.href = `/vendor/${selectedVendor.slug || selectedVendor.id}`
+              }}
           />
         </div>
       )}

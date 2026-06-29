@@ -1,0 +1,20 @@
+{
+  "name": "BarrioTech",
+  "short_name": "BarrioTech",
+  "description": "Encuentra vendedores informales cerca de ti en tiempo real",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#F97316",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "categories": ["food", "shopping", "lifestyle"],
+  "icons": [
+    { "src": "/logo-avatar.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

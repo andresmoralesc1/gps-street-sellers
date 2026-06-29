@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Block auth/API/utility routes from crawlers
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /role-select
+Disallow: /onboarding
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /favorites
+Disallow: /orders
+Disallow: /notifications
+Disallow: /profile/
+
+# Sitemap
+Sitemap: https://gps.neuralflow.space/sitemap.xml

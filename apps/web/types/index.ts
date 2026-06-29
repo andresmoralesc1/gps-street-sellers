@@ -1,4 +1,3 @@
-// Re-exportar tipos del core
 export type {
   UserRole,
   VendorCategory,

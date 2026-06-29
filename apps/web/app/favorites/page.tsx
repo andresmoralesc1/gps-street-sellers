@@ -2,36 +2,44 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Heart, Trash2, Store, ImageIcon } from 'lucide-react'
+import { Heart, Trash2, MapPin, Star, Store, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useStore } from '@/store/useStore'
+import type { VendorCategory } from '@/lib/core/types'
 
-interface Favorite {
+const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
+  frutas: Apple,
+  comida: UtensilsCrossed,
+  bebidas: CupSoda,
+  artesanias: Palette,
+  ropa: Shirt,
+  otros: Package,
+}
+
+interface FavoriteVendor {
   id: string
   vendorId: string
+  vendorSlug?: string
   vendorName: string
-  productId: string
-  productName: string
-  price: number
+  category: VendorCategory
   imageUrl: string | null
+  ratingAvg: number
+  reviewCount: number
 }
 
 export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<Favorite[]>([])
+  const [favorites, setFavorites] = useState<FavoriteVendor[]>([])
   const [loading, setLoading] = useState(true)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [removeError, setRemoveError] = useState('')
   const user = useStore((s) => s.user)
   const _hasHydrated = useStore((s) => s._hasHydrated)
   const removeFavorite = useStore((s) => s.removeFavorite)
+  const addFavorite = useStore((s) => s.addFavorite)
   const favoriteIds = useStore((s) => s.favoriteIds)
 
-  useEffect(() => {
-    // Wait for hydration
-    if (!_hasHydrated) return
-  }, [_hasHydrated])
-
+  // Load favorites from API on mount
   useEffect(() => {
     if (!_hasHydrated || !user) {
       setLoading(false)
@@ -51,7 +59,7 @@ export default function FavoritesPage() {
       })
   }, [_hasHydrated, user])
 
-  const handleRemove = useCallback(async (favorite: Favorite) => {
+  const handleRemove = useCallback(async (favorite: FavoriteVendor) => {
     if (!user) return
     setRemovingId(favorite.id)
     setRemoveError('')
@@ -65,19 +73,18 @@ export default function FavoritesPage() {
       })
       if (!res.ok) throw new Error('Delete failed')
     } catch {
-      // Rollback optimistic remove
+      // Rollback
       setFavorites((prev) => [favorite, ...prev])
       if (!favoriteIds.includes(favorite.vendorId)) {
-        // re-remove from store if it wasn't already re-added
-        removeFavorite(favorite.vendorId)
+        addFavorite(favorite.vendorId)
       }
       setRemoveError('No se pudo eliminar. Intenta de nuevo.')
     } finally {
       setRemovingId(null)
     }
-  }, [user, removeFavorite, favoriteIds])
+  }, [user, removeFavorite, addFavorite, favoriteIds])
 
-  // Show loading while hydrating
+  // Loading state
   if (!_hasHydrated || loading) {
     return (
       <div className="min-h-screen bg-background-cream flex items-center justify-center">
@@ -110,81 +117,104 @@ export default function FavoritesPage() {
       <header className="bg-white shadow-sm p-4">
         <h1 className="text-xl font-bold">Mis Favoritos</h1>
         <p className="text-sm text-gray-500">
-          {favorites.length}/10 productos guardados
+          {favorites.length} {favorites.length === 1 ? 'vendedor guardado' : 'vendedores guardados'}
         </p>
         {removeError && (
           <p className="text-red-500 text-sm mt-1">{removeError}</p>
         )}
       </header>
 
-      <div className="p-4">
+      <div className="p-4 max-w-4xl mx-auto">
         {favorites.length === 0 ? (
           <Card variant="outlined" className="p-8 text-center">
             <Heart size={48} className="mx-auto mb-4 text-gray-300" />
-            <h2 className="text-xl font-bold mb-2">No tienes favoritos</h2>
+            <h2 className="text-xl font-bold mb-2">No tienes favoritos aún</h2>
             <p className="text-gray-500 mb-4">
-              Guarda productos como favoritos para verlos rápidamente
+              Toca el corazón en cualquier vendedor para guardarlo aquí
             </p>
             <Link href="/map">
               <Button>Explorar vendedores</Button>
             </Link>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {favorites.map((fav) => (
-              <Card key={fav.id} variant="outlined" className="p-3 overflow-hidden">
-                {/* Image */}
-                <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-                  {fav.imageUrl ? (
-                    <img
-                      src={fav.imageUrl}
-                      alt={fav.productName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <ImageIcon size={32} className="text-gray-300" />
-                  )}
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {favorites.map((fav) => {
+              const IconComponent = CategoryIconMap[fav.category] || Store
+              return (
+                <Card key={fav.id} variant="outlined" className="overflow-hidden p-0">
+                  {/* Photo */}
+                  <Link
+                    href={`/vendor/${fav.vendorSlug || fav.vendorId}`}
+                    className="block aspect-video bg-gray-100 relative overflow-hidden"
+                  >
+                    {fav.imageUrl ? (
+                      <img
+                        src={fav.imageUrl}
+                        alt={fav.vendorName}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
+                        <IconComponent size={48} className="text-primary-700" />
+                      </div>
+                    )}
+                  </Link>
 
-                {/* Vendor */}
-                <div className="flex items-center gap-1 mb-1">
-                  <Store size={12} className="text-gray-400" />
-                  <span className="text-xs text-gray-500 truncate">{fav.vendorName}</span>
-                </div>
+                  {/* Info */}
+                  <div className="p-4">
+                    <Link href={`/vendor/${fav.vendorSlug || fav.vendorId}`} className="block">
+                      <h3 className="font-bold text-lg mb-1 hover:text-primary transition-colors line-clamp-1">
+                        {fav.vendorName}
+                      </h3>
+                    </Link>
 
-                {/* Product name */}
-                <p className="font-semibold text-sm truncate mb-1">{fav.productName}</p>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                      <span className="capitalize">{fav.category}</span>
+                      {fav.ratingAvg > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                            {fav.ratingAvg.toFixed(1)} ({fav.reviewCount})
+                          </span>
+                        </>
+                      )}
+                    </div>
 
-                {/* Price */}
-                <p className="text-primary font-bold mb-3">
-                  ${fav.price.toLocaleString('es-CO')}
-                </p>
-
-                {/* Remove button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
-                  onClick={() => handleRemove(fav)}
-                  isLoading={removingId === fav.id}
-                >
-                  <Trash2 size={14} className="mr-1" />
-                  Eliminar
-                </Button>
-              </Card>
-            ))}
+                    <div className="flex gap-2 mt-3">
+                      <Link href={`/vendor/${fav.vendorSlug || fav.vendorId}`} className="flex-1">
+                        <Button size="sm" variant="primary" className="w-full">
+                          <MapPin size={14} className="mr-1" />
+                          Ver
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleRemove(fav)}
+                        isLoading={removingId === fav.id}
+                        aria-label={`Quitar ${fav.vendorName} de favoritos`}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3">
+      {/* Bottom Nav (mobile) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3 md:hidden">
         <Link href="/map" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <MapPin size={24} />
           <span className="text-xs mt-1">Mapa</span>
         </Link>
         <Link href="/favorites" className="flex flex-col items-center text-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          <Heart size={24} fill="currentColor" />
           <span className="text-xs mt-1">Favoritos</span>
         </Link>
         <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">

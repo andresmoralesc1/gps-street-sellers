@@ -92,7 +92,11 @@ export function VendorDetailClient({ vendorId }: Props) {
 
   const toggleFavorite = async () => {
     if (!user) {
-      router.push('/register')
+      // Don't kick the user out to /register — show an inline prompt.
+      const shouldLogin = window.confirm('Inicia sesión para guardar favoritos. ¿Ir a login?')
+      if (shouldLogin) {
+        router.push('/login?redirect=' + encodeURIComponent(window.location.pathname))
+      }
       return
     }
     const wasFavorite = isFavorite

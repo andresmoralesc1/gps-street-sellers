@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await pool.query(
-      `SELECT f.id, f.vendor_id, v.name as vendor_name, v.category, v.photo_url as image_url,
+      `SELECT f.id, f.vendor_id, v.slug as vendor_slug, v.name as vendor_name, v.category, v.photo_url as image_url,
               v.rating, v.review_count
        FROM favorites f
        JOIN vendors v ON f.vendor_id = v.id
@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
     const favorites = result.rows.map((row) => ({
       id: row.id,
       vendorId: row.vendor_id,
+      vendorSlug: row.vendor_slug,
       vendorName: row.vendor_name,
       category: row.category,
       imageUrl: row.image_url,

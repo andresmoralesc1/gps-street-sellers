@@ -10,6 +10,7 @@ export type VendorCategory =
 
 export interface Vendor {
   id: string
+  slug?: string
   userId: string
   name: string
   category: VendorCategory

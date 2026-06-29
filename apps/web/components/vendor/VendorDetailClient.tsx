@@ -10,6 +10,7 @@ import { VendorReviews } from '@/components/vendor/VendorReviews'
 import { CartDrawer } from '@/components/cart/CartDrawer'
 import { useStore } from '@/store/useStore'
 import type { Vendor, Product, Review } from '@/lib/core/types'
+import { isUuid } from '@/lib/core/utils/slug'
 
 interface Props {
   vendorId: string
@@ -41,6 +42,22 @@ export function VendorDetailClient({ vendorId }: Props) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   useEffect(() => {
+    // Legacy UUID URLs get redirected to the canonical slug form.
+    // This keeps old shared/bookmarked links working without 404.
+    if (isUuid(vendorId)) {
+      fetch(`/api/vendors/${vendorId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const slug = data?.vendor?.slug
+          if (slug) {
+            router.replace(`/vendor/${slug}`)
+            return
+          }
+        })
+        .catch(() => router.push('/map'))
+      return
+    }
+
     fetch(`/api/vendors/${vendorId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -237,7 +254,7 @@ export function VendorDetailClient({ vendorId }: Props) {
         </button>
       </header>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 max-w-5xl mx-auto md:p-6 md:space-y-8">
         <VendorProfile vendor={adaptedVendor} />
 
           {/* Action buttons — visible to everyone */}
@@ -245,11 +262,11 @@ export function VendorDetailClient({ vendorId }: Props) {
             <p className="text-sm text-gray-600 mb-3">
               Contacta a {vendor.name}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
               {vendor.phone && (
                 <a
                   href={`tel:${vendor.phone}`}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-xl transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-xl transition-colors md:py-2.5"
                 >
                   <Phone size={18} />
                   <span>Llamar</span>
@@ -259,7 +276,7 @@ export function VendorDetailClient({ vendorId }: Props) {
                 <button
                   type="button"
                   onClick={handleWhatsAppDirect}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition-colors md:py-2.5"
                 >
                   <MessageCircle size={18} />
                   <span>WhatsApp</span>
@@ -270,7 +287,7 @@ export function VendorDetailClient({ vendorId }: Props) {
                   href={`https://www.google.com/maps/dir/?api=1&destination=${vendor.latitude},${vendor.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary hover:bg-secondary-dark text-white font-medium rounded-xl transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary hover:bg-secondary-dark text-white font-medium rounded-xl transition-colors md:py-2.5"
                 >
                   <Navigation size={18} />
                   <span>Cómo llegar</span>

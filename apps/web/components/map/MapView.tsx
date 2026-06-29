@@ -230,7 +230,7 @@ export function MapView() {
                     distance={getVendorDistance(vendor)}
                     isSponsored={sponsored}
                     onViewDetails={() => {
-                      window.location.href = `/vendor/${vendor.id}`
+                      window.location.href = `/vendor/${vendor.slug || vendor.id}`
                     }}
                   />
                 </Popup>
@@ -247,7 +247,7 @@ export function MapView() {
             distance={getVendorDistance(selectedVendor)}
             onClose={() => setSelectedVendor(null)}
               onViewDetails={() => {
-                window.location.href = `/vendor/${selectedVendor.id}`
+                window.location.href = `/vendor/${selectedVendor.slug || selectedVendor.id}`
               }}
           />
         </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
+import { isUuid } from '@/lib/core/utils/slug'
 
 
 type RouteContext = {
@@ -8,16 +9,37 @@ type RouteContext = {
 }
 
 // GET /api/vendors/[id]
+// Accepts either a vendor UUID (legacy) or a human-friendly slug
+// (e.g. "frutas-don-jaime-cali"). UUIDs still work for backward-compat.
+//
+// Slug column is filled by migration 003_vendor_slugs.sql.
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
-    const { id: vendorId } = await context.params
+    const { id: param } = await context.params
+    const isUuidParam = isUuid(param)
+
+    // If the caller is hitting the page (Accept: text/html) with a UUID,
+    // 301-redirect to the canonical slug URL. This is what makes the
+    // browser URL bar show the slug version when someone pastes a legacy link.
+    const accept = req.headers.get('accept') || ''
+    if (isUuidParam && accept.includes('text/html')) {
+      const slugResult = await pool.query(
+        'SELECT slug FROM vendors WHERE id = $1',
+        [param]
+      )
+      const slug = slugResult.rows[0]?.slug
+      if (slug) {
+        const url = new URL(`/vendor/${slug}`, req.url)
+        return NextResponse.redirect(url, 301)
+      }
+    }
 
     const vendorResult = await pool.query(
       `SELECT v.*, c.label as category_label
        FROM vendors v
        LEFT JOIN categories c ON v.category = c.id
-       WHERE v.id = $1`,
-      [vendorId]
+       WHERE ${isUuidParam ? 'v.id = $1' : 'v.slug = $1'}`,
+      [param]
     )
 
     if (vendorResult.rows.length === 0) {
@@ -25,6 +47,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const vendor = vendorResult.rows[0]
+    const vendorId: string = vendor.id
 
     // Fetch products
     const productsResult = await pool.query(

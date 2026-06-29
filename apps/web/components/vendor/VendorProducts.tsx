@@ -30,7 +30,7 @@ export function VendorProducts({ products, onAddToCart, compact, user }: VendorP
   return (
     <div>
       <h3 className="text-lg font-bold mb-3">Productos</h3>
-      <div className={clsx('grid gap-3', compact ? 'grid-cols-1' : 'grid-cols-2')}>
+      <div className={clsx('grid gap-3', compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')}>
         {products.map((product) => (
           <ProductCard
             key={product.id}
@@ -61,7 +61,7 @@ function ProductCard({ product, compact, onAddToCart, user, router }: ProductCar
   return (
     <Card variant="outlined" className="overflow-hidden p-0">
       {!compact && (
-        <div className="w-full h-28 bg-gray-100 overflow-hidden relative">
+        <div className="w-full aspect-square bg-gray-100 overflow-hidden relative">
           {showPhoto ? (
             <img
               src={product.photoUrl}
@@ -80,8 +80,8 @@ function ProductCard({ product, compact, onAddToCart, user, router }: ProductCar
       <div className="p-3">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold truncate">{product.name}</h4>
-            <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
+            <h4 className="font-semibold leading-tight">{product.name}</h4>
+            <p className="text-sm text-gray-500 line-clamp-2 mt-1">{product.description}</p>
             <p className="text-primary font-bold mt-1">
               ${product.price.toLocaleString('es-CO')}
             </p>

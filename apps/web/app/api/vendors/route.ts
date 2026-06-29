@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
 
     const vendors = result.rows.map((v) => ({
       id: v.id,
+      slug: v.slug,
       name: v.name,
       category: v.category,
       categoryLabel: v.category_label,

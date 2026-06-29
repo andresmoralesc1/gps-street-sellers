@@ -17,3 +17,4 @@ export type { CategoryInfo } from './constants/categories'
 
 // Utils
 export { calculateDistance, filterByDistance } from './utils/geo'
+export { isUuid, slugify, vendorSlug } from './utils/slug'

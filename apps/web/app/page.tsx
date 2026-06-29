@@ -69,7 +69,7 @@ export default function HomePage() {
       <section className="relative min-h-[580px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img src={HERO_PHOTO} alt="Vendedores callejeros Colombia" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/85 via-gray-900/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/75 to-gray-900/30" />
         </div>
         <div className="relative max-w-6xl mx-auto px-4 py-20 w-full">
           <div className="max-w-xl">
@@ -84,7 +84,7 @@ export default function HomePage() {
               <br />
               <span className="text-secondary-light">ahora en tu celular.</span>
             </h1>
-            <p className="text-lg text-white/80 mb-8">
+            <p className="text-lg text-white/95 mb-8">
               Descubre vendedores informales cerca de ti. Comida, frutas, artesanías y más — en tiempo real.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">

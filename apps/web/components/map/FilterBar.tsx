@@ -64,48 +64,52 @@ export function FilterBar() {
       </div>
 
       {/* Categorías */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        <button
-          onClick={() => setFilters({ category: null })}
-          className={clsx(
-            'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
-            filters.category === null
-              ? 'bg-primary text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          )}
-        >
-          Todos
-        </button>
-        {CATEGORIES.map((cat) => {
-          const IconComponent = CategoryIconMap[cat.id]
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setFilters({ category: cat.id as VendorCategory })}
-              className={clsx(
-                'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
-                filters.category === cat.id
-                  ? 'text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              )}
-              style={filters.category === cat.id ? { background: cat.color } : {}}
-            >
-              <IconComponent size={16} />
-              {cat.label}
-            </button>
-          )
-        })}
+      <div className="relative">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+          <button
+            onClick={() => setFilters({ category: null })}
+            className={clsx(
+              'shrink-0 snap-start px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 min-h-[36px]',
+              filters.category === null
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            )}
+          >
+            Todos
+          </button>
+          {CATEGORIES.map((cat) => {
+            const IconComponent = CategoryIconMap[cat.id]
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setFilters({ category: cat.id as VendorCategory })}
+                className={clsx(
+                  'shrink-0 snap-start px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 min-h-[36px]',
+                  filters.category === cat.id
+                    ? 'text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                )}
+                style={filters.category === cat.id ? { background: cat.color } : {}}
+              >
+                <IconComponent size={16} />
+                {cat.label}
+              </button>
+            )
+          })}
+        </div>
+        {/* Indicador de scroll a la derecha */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-6 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
       </div>
 
       {/* Distancia */}
-      <div className="flex gap-2 items-center">
-        <div className="flex gap-2">
+      <div className="flex gap-2 items-center flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           {DISTANCES.map((dist) => (
             <button
               key={dist.value}
               onClick={() => setFilters({ maxDistanceMeters: dist.value })}
               className={clsx(
-                'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5',
+                'shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 min-h-[36px]',
                 filters.maxDistanceMeters === dist.value
                   ? 'bg-secondary text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -119,7 +123,7 @@ export function FilterBar() {
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="ml-auto px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1.5"
+            className="ml-auto shrink-0 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1.5 min-h-[36px]"
           >
             <X size={14} />
             Limpiar filtros

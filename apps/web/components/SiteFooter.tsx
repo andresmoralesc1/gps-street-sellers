@@ -31,29 +31,29 @@ export function SiteFooter() {
           {/* Explorar */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Explorar</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/map" className="text-sm hover:text-primary transition-colors">Mapa de vendedores</Link></li>
-              <li><Link href="/register" className="text-sm hover:text-primary transition-colors">Ser vendedor</Link></li>
-              <li><Link href="/login" className="text-sm hover:text-primary transition-colors">Iniciar sesión</Link></li>
+            <ul className="space-y-1">
+              <li><Link href="/map" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Mapa de vendedores</Link></li>
+              <li><Link href="/register" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Ser vendedor</Link></li>
+              <li><Link href="/login" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Iniciar sesión</Link></li>
             </ul>
           </div>
 
           {/* Compañía */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Compañía</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/nosotros" className="text-sm hover:text-primary transition-colors">Sobre nosotros</Link></li>
-              <li><Link href="/contacto" className="text-sm hover:text-primary transition-colors">Contacto</Link></li>
-              <li><Link href="/preguntas-frecuentes" className="text-sm hover:text-primary transition-colors">Preguntas frecuentes</Link></li>
+            <ul className="space-y-1">
+              <li><Link href="/nosotros" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Sobre nosotros</Link></li>
+              <li><Link href="/contacto" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Contacto</Link></li>
+              <li><Link href="/preguntas-frecuentes" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Preguntas frecuentes</Link></li>
             </ul>
           </div>
 
           {/* Legal */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Legal</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/privacidad" className="text-sm hover:text-primary transition-colors">Política de privacidad</Link></li>
-              <li><Link href="/terminos" className="text-sm hover:text-primary transition-colors">Términos y condiciones</Link></li>
+            <ul className="space-y-1">
+              <li><Link href="/privacidad" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Política de privacidad</Link></li>
+              <li><Link href="/terminos" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Términos y condiciones</Link></li>
             </ul>
           </div>
         </div>
@@ -64,7 +64,7 @@ export function SiteFooter() {
           </p>
           <a
             href="mailto:hola@barriotech.com"
-            className="flex items-center gap-2 text-xs text-gray-500 hover:text-primary transition-colors"
+            className="flex items-center gap-2 text-xs text-gray-500 hover:text-primary transition-colors py-2 min-h-[36px]"
           >
             <Mail size={12} />
             hola@barriotech.com

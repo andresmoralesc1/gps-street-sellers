@@ -195,6 +195,42 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Sé el primero */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-3xl p-8 md:p-12 text-center">
+            <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm mb-6">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-gray-600">Lanzamiento 2026 · Colombia</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">
+              Tu barrio todavía no está en el mapa.
+            </h2>
+            <p className="text-gray-500 mb-8 max-w-lg mx-auto text-base">
+              {stats.cities > 0 || stats.vendors > 0
+                ? `Ya somos ${stats.cities} ciudad${stats.cities !== 1 ? 'es' : ''} · ${stats.vendors} vendedor${stats.vendors !== 1 ? 'es' : ''} activo${stats.vendors !== 1 ? 's' : ''}. ¡Sé el primero en tu barrio!`
+                : 'Tu barrio todavía no está en el mapa. Si te registras hoy, eres el primer vendedor de tu ciudad en la app.'}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/register?role=seller">
+                <Button size="lg" className="bg-primary hover:bg-primary-700">
+                  <MapPin size={18} className="mr-2" />
+                  Quiero ser vendedor
+                </Button>
+              </Link>
+              <Link href="/register?role=buyer">
+                <Button variant="outline" size="lg" className="border-orange-200 text-primary hover:bg-orange-50">
+                  Explorar como comprador
+                </Button>
+              </Link>
+            </div>
+            <p className="mt-6 text-xs text-gray-400">
+              100% gratis · Sin comisiones · Sin número mínimo de pedidos
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

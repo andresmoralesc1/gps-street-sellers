@@ -89,6 +89,15 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, 
             )}
           </p>
         </div>
+        {onViewDetails && (
+          <button
+            onClick={onViewDetails}
+            className="ml-auto text-xs font-medium text-primary hover:text-primary-700 flex items-center gap-0.5"
+            aria-label="Ver detalles del vendedor"
+          >
+            Ver →
+          </button>
+        )}
       </div>
     )
   }

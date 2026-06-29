@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Frown } from 'lucide-react'
@@ -25,7 +24,6 @@ function MapUpdater({ center }: { center: LatLng }) {
 }
 
 export function MapView() {
-  const router = useRouter()
   const selectedCity = useStore((s) => s.selectedCity)
   const setSelectedCity = useStore((s) => s.setSelectedCity)
   const [center, setCenter] = useState<[number, number]>(selectedCity.center)
@@ -231,6 +229,9 @@ export function MapView() {
                     compact
                     distance={getVendorDistance(vendor)}
                     isSponsored={sponsored}
+                    onViewDetails={() => {
+                      window.location.href = `/vendor/${vendor.id}`
+                    }}
                   />
                 </Popup>
               </Marker>
@@ -245,9 +246,9 @@ export function MapView() {
             vendor={selectedVendor}
             distance={getVendorDistance(selectedVendor)}
             onClose={() => setSelectedVendor(null)}
-            onViewDetails={() => {
-              router.push(`/vendor/${selectedVendor.id}`)
-            }}
+              onViewDetails={() => {
+                window.location.href = `/vendor/${selectedVendor.id}`
+              }}
           />
         </div>
       )}

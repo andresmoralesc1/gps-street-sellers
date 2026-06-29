@@ -154,7 +154,7 @@ export function CookieBanner() {
             onClick={() => setShowDetails((s) => !s)}
             className="px-3 py-2 text-xs text-gray-500 underline hover:text-gray-700"
           >
-            {showDetails ? 'Ocultar detalles' : 'Ver detalles'}
+            {showDetails ? 'Ocultar' : 'Más información'}
           </button>
         </div>
       </div>

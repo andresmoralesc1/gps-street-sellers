@@ -5,7 +5,6 @@ import Image from 'next/image'
 import { MapPin, Users, TrendingUp, Star, ArrowRight, Clock, Shield, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { getActiveVendors } from '@/lib/mockData'
-import { useStore } from '@/store/useStore'
 import { useEffect, useState } from 'react'
 
 // Photos from Pexels (Colombian street food / market scenes)
@@ -55,17 +54,14 @@ const Truck = (props: any) => (
 
 export default function HomePage() {
   const activeVendors = getActiveVendors()
-  const selectedCity = useStore((s) => s.selectedCity)
-  const [cityName, setCityName] = useState('Bogotá')
   const [stats, setStats] = useState({ vendors: 0, cities: 0 })
 
   useEffect(() => {
-    setCityName(selectedCity.name)
     fetch('/api/stats')
       .then((r) => r.json())
       .then((d) => setStats({ vendors: d.activeVendors, cities: d.activeCities }))
       .catch(() => {})
-  }, [selectedCity])
+  }, [])
 
   return (
     <div className="min-h-screen bg-background-cream">
@@ -197,81 +193,8 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <div className="text-center mt-10">
-            <Link href="/register">
-              <Button size="lg" className="bg-primary hover:bg-primary-700">
-                Registrarme como vendedor
-                <ArrowRight size={18} className="ml-2" />
-              </Button>
-            </Link>
-          </div>
         </div>
       </section>
-
-      {/* Sé el primero */}
-      <section className="py-16 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-3xl p-8 md:p-12 text-center">
-            <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm mb-6">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-gray-600">Lanzamiento 2026 · Colombia</span>
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">
-              Tu barrio todavía no está en el mapa.
-            </h2>
-            <p className="text-gray-500 mb-8 max-w-lg mx-auto text-base">
-              {stats.cities > 0 || stats.vendors > 0
-                ? `Ya somos ${stats.cities} ciudad${stats.cities !== 1 ? 'es' : ''} · ${stats.vendors} vendedor${stats.vendors !== 1 ? 'es' : ''} activo${stats.vendors !== 1 ? 's' : ''}. ¡Sé el primero en tu barrio!`
-                : 'Tu barrio todavía no está en el mapa. Si te registras hoy, eres el primer vendedor de tu ciudad en la app.'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/register?role=seller">
-                <Button size="lg" className="bg-primary hover:bg-primary-700">
-                  <MapPin size={18} className="mr-2" />
-                  Quiero ser vendedor
-                </Button>
-              </Link>
-              <Link href="/register?role=buyer">
-                <Button variant="outline" size="lg" className="border-orange-200 text-primary hover:bg-orange-50">
-                  Explorar como comprador
-                </Button>
-              </Link>
-            </div>
-            <p className="mt-6 text-xs text-gray-400">
-              100% gratis · Sin comisiones · Sin número mínimo de pedidos
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Final */}
-      <section className="py-20 px-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary rounded-full blur-3xl" />
-        </div>
-        <div className="relative max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">
-            Empieza a explorar {cityName} hoy
-          </h2>
-          <p className="text-gray-400 mb-8 max-w-xl mx-auto">
-            Únete a miles de compradores y vendedores que ya están conectados. Descarga la app o regístrate gratis.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
-              <Button size="lg" className="bg-secondary hover:bg-secondary-dark w-full sm:w-auto">
-                Registrarme gratis
-              </Button>
-            </Link>
-            <Link href="/map">
-              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 w-full sm:w-auto">
-                Explorar mapa
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
     </div>
   )
 }

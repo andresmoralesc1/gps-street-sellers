@@ -5,6 +5,11 @@ import { useRouter, usePathname } from 'next/navigation'
 import { X, MapPin, Heart, Bell, ArrowRight } from 'lucide-react'
 
 const STORAGE_KEY = 'barriotech_onboarding_done'
+const LABELS: Record<string, string> = {
+  '/map': 'mapa',
+  '/favorites': 'favoritos',
+  '/settings': 'ajustes',
+}
 const STEPS = [
   {
     icon: MapPin,
@@ -123,7 +128,7 @@ export function OnboardingTour() {
             onClick={goToStep}
             className="flex-1 px-4 py-3 rounded-xl border-2 border-amber-500 text-amber-600 font-semibold hover:bg-amber-50 transition-colors"
           >
-            Ir a {current.target.split('/')[1] || 'mapa'}
+            Ir a {LABELS[current.target] || current.target}
           </button>
           <button
             onClick={next}

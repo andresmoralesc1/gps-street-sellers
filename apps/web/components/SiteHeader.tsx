@@ -181,18 +181,79 @@ export function SiteHeader() {
                 </Link>
               ))}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link href="/login" onClick={() => setMenuOpen(false)}>
-                <Button size="sm" variant="outline" className="w-full justify-center gap-1.5">
-                  <LogIn size={14} /> Ingresar
-                </Button>
-              </Link>
-              <Link href="/register" onClick={() => setMenuOpen(false)}>
-                <Button size="sm" className="w-full justify-center gap-1.5">
-                  <User size={14} /> Registrarme
-                </Button>
-              </Link>
-            </div>
+
+            {isLoggedIn ? (
+              <div className="mt-3 bg-gray-50 rounded-2xl p-3 space-y-1 border border-gray-100">
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <User size={18} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {user.fullName || user.email}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+                {user.role === 'seller' && (
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:text-primary hover:bg-white rounded-xl transition-all"
+                  >
+                    <MapPin size={16} className="text-primary/70" />
+                    Dashboard
+                  </Link>
+                )}
+                <Link
+                  href="/orders"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:text-primary hover:bg-white rounded-xl transition-all"
+                >
+                  <MapPin size={16} className="text-primary/70" />
+                  Mis pedidos
+                </Link>
+                <Link
+                  href="/favorites"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:text-primary hover:bg-white rounded-xl transition-all"
+                >
+                  <MapPin size={16} className="text-primary/70" />
+                  Favoritos
+                </Link>
+                <Link
+                  href="/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:text-primary hover:bg-white rounded-xl transition-all"
+                >
+                  <MapPin size={16} className="text-primary/70" />
+                  Configuración
+                </Link>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false)
+                    handleLogout()
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                >
+                  <LogOut size={16} />
+                  Cerrar sesión
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setMenuOpen(false)}>
+                  <Button size="sm" variant="outline" className="w-full justify-center gap-1.5">
+                    <LogIn size={14} /> Ingresar
+                  </Button>
+                </Link>
+                <Link href="/register" onClick={() => setMenuOpen(false)}>
+                  <Button size="sm" className="w-full justify-center gap-1.5">
+                    <User size={14} /> Registrarme
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>

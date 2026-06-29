@@ -68,7 +68,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative min-h-[580px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src={HERO_PHOTO} alt="Vendedores callejeros Colombia" className="w-full h-full object-cover" />
+          <img src={HERO_PHOTO} alt="Vendedores callejeros Colombia" className="w-full h-full object-cover object-[right_center] md:object-[center_30%]" />
           <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/75 to-gray-900/30" />
         </div>
         <div className="relative max-w-6xl mx-auto px-4 py-20 w-full">

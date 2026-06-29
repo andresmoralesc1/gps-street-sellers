@@ -26,47 +26,58 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
 
   return (
     <Card variant="elevated" className="p-6">
-      <div className="flex items-start gap-4">
-        {vendor.photoUrl ? (
-          <img
-            src={vendor.photoUrl}
-            alt={vendor.name}
-            className="w-24 h-24 rounded-2xl object-cover flex-shrink-0"
-            onError={(e) => {
-              ;(e.target as HTMLImageElement).style.display = 'none'
-              ;(e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden')
-            }}
-          />
-        ) : null}
-        <div
-          className={clsx(
-            'w-24 h-24 rounded-2xl flex items-center justify-center flex-shrink-0',
-            !vendor.photoUrl && 'hidden'
-          )}
-          style={{ background: category.color }}
-        >
-          <IconComponent size={48} className="text-white" />
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+        {/* Hero photo — large on the left, square */}
+        <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 flex-shrink-0 rounded-2xl overflow-hidden relative bg-gray-100">
+          {vendor.photoUrl ? (
+            <img
+              src={vendor.photoUrl}
+              alt={vendor.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+                ;(e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden')
+              }}
+            />
+          ) : null}
+          <div
+            className={clsx(
+              'w-full h-full flex items-center justify-center',
+              !vendor.photoUrl && 'hidden'
+            )}
+            style={{ background: category.color }}
+          >
+            <IconComponent size={64} className="text-white" />
+          </div>
         </div>
 
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              {vendor.name}
-              {vendor.isVerified && (
-                <span title="Vendedor verificado" className="text-xl">✅</span>
-              )}
-            </h2>
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          {/* Name with small category icon inline */}
+          <h2 className="text-2xl sm:text-3xl font-bold flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+            <IconComponent
+              size={22}
+              className="flex-shrink-0"
+              style={{ color: category.color }}
+            />
+            <span>{vendor.name}</span>
+            {vendor.isVerified && (
+              <span title="Vendedor verificado" className="text-xl">✅</span>
+            )}
+          </h2>
+
+          {/* Status + category badges */}
+          <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
             {vendor.isActive && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Circle size={8} fill="currentColor" className="text-green-500" />
                 Activo
               </Badge>
             )}
+            <Badge variant="outline">{category.label}</Badge>
           </div>
 
-          <Badge variant="outline">{category.label}</Badge>
-
-          <div className="flex items-center gap-2 mt-3">
+          {/* Rating */}
+          <div className="flex items-center justify-center sm:justify-start gap-2 mt-3">
             <Star size={20} className="text-yellow-500 fill-yellow-500" />
             <span className="text-xl font-bold">{vendor.ratingAvg.toFixed(1)}</span>
             <span className="text-gray-500">({vendor.reviewCount} reseñas)</span>

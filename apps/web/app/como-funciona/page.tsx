@@ -53,16 +53,18 @@ export default function ComoFuncionaPage() {
 
       {/* Para compradores */}
       <section className="mb-16">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Si quieres comprar</h2>
-        <p className="text-gray-600 mb-8">Tres pasos y listo.</p>
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Si quieres comprar</h2>
+          <p className="text-gray-600">Tres pasos y listo.</p>
+        </div>
 
         <div className="grid md:grid-cols-3 gap-6">
           {BUYER_STEPS.map((s) => {
             const Icon = s.icon
             return (
               <div key={s.title} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-4">
-                  <Icon size={24} className="text-orange-600" />
+                <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center mb-4">
+                  <Icon size={24} className="text-primary-600" />
                 </div>
                 <h3 className="font-semibold text-gray-800 mb-2">{s.title}</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
@@ -80,16 +82,18 @@ export default function ComoFuncionaPage() {
 
       {/* Para vendedores */}
       <section className="mb-16">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Si quieres vender</h2>
-        <p className="text-gray-600 mb-8">Más visibilidad = más ventas.</p>
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Si quieres vender</h2>
+          <p className="text-gray-600">Más visibilidad = más ventas.</p>
+        </div>
 
         <div className="grid md:grid-cols-3 gap-6">
           {SELLER_STEPS.map((s) => {
             const Icon = s.icon
             return (
               <div key={s.title} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4">
-                  <Icon size={24} className="text-amber-600" />
+                <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center mb-4">
+                  <Icon size={24} className="text-primary-600" />
                 </div>
                 <h3 className="font-semibold text-gray-800 mb-2">{s.title}</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
@@ -98,9 +102,9 @@ export default function ComoFuncionaPage() {
           })}
         </div>
 
-        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-6">
-          <h3 className="font-bold text-amber-900 mb-2">Destaca tu negocio</h3>
-          <p className="text-amber-800 mb-4">
+        <div className="mt-8 bg-primary-50 border border-primary-200 rounded-2xl p-6">
+          <h3 className="font-bold text-primary-900 mb-2">Destaca tu negocio</h3>
+          <p className="text-primary-800 mb-4">
             Por <strong>COP $20.000/semana</strong> o <strong>$60.000/mes</strong> apareces primero
             en los mapas y búsquedas de tu zona. Pin dorado con ⭐ para que los clientes
             te identifiquen al instante.

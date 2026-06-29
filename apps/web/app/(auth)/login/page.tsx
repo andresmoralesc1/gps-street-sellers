@@ -34,6 +34,28 @@ function AuthPageContent() {
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
+
+  const handleForgotPassword = async () => {
+    if (!email) return
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      // Always show success to avoid email enumeration
+      setForgotSent(true)
+      setShowForgot(false)
+    } catch {
+      setForgotSent(true)
+      setShowForgot(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const redirectAfterLogin = (user: any) => {
     if (user.role === 'seller') {
@@ -185,7 +207,16 @@ function AuthPageContent() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Contraseña</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-gray-700">Contraseña</label>
+              <button
+                type="button"
+                onClick={() => setShowForgot(!showForgot)}
+                className="text-xs text-primary hover:text-primary-dark font-medium"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -205,8 +236,30 @@ function AuthPageContent() {
             </div>
           </div>
 
+          {showForgot && (
+            <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 text-sm text-gray-700">
+              <p className="mb-2">Te enviaremos un enlace para restablecer tu contraseña a tu email.</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleForgotPassword}
+                disabled={!email || isLoading}
+                className="w-full"
+              >
+                Enviar enlace de recuperación
+              </Button>
+            </div>
+          )}
+
           {error && (
             <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          )}
+
+          {forgotSent && (
+            <p className="text-green-700 text-sm bg-green-50 rounded-lg px-3 py-2">
+              Si el email está registrado, recibirás un enlace de recuperación en breve.
+            </p>
           )}
 
           <Button type="submit" className="w-full" size="lg" disabled={isLoading}>

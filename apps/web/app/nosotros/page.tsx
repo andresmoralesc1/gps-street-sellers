@@ -34,14 +34,16 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background-cream">
       {/* Hero */}
-      <section className="relative py-20 px-4 bg-gradient-to-br from-primary via-primary-600 to-secondary overflow-hidden">
+      <section className="relative py-12 px-4 bg-gradient-to-br from-primary via-primary-600 to-secondary overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-20 w-48 h-48 bg-secondary rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-6">Conectando barrios,<br />creando comunidad</h1>
-          <p className="text-white/80 text-lg max-w-2xl mx-auto">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Conectando barrios, creando comunidad
+          </h1>
+          <p className="text-white/90 text-base max-w-2xl mx-auto leading-relaxed">
             BarrioTech nació de una creencia simple: los vendedores informales de Colombia merecen ser encontrados. Somos la plataforma que los conecta con las personas que están a solo unos pasos de distancia.
           </p>
         </div>

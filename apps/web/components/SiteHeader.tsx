@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Menu, X, MapPin, User, LogIn, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { NotificationBell } from './notifications/NotificationBell'
@@ -14,6 +15,12 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const { user, _hasHydrated } = useStore()
+  const pathname = usePathname()
+
+  // Hide the redundant "Ingresar" / "Registrarme" buttons when user is already on those pages
+  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/role-select'
+  const onLogin = pathname === '/login'
+  const onRegister = pathname === '/register'
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -130,22 +137,26 @@ export function SiteHeader() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : !isAuthPage ? (
               <>
-                <Link href="/login">
-                  <Button size="sm" variant="ghost" className="text-gray-600 gap-1.5">
-                    <LogIn size={15} />
-                    Ingresar
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="gap-1.5 shadow-md shadow-primary/20">
-                    <User size={15} />
-                    Registrarme
-                  </Button>
-                </Link>
+                {!onLogin && (
+                  <Link href="/login">
+                    <Button size="sm" variant="ghost" className="text-gray-600 gap-1.5">
+                      <LogIn size={15} />
+                      Ingresar
+                    </Button>
+                  </Link>
+                )}
+                {!onRegister && (
+                  <Link href="/register">
+                    <Button size="sm" className="gap-1.5 shadow-md shadow-primary/20">
+                      <User size={15} />
+                      Registrarme
+                    </Button>
+                  </Link>
+                )}
               </>
-            )}
+            ) : null}
           </div>
 
           {/* Mobile hamburger */}
@@ -240,20 +251,24 @@ export function SiteHeader() {
                   Cerrar sesión
                 </button>
               </div>
-            ) : (
+            ) : !isAuthPage ? (
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <Link href="/login" onClick={() => setMenuOpen(false)}>
-                  <Button size="sm" variant="outline" className="w-full justify-center gap-1.5">
-                    <LogIn size={14} /> Ingresar
-                  </Button>
-                </Link>
-                <Link href="/register" onClick={() => setMenuOpen(false)}>
-                  <Button size="sm" className="w-full justify-center gap-1.5">
-                    <User size={14} /> Registrarme
-                  </Button>
-                </Link>
+                {!onLogin && (
+                  <Link href="/login" onClick={() => setMenuOpen(false)}>
+                    <Button size="sm" variant="outline" className="w-full justify-center gap-1.5">
+                      <LogIn size={14} /> Ingresar
+                    </Button>
+                  </Link>
+                )}
+                {!onRegister && (
+                  <Link href="/register" onClick={() => setMenuOpen(false)}>
+                    <Button size="sm" className="w-full justify-center gap-1.5">
+                      <User size={14} /> Registrarme
+                    </Button>
+                  </Link>
+                )}
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Heart, Bell, ChevronLeft, ShoppingCart, MessageCircle, Star, User } from 'lucide-react'
+import { Heart, Bell, ChevronLeft, ShoppingCart, MessageCircle, Star, User, Phone, Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
@@ -240,36 +240,44 @@ export function VendorDetailClient({ vendorId }: Props) {
       <div className="p-4 space-y-6">
         <VendorProfile vendor={adaptedVendor} />
 
-          {/* CTA — solo para usuarios logueados */}
-          {user ? (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <p className="text-sm text-green-800 mb-3">
-                ¿Prefieres hablar directo? Contacta a {vendor.name} por WhatsApp
-              </p>
-              <Button
-                variant="secondary"
-                className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white border-0"
-                onClick={handleWhatsAppDirect}
-              >
-                <MessageCircle size={20} />
-                Contactar por WhatsApp
-              </Button>
+          {/* Action buttons — visible to everyone */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-gray-600 mb-3">
+              Contacta a {vendor.name}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {vendor.phone && (
+                <a
+                  href={`tel:${vendor.phone}`}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-xl transition-colors"
+                >
+                  <Phone size={18} />
+                  <span>Llamar</span>
+                </a>
+              )}
+              {vendor.phone && (
+                <button
+                  type="button"
+                  onClick={handleWhatsAppDirect}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition-colors"
+                >
+                  <MessageCircle size={18} />
+                  <span>WhatsApp</span>
+                </button>
+              )}
+              {vendor.latitude && vendor.longitude && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${vendor.latitude},${vendor.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary hover:bg-secondary-dark text-white font-medium rounded-xl transition-colors"
+                >
+                  <Navigation size={18} />
+                  <span>Cómo llegar</span>
+                </a>
+              )}
             </div>
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <p className="text-sm text-gray-600 mb-3">
-                Regístrate para contactar a {vendor.name} directamente
-              </p>
-              <Button
-                variant="secondary"
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() => router.push('/register')}
-              >
-                <User size={18} />
-                Regístrate gratis
-              </Button>
-            </div>
-          )}
+          </div>
 
         <VendorProducts products={products} onAddToCart={addToCart} user={user} />
 

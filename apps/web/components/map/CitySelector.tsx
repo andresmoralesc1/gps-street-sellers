@@ -75,9 +75,12 @@ export function CitySelector() {
             setTimeout(() => inputRef.current?.focus(), 50)
           }
         }}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={`Ciudad seleccionada: ${selectedCity.name}. Click para cambiar.`}
         className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium"
       >
-        <MapPin size={16} className="text-primary" />
+        <MapPin size={16} className="text-primary" aria-hidden="true" />
         <span>{selectedCity.name}</span>
         <ChevronDown size={14} className={clsx('text-gray-400 transition-transform', open && 'rotate-180')} />
       </button>
@@ -122,6 +125,8 @@ export function CitySelector() {
                   key={city.id}
                   onClick={() => pick(city.id)}
                   onMouseEnter={() => setHighlight(i)}
+                  role="option"
+                  aria-selected={selectedCity.id === city.id}
                   className={clsx(
                     'w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between',
                     highlight === i && 'bg-gray-50',

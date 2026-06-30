@@ -60,5 +60,27 @@ export default async function VendorDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  return <VendorDetailClient vendorId={id} />
+  // Resolve the vendor's UUID once on the server so the client can use it
+  // for endpoints that require a UUID (favorites, orders, etc.).
+  // The slug stays in the URL for SEO; the UUID is the canonical id.
+  const isUuidId = isUuid(id)
+  let vendorUuid = id
+  let vendorSlug: string | undefined
+  try {
+    const result = await pool.query(
+      `SELECT v.id, v.slug FROM vendors v WHERE ${isUuidId ? 'v.id = $1' : 'v.slug = $1'} LIMIT 1`,
+      [id]
+    )
+    if (result.rows.length > 0) {
+      vendorUuid = result.rows[0].id
+      vendorSlug = result.rows[0].slug
+    }
+  } catch {
+    // If the lookup fails the client will surface a "not found" state.
+  }
+  // Only pass the slug to the client when the URL was a UUID. This signals
+  // the client to perform a one-time redirect to the canonical slug form.
+  // If the URL is already the slug, we skip the redirect to avoid a loop.
+  const clientSlug = isUuidId ? vendorSlug : undefined
+  return <VendorDetailClient vendorId={vendorUuid} vendorSlug={clientSlug} />
 }

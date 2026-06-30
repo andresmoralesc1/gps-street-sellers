@@ -9,6 +9,7 @@ import { Button } from './ui/Button'
 import { NotificationBell } from './notifications/NotificationBell'
 import { ThemeToggle } from './ThemeToggle'
 import { useStore } from '@/store/useStore'
+import { clsx } from 'clsx'
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -100,18 +101,21 @@ export function SiteHeader() {
               <div className="relative">
                 <button
                   onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen) }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-all"
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label={`Menú de usuario: ${user.fullName || user.email}`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-all min-h-[36px]"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User size={15} className="text-primary" />
+                    <User size={15} className="text-primary" aria-hidden="true" />
                   </div>
                   <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate">
                     {user.fullName || user.email}
                   </span>
-                  <ChevronDown size={14} className="text-gray-400" />
+                  <ChevronDown size={14} className={clsx('text-gray-400 transition-transform', userMenuOpen && 'rotate-180')} aria-hidden="true" />
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                  <div role="menu" className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
                     {user.role === 'seller' && (
                       <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                         Dashboard

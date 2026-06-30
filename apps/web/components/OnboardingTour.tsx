@@ -50,8 +50,11 @@ export function OnboardingTour() {
     ) return
 
     // Wait until user has been on the map at least once (so they have context)
+    // Also skip on auth/onboarding flows to avoid blocking the user
     const buyerPaths = ['/map', '/favorites', '/settings']
+    const skipPaths = ['/login', '/register', '/role-select', '/onboarding', '/profile']
     if (!buyerPaths.some((p) => pathname?.startsWith(p))) return
+    if (skipPaths.some((p) => pathname?.startsWith(p))) return
 
     const timer = setTimeout(() => setOpen(true), 1500)
     return () => clearTimeout(timer)
@@ -87,6 +90,8 @@ export function OnboardingTour() {
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="onboarding-tour-title"
+      aria-describedby="onboarding-tour-body"
       className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
     >
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
@@ -104,10 +109,10 @@ export function OnboardingTour() {
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-center text-gray-800 mb-2">
+        <h2 id="onboarding-tour-title" className="text-xl font-bold text-center text-gray-800 mb-2">
           {current.title}
         </h2>
-        <p className="text-center text-gray-600 mb-6">
+        <p id="onboarding-tour-body" className="text-center text-gray-600 mb-6">
           {current.body}
         </p>
 

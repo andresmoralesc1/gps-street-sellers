@@ -13,10 +13,20 @@ import type { Vendor, Product, Review } from '@/lib/core/types'
 import { isUuid } from '@/lib/core/utils/slug'
 
 interface Props {
+  /**
+   * Always a UUID. The server resolves both UUID and slug URLs to the canonical
+   * UUID before passing it here so client endpoints (favorites, orders, etc.)
+   * always get a valid UUID.
+   */
   vendorId: string
+  /**
+   * The slug from the URL (for canonical redirects and breadcrumb display).
+   * May be the same value as `vendorId` when the URL was already a UUID.
+   */
+  vendorSlug?: string
 }
 
-export function VendorDetailClient({ vendorId }: Props) {
+export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
   const router = useRouter()
   const [vendor, setVendor] = useState<any>(null)
   const [products, setProducts] = useState<Product[]>([])
@@ -42,19 +52,11 @@ export function VendorDetailClient({ vendorId }: Props) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   useEffect(() => {
-    // Legacy UUID URLs get redirected to the canonical slug form.
-    // This keeps old shared/bookmarked links working without 404.
-    if (isUuid(vendorId)) {
-      fetch(`/api/vendors/${vendorId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const slug = data?.vendor?.slug
-          if (slug) {
-            router.replace(`/vendor/${slug}`)
-            return
-          }
-        })
-        .catch(() => router.push('/map'))
+    // If the URL was a UUID and we now know the canonical slug, redirect
+    // once so the URL is human-friendly. Skip if the URL is already the slug
+    // to avoid an infinite loop.
+    if (vendorSlug && isUuid(vendorId) && vendorSlug !== vendorId) {
+      router.replace(`/vendor/${vendorSlug}`)
       return
     }
 
@@ -242,14 +244,24 @@ export function VendorDetailClient({ vendorId }: Props) {
           <ChevronLeft size={20} />
         </Button>
         <h1 className="text-lg font-bold">{vendor.name}</h1>
-        <button onClick={toggleFavorite} className="ml-auto">
+        <button
+          onClick={toggleFavorite}
+          className="ml-auto p-2"
+          aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          aria-pressed={isFavorite}
+        >
           <Heart
             size={28}
             className={isFavorite ? 'fill-accent text-accent' : 'text-gray-400'}
+            aria-hidden="true"
           />
         </button>
-        <button onClick={() => setCartOpen(true)} className="relative">
-          <ShoppingCart size={28} className="text-gray-600" />
+        <button
+          onClick={() => setCartOpen(true)}
+          className="relative p-2"
+          aria-label={`Abrir carrito${cartItemCount > 0 ? `, ${cartItemCount} ${cartItemCount === 1 ? 'producto' : 'productos'}` : ''}`}
+        >
+          <ShoppingCart size={28} className="text-gray-600" aria-hidden="true" />
           {cartItemCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center">
               {cartItemCount}

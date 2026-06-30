@@ -192,7 +192,9 @@ export default function RegisterPage() {
           <Button
             type="submit"
             className="w-full"
+            variant="primary"
             size="lg"
+            isLoading={isLoading}
             disabled={isLoading}
           >
             {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}

@@ -262,7 +262,7 @@ function AuthPageContent() {
             </p>
           )}
 
-          <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+          <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
             {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
           </Button>
         </form>
@@ -372,7 +372,7 @@ function AuthPageContent() {
             <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
           )}
 
-          <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+          <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
             {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
           </Button>
         </form>

@@ -22,9 +22,10 @@ export function Input({ className, label, error, id, ...props }: InputProps) {
         className={clsx(
           'w-full px-4 py-3 rounded-xl border border-stone-200 bg-white',
           'transition-all duration-200',
-          'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
+          'hover:border-stone-300',
+          'focus:outline-none focus:ring-4 focus:ring-primary/15 focus:border-primary focus:shadow-sm focus:shadow-primary/10',
           'placeholder:text-stone-400 placeholder:font-normal',
-          error && 'border-accent focus:ring-accent/30',
+          error && 'border-accent focus:ring-accent/15 hover:border-accent/70',
           props.disabled && 'bg-stone-50 cursor-not-allowed opacity-60',
           className
         )}

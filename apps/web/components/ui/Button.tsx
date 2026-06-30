@@ -25,10 +25,10 @@ export function Button({
         'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2',
         'disabled:opacity-60 disabled:cursor-not-allowed',
         {
-          'bg-gradient-to-b from-primary to-primary-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0': variant === 'primary',
-          'bg-gradient-to-b from-secondary to-secondary-dark text-white shadow-lg shadow-secondary/25 hover:shadow-xl hover:shadow-secondary/30 hover:-translate-y-0.5 active:translate-y-0': variant === 'secondary',
-          'border-2 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 active:bg-primary/10': variant === 'outline',
-          'text-stone-600 hover:bg-stone-100 hover:text-stone-900 active:bg-stone-200': variant === 'ghost',
+          'bg-gradient-to-b from-primary to-primary-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]': variant === 'primary',
+          'bg-gradient-to-b from-secondary to-secondary-dark text-white shadow-lg shadow-secondary/25 hover:shadow-xl hover:shadow-secondary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]': variant === 'secondary',
+          'border-2 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 active:bg-primary/10 active:scale-[0.97]': variant === 'outline',
+          'text-stone-600 hover:bg-stone-100 hover:text-stone-900 active:bg-stone-200 active:scale-[0.97]': variant === 'ghost',
         },
         {
           'px-3 py-1.5 text-sm rounded-lg': size === 'sm',

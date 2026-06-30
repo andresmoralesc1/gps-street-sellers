@@ -68,3 +68,80 @@
     @apply bg-white/80 backdrop-blur-md border border-white/20;
   }
 }
+
+@layer utilities {
+  /* Heart pop — scale 1 → 1.35 → 1 with overshoot */
+  @keyframes heart-pop {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.35); }
+    60%  { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  .animate-heart-pop {
+    animation: heart-pop 400ms ease-out;
+    transform-origin: center;
+  }
+
+  /* Cart wobble — gentle side-to-side bounce */
+  @keyframes cart-bounce {
+    0%   { transform: translateY(0) rotate(0); }
+    25%  { transform: translateY(-3px) rotate(-8deg); }
+    50%  { transform: translateY(0) rotate(0); }
+    75%  { transform: translateY(-2px) rotate(8deg); }
+    100% { transform: translateY(0) rotate(0); }
+  }
+  .animate-cart-bounce {
+    animation: cart-bounce 500ms ease-out;
+    transform-origin: center;
+  }
+
+  /* Badge pop — scale + slight overshoot, used for cart count */
+  @keyframes badge-pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    50%  { transform: scale(1.25); opacity: 1; }
+    75%  { transform: scale(0.95); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-badge-pop {
+    animation: badge-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Respect users who prefer no motion */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-heart-pop,
+    .animate-cart-bounce,
+    .animate-badge-pop,
+    .animate-shimmer,
+    .animate-fade-in,
+    .animate-slide-up {
+      animation: none;
+    }
+  }
+
+  /* Skeleton shimmer — used by Skeleton component */
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .animate-shimmer {
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Page fade — used by client pages */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .animate-fade-in {
+    animation: fade-in 300ms ease-out both;
+  }
+
+  /* Page slide-up — used by client pages */
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slide-up 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}

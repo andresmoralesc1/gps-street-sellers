@@ -48,6 +48,18 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
   const clearCart = useStore((s) => s.clearCart)
   const user = useStore((s) => s.user)
 
+  // Micro-interaction states — heart pop + cart badge bounce on add
+  const [heartPop, setHeartPop] = useState(false)
+  const [cartBounce, setCartBounce] = useState(false)
+  const triggerHeartPop = () => {
+    setHeartPop(true)
+    window.setTimeout(() => setHeartPop(false), 400)
+  }
+  const triggerCartBounce = () => {
+    setCartBounce(true)
+    window.setTimeout(() => setCartBounce(false), 500)
+  }
+
   const isFavorite = favoriteIds.includes(vendorId)
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -107,6 +119,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     } else {
       addFavorite(vendorId)
     }
+    triggerHeartPop()
     try {
       const res = await fetch(
         isFavorite
@@ -246,24 +259,38 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
         <h1 className="text-lg font-bold">{vendor.name}</h1>
         <button
           onClick={toggleFavorite}
-          className="ml-auto p-2"
+          className="ml-auto p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
           aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
           aria-pressed={isFavorite}
         >
           <Heart
             size={28}
-            className={isFavorite ? 'fill-accent text-accent' : 'text-gray-400'}
+            className={
+              (isFavorite ? 'fill-accent text-accent' : 'text-gray-400') +
+              ' transition-transform duration-300' +
+              (heartPop ? ' animate-heart-pop' : '')
+            }
             aria-hidden="true"
           />
         </button>
         <button
           onClick={() => setCartOpen(true)}
-          className="relative p-2"
+          className="relative p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
           aria-label={`Abrir carrito${cartItemCount > 0 ? `, ${cartItemCount} ${cartItemCount === 1 ? 'producto' : 'productos'}` : ''}`}
         >
-          <ShoppingCart size={28} className="text-gray-600" aria-hidden="true" />
+          <ShoppingCart
+            size={28}
+            className={'text-gray-600 transition-transform duration-300' + (cartBounce ? ' animate-cart-bounce' : '')}
+            aria-hidden="true"
+          />
           {cartItemCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center">
+            <span
+              key={cartItemCount}
+              className={
+                'absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center' +
+                (cartBounce ? ' animate-badge-pop' : '')
+              }
+            >
               {cartItemCount}
             </span>
           )}
@@ -312,7 +339,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
             </div>
           </div>
 
-        <VendorProducts products={products} onAddToCart={addToCart} user={user} />
+        <VendorProducts products={products} onAddToCart={(p) => { addToCart(p); triggerCartBounce() }} user={user} />
 
         {/* Review Form */}
         {user && user.role === 'buyer' && (

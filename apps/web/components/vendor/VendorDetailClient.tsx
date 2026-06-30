@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Heart, Bell, ChevronLeft, ShoppingCart, MessageCircle, Star, User, Phone, Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { toast } from '@/components/ui/Toast'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
 import { VendorReviews } from '@/components/vendor/VendorReviews'
@@ -133,6 +134,11 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
         }
       )
       if (!res.ok) throw new Error('Request failed')
+      toast({
+        kind: wasFavorite ? 'info' : 'success',
+        title: wasFavorite ? 'Eliminado de favoritos' : 'Agregado a favoritos',
+        description: vendor.name,
+      })
     } catch {
       // Rollback optimistic update
       if (wasFavorite) {
@@ -140,6 +146,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
       } else {
         removeFavorite(vendorId)
       }
+      toast({ kind: 'error', title: 'No se pudo actualizar favoritos' })
     }
   }
 
@@ -339,7 +346,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
             </div>
           </div>
 
-        <VendorProducts products={products} onAddToCart={(p) => { addToCart(p); triggerCartBounce() }} user={user} />
+        <VendorProducts products={products} onAddToCart={(p) => { addToCart(p); triggerCartBounce(); toast({ kind: 'success', title: 'Agregado al carrito', description: p.name }) }} user={user} />
 
         {/* Review Form */}
         {user && user.role === 'buyer' && (

@@ -52,12 +52,11 @@ export function SiteHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`sticky top-0 z-50 transition-[background-color,box-shadow,backdrop-filter] duration-300 ease-out ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-xl shadow-card'
-          : 'bg-white shadow-soft'
+          ? 'bg-white/85 backdrop-blur-xl shadow-card border-b border-stone-200/50'
+          : 'bg-white shadow-soft border-b border-transparent'
       }`}
-      style={{ borderRadius: '0 0 16px 16px' }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
@@ -70,7 +69,7 @@ export function SiteHeader() {
                 alt="BarrioTech"
                 width={40}
                 height={40}
-                className="object-contain"
+                className="object-contain transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
                 priority
               />
             </div>
@@ -82,15 +81,31 @@ export function SiteHeader() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary rounded-xl hover:bg-primary/5 transition-all"
-              >
-                {l.label}
-              </Link>
-            ))}
+            {navLinks.map((l) => {
+              const isActive = pathname === l.href || pathname.startsWith(l.href + '/')
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={
+                    'relative px-4 py-2 text-sm font-medium rounded-xl transition-colors ' +
+                    (isActive
+                      ? 'text-primary bg-primary/5'
+                      : 'text-gray-600 hover:text-primary hover:bg-primary/5')
+                  }
+                >
+                  {l.label}
+                  <span
+                    className={
+                      'absolute left-3 right-3 -bottom-0.5 h-0.5 rounded-full bg-primary transition-all duration-300 ' +
+                      (isActive ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0')
+                    }
+                    aria-hidden="true"
+                  />
+                </Link>
+              )
+            })}
           </nav>
 
           {/* Desktop Auth */}

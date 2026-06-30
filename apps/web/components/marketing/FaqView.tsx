@@ -53,7 +53,7 @@ export function FaqView() {
   return (
     <div className="min-h-screen bg-background-cream">
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 py-16">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-gray-800 mb-3">Preguntas Frecuentes</h1>
           <p className="text-gray-500">Encuentra respuestas a las dudas más comunes</p>

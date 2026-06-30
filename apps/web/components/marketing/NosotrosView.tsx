@@ -74,7 +74,7 @@ export function NosotrosView() {
       </section>
 
       {/* Pilares compactos */}
-      <section className="py-12 px-4 bg-[#FFFBEB]">
+      <section className="py-16 px-4 bg-background-cream">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-xl font-bold text-gray-800 mb-8 text-center">Nuestros pilares estratégicos</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -92,12 +92,12 @@ export function NosotrosView() {
       </section>
 
       {/* Valores compactos */}
-      <section className="py-12 px-4 bg-white">
+      <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-xl font-bold text-gray-800 mb-8 text-center">Nuestros valores</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {VALUES.map((v) => (
-              <div key={v.title} className="bg-[#FFFBEB] rounded-xl p-4 shadow-card text-center">
+              <div key={v.title} className="bg-background-cream rounded-xl p-4 shadow-card text-center">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <v.icon size={20} className="text-primary" />
                 </div>
@@ -110,7 +110,7 @@ export function NosotrosView() {
       </section>
 
       {/* Andrés Morales */}
-      <section className="py-16 px-4 bg-[#FFFBEB]">
+      <section className="py-16 px-4 bg-background-cream">
         <div className="max-w-4xl mx-auto text-center">
           {/* Foto circular */}
           <div className="relative w-40 h-40 rounded-full overflow-hidden mx-auto mb-6 ring-4 ring-primary/20 shadow-lg">

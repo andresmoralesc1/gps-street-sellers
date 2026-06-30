@@ -9,7 +9,7 @@ const POLICY_EFFECTIVE = '28 de junio de 2026'
 export function PrivacidadView() {
   return (
     <div className="min-h-screen bg-background-cream">
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           Política de Tratamiento de Datos Personales
         </h1>

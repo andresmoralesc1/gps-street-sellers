@@ -109,7 +109,7 @@ export function HomeView() {
       </section>
 
       {/* Cómo funciona */}
-      <section className="py-16 px-4 bg-[#FFFBEB]">
+      <section className="py-16 px-4 bg-background-cream">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-3">
             ¿Cómo funciona?

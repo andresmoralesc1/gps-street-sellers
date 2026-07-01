@@ -80,12 +80,36 @@ export async function GET(req: NextRequest, context: RouteContext) {
       ? parseFloat((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1))
       : 0
 
+    // Return vendor in camelCase to match /api/vendors (consistency).
+    // products and reviews stay snake_case here; the client already maps them
+    // to its own Product/Review types on the way in (see VendorDetailClient.tsx).
+    const vendorRow = vendorResult.rows[0]
+    const camelVendor = {
+      id: vendorRow.id,
+      slug: vendorRow.slug,
+      name: vendorRow.name,
+      category: vendorRow.category,
+      categoryLabel: vendorRow.category_label,
+      description: vendorRow.description,
+      phone: vendorRow.phone,
+      photoUrl: vendorRow.photo_url,
+      vehicleType: vendorRow.vehicle_type,
+      vehiclePhotoUrl: vendorRow.vehicle_photo_url,
+      isActive: vendorRow.is_active,
+      isVerified: vendorRow.is_verified || false,
+      isSponsored: vendorRow.is_sponsored || false,
+      sponsoredUntil: vendorRow.sponsored_until,
+      rating: avgRating,
+      reviewCount: reviews.length,
+      latitude: vendorRow.latitude,
+      longitude: vendorRow.longitude,
+      cityId: vendorRow.city_id,
+      createdAt: vendorRow.created_at,
+      locationUpdatedAt: vendorRow.location_updated_at,
+    }
+
     return NextResponse.json({
-      vendor: {
-        ...vendor,
-        rating: avgRating,
-        review_count: reviews.length,
-      },
+      vendor: camelVendor,
       products: productsResult.rows,
       reviews,
     })

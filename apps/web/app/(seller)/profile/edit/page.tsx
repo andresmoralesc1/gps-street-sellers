@@ -64,7 +64,7 @@ export default function EditProfilePage() {
           setDescription(data.vendor.description || '')
           setCategory(data.vendor.category || 'comida')
           setPhone(data.vendor.phone || '')
-          setPhotoUrl(data.vendor.photo_url || '')
+          setPhotoUrl(data.vendor.photoUrl || '')
         }
         setLoading(false)
       })

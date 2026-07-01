@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
 
 /**
@@ -33,6 +34,9 @@ async function getMyVendorId(req: NextRequest) {
 
   const decoded = await verifyToken(token)
   if (!decoded) return { error: 'Token inválido', status: 401 } as const
+  if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
+    return { error: 'Sesión revocada', status: 401 } as const
+  }
 
   const r = await pool.query(
     'SELECT v.id FROM vendors v JOIN profiles p ON p.id = v.profile_id WHERE p.user_id = $1',
@@ -87,53 +91,77 @@ export async function POST(req: NextRequest) {
 
   // Don't allow stacking — if there's an active sponsorship, reject.
   // (We could allow renewals that extend the window; deferred for v2.)
-  const activeResult = await pool.query(
-    `SELECT id, ends_at FROM sponsorships
-     WHERE vendor_id = $1 AND status = 'active' AND ends_at > NOW()
-     LIMIT 1`,
-    [auth.vendorId]
-  )
+  // Wrap in a transaction with the INSERT below to prevent races where two
+  // simultaneous POSTs both pass the check and create two active sponsorships.
+  const client = await pool.connect()
+  let insertedRow: any = null
+  try {
+    await client.query('BEGIN')
 
-  if (activeResult.rows.length > 0) {
-    return NextResponse.json(
-      {
-        error: 'Ya tienes una sponsorship activa',
-        activeUntil: activeResult.rows[0].ends_at,
-      },
-      { status: 409 }
+    const activeResult = await client.query(
+      `SELECT id, ends_at FROM sponsorships
+       WHERE vendor_id = $1 AND status = 'active' AND ends_at > NOW()
+       LIMIT 1
+       FOR UPDATE`,
+      [auth.vendorId]
     )
+
+    if (activeResult.rows.length > 0) {
+      await client.query('ROLLBACK')
+      return NextResponse.json(
+        {
+          error: 'Ya tienes una sponsorship activa',
+          activeUntil: activeResult.rows[0].ends_at,
+        },
+        { status: 409 }
+      )
+    }
+
+    // Beta gate: sponsorship activation requires explicit opt-in via env var.
+    // In production, payment verification (Wompi webhook) is required BEFORE
+    // activation. Setting ENABLE_BETA_SPONSORSHIPS=true in .env re-enables the
+    // dev/beta shortcut. Default = disabled (safer for prod).
+    if (process.env.ENABLE_BETA_SPONSORSHIPS !== 'true') {
+      await client.query('ROLLBACK')
+      return NextResponse.json(
+        {
+          error:
+            'Pagos aún no disponibles. Estamos integrando Wompi (PSE/Nequi). ' +
+            'Si quieres patrocinar tu tienda en beta, contacta a soporte.',
+        },
+        { status: 503 }
+      )
+    }
+
+    const insertResult = await client.query(
+      `INSERT INTO sponsorships (vendor_id, plan, amount_cents, ends_at, status)
+       VALUES ($1, $2, $3, NOW() + ($4 || ' days')::INTERVAL, 'active')
+       RETURNING id, plan, amount_cents, starts_at, ends_at, status`,
+      [auth.vendorId, plan, config.amount_cents, config.days]
+    )
+    insertedRow = insertResult.rows[0]
+
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
   }
 
-  // Beta gate: sponsorship activation requires explicit opt-in via env var.
-  // In production, payment verification (Wompi webhook) is required BEFORE
-  // activation. Setting ENABLE_BETA_SPONSORSHIPS=true in .env re-enables the
-  // dev/beta shortcut. Default = disabled (safer for prod).
-  if (process.env.ENABLE_BETA_SPONSORSHIPS !== 'true') {
-    return NextResponse.json(
-      {
-        error:
-          'Pagos aún no disponibles. Estamos integrando Wompi (PSE/Nequi). ' +
-          'Si quieres patrocinar tu tienda en beta, contacta a soporte.',
-      },
-      { status: 503 }
-    )
+  if (!insertedRow) {
+    // Should be unreachable — but keeps TS happy and the contract explicit.
+    return NextResponse.json({ error: 'No se pudo crear la sponsorship' }, { status: 500 })
   }
-
-  const insertResult = await pool.query(
-    `INSERT INTO sponsorships (vendor_id, plan, amount_cents, ends_at, status)
-     VALUES ($1, $2, $3, NOW() + ($4 || ' days')::INTERVAL, 'active')
-     RETURNING id, plan, amount_cents, starts_at, ends_at, status`,
-    [auth.vendorId, plan, config.amount_cents, config.days]
-  )
 
   return NextResponse.json({
     sponsorship: {
-      id: insertResult.rows[0].id,
-      plan: insertResult.rows[0].plan,
-      amountCents: Number(insertResult.rows[0].amount_cents),
-      startsAt: insertResult.rows[0].starts_at,
-      endsAt: insertResult.rows[0].ends_at,
-      status: insertResult.rows[0].status,
+      id: insertedRow.id,
+      plan: insertedRow.plan,
+      amountCents: Number(insertedRow.amount_cents),
+      startsAt: insertedRow.starts_at,
+      endsAt: insertedRow.ends_at,
+      status: insertedRow.status,
     },
   })
 }

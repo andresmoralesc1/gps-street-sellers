@@ -12,3 +12,6 @@ backups/
 *.sql
 *.sql.gz
 .DS_Store
+# Backup env files (created during secret rotation)
+.env.bak.*
+.env.local.bak.*

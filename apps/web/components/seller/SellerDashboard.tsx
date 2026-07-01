@@ -126,14 +126,14 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
         <div className="space-y-2">
           {/* Foto de perfil */}
           <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${vendor.photo_url ? 'bg-green-500' : 'bg-gray-200'}`}>
-              {vendor.photo_url ? (
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${vendor.photoUrl ? 'bg-green-500' : 'bg-gray-200'}`}>
+              {vendor.photoUrl ? (
                 <Check size={14} className="text-white" />
               ) : (
                 <span className="w-2 h-2 rounded-full bg-gray-400" />
               )}
             </div>
-            <span className={`text-sm ${vendor.photo_url ? 'text-gray-700' : 'text-gray-400'}`}>Foto de perfil</span>
+            <span className={`text-sm ${vendor.photoUrl ? 'text-gray-700' : 'text-gray-400'}`}>Foto de perfil</span>
           </div>
           {/* Agregar productos */}
           <div className="flex items-center gap-3">
@@ -201,7 +201,7 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               {vendor.name}
-              {vendor.is_verified && (
+              {vendor.isVerified && (
                 <span title="Vendedor verificado">✅</span>
               )}
             </h2>

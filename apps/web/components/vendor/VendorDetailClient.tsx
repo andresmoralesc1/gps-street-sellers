@@ -249,12 +249,12 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     name: vendor.name,
     category: vendor.category,
     description: vendor.description || '',
-    photoUrl: vendor.photo_url || '',
-    isActive: vendor.is_active,
-    isVerified: vendor.is_verified || false,
+    photoUrl: vendor.photoUrl || '',
+    isActive: vendor.isActive,
+    isVerified: vendor.isVerified || false,
     ratingAvg: parseFloat(vendor.rating) || 0,
-    reviewCount: vendor.review_count ?? 0,
-    createdAt: vendor.created_at,
+    reviewCount: vendor.reviewCount ?? 0,
+    createdAt: vendor.createdAt,
   }
 
   return (

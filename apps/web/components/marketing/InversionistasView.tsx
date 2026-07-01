@@ -28,7 +28,6 @@ const METRICS = [
   { value: '13,2M', label: 'Trabajadores informales en Colombia', source: 'DANE 2026' },
   { value: '55,1%', label: 'De la fuerza laboral nacional', source: 'DANE 2026' },
   { value: '83%', label: 'Informalidad en zonas rurales', source: 'DANE 2026' },
-  { value: '0', label: 'Competidores digitalizando este segmento', source: 'Análisis interno' },
 ]
 
 const TRACTION = [
@@ -167,7 +166,7 @@ export function InversionistasView() {
               Un mercado subestimado que está migrando a lo digital.
             </h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {METRICS.map((m) => (
               <div key={m.label} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
                 <p className="text-3xl md:text-4xl font-bold text-primary mb-2">{m.value}</p>

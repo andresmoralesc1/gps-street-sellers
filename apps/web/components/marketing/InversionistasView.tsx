@@ -32,7 +32,7 @@ const METRICS = [
 
 const TRACTION = [
   { icon: Sparkles, title: 'Fase actual', desc: 'Desarrollo de WebApp MVP enfocada en validación de geolocalización y experiencia de vendedor.' },
-  { icon: Building2, title: 'Modelo de negocio', desc: 'Suscripciones B2B para vendedores y red de publicidad hiper-local para marcas nacionales.' },
+  { icon: Building2, title: 'Modelo de negocio', desc: 'Suscripciones B2B para vendedores y compradores con funciones extra de visibilidad, y red de publicidad hiper-local para marcas nacionales.' },
   { icon: Target, title: 'Visión estratégica', desc: 'Infraestructura escalable diseñada para expandirse de Bogotá a nivel nacional.' },
 ]
 

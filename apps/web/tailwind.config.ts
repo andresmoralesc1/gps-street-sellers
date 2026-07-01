@@ -1,7 +1,10 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  darkMode: 'class',
+  // Dark mode disabled — see app/providers.tsx for the runtime guard.
+  // To re-enable: restore `darkMode: 'class'` and uncomment the
+  // <ThemeToggle /> import + render in SiteHeader.tsx
+  // darkMode: 'class',
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',

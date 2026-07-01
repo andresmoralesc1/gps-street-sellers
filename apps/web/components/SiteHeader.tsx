@@ -7,7 +7,9 @@ import { usePathname } from 'next/navigation'
 import { Menu, X, MapPin, User, LogIn, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { NotificationBell } from './notifications/NotificationBell'
-import { ThemeToggle } from './ThemeToggle'
+// Theme toggle hidden while dark mode is disabled. Component kept in
+// repo for easy re-enable later.
+// import { ThemeToggle } from './ThemeToggle'
 import { useStore } from '@/store/useStore'
 import { clsx } from 'clsx'
 
@@ -110,7 +112,7 @@ export function SiteHeader() {
 
           {/* Desktop Auth */}
           <div className="hidden md:flex items-center gap-2">
-            <ThemeToggle />
+            {/* ThemeToggle hidden — dark mode disabled */}
             <NotificationBell />
             {isLoggedIn ? (
               <div className="relative">

@@ -43,6 +43,7 @@ export function SiteFooter() {
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Compañía</h4>
             <ul className="space-y-1">
               <li><Link href="/nosotros" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Sobre nosotros</Link></li>
+              <li><Link href="/inversionistas" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Inversionistas</Link></li>
               <li><Link href="/contacto" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Contacto</Link></li>
               <li><Link href="/preguntas-frecuentes" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Preguntas frecuentes</Link></li>
             </ul>

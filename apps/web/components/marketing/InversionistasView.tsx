@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { TrendingUp, MapPin, BarChart3, Building2, Sparkles, Mail, FileText, Users, Target, Eye, Send, Loader2 } from 'lucide-react'
 
@@ -215,8 +216,8 @@ export function InversionistasView() {
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">Quién está detrás</h2>
           </div>
           <div className="bg-white rounded-2xl p-8 shadow-card text-center">
-            <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-5 ring-4 ring-primary/20 shadow-lg bg-orange-100 flex items-center justify-center">
-              <span className="text-4xl font-bold text-primary">AM</span>
+            <div className="relative w-32 h-32 rounded-full overflow-hidden mx-auto mb-5 ring-4 ring-primary/20 shadow-lg bg-orange-100">
+              <Image src="/andres.png" alt="Andrés Morales" fill className="object-cover" sizes="128px" unoptimized />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-1">Andrés Morales</h3>
             <p className="text-primary font-medium text-sm mb-4">Fundador y CEO</p>

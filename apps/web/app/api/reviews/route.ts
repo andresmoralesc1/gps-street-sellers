@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const vendor_id = body.vendor_id || body.vendorId
-    const { rating, comment, author_name } = body
+    const { rating, comment } = body
 
     if (!vendor_id || !rating || !comment) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -45,16 +45,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Rating debe ser entre 1 y 5' }, { status: 400 })
     }
 
-    // Get buyer name from profile
-    let name = author_name || 'Cliente anónimo'
-    if (!author_name) {
-      const profileResult = await pool.query(
-        'SELECT name FROM profiles WHERE user_id = $1',
-        [decoded.userId]
-      )
-      if (profileResult.rows.length > 0 && profileResult.rows[0].name) {
-        name = profileResult.rows[0].name
-      }
+    // Security: ALWAYS use the authenticated user's profile name — never
+    // trust author_name from the client (identity impersonation risk).
+    let name = 'Cliente anónimo'
+    const profileResult = await pool.query(
+      'SELECT name FROM profiles WHERE user_id = $1',
+      [decoded.userId]
+    )
+    if (profileResult.rows.length > 0 && profileResult.rows[0].name) {
+      name = profileResult.rows[0].name
     }
 
     const result = await pool.query(

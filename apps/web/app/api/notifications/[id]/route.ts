@@ -4,10 +4,10 @@ import pool from '@/lib/db'
 
 
 // PATCH /api/notifications/[id] — mark as read
-export async function PATCH(req: NextRequest) {
+type RouteContext = { params: Promise<{ id: string }> }
+export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { searchParams } = new URL(req.url)
-    const notifId = searchParams.get('id')
+    const { id: notifId } = await context.params
 
     // Accept Authorization header OR cookie token
     let token: string | null = null

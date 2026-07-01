@@ -55,13 +55,16 @@ export async function GET(request: NextRequest) {
     )
     const profileId = profileRes.rows[0]?.id ?? null
 
-    // 3. Vendor (if exists).
-    const vendorRes = await pool.query(
-      `SELECT id, name, description, category, phone, city_id,
-              rating, is_active, is_verified, created_at, updated_at
-       FROM vendors WHERE user_id = $1`,
-      [userId]
-    )
+    // 3. Vendor (if exists). vendors has profile_id (FK to profiles), not user_id.
+    let vendorRes: { rows: unknown[] } = { rows: [] }
+    if (profileId) {
+      vendorRes = await pool.query(
+        `SELECT id, name, description, category, phone, city_id,
+                rating, is_active, is_verified, created_at, updated_at
+         FROM vendors WHERE profile_id = $1`,
+        [profileId]
+      )
+    }
 
     // 4. Orders placed (buyer = profile).
     let ordersPlaced: unknown[] = []
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     // 5. Orders received (vendor side).
     const ordersReceived: unknown[] = []
-    for (const v of vendorRes.rows) {
+    for (const v of (vendorRes.rows as Array<{ id: string }>)) {
       const r = await pool.query(
         `SELECT id, status, total, created_at
          FROM orders WHERE vendor_id = $1 ORDER BY created_at DESC`,

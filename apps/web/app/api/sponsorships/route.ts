@@ -104,9 +104,21 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Beta mode: mark as 'active' immediately.
-  // Production: insert with status='pending_payment' and let the Wompi
-  // webhook flip to 'active' after confirmation.
+  // Beta gate: sponsorship activation requires explicit opt-in via env var.
+  // In production, payment verification (Wompi webhook) is required BEFORE
+  // activation. Setting ENABLE_BETA_SPONSORSHIPS=true in .env re-enables the
+  // dev/beta shortcut. Default = disabled (safer for prod).
+  if (process.env.ENABLE_BETA_SPONSORSHIPS !== 'true') {
+    return NextResponse.json(
+      {
+        error:
+          'Pagos aún no disponibles. Estamos integrando Wompi (PSE/Nequi). ' +
+          'Si quieres patrocinar tu tienda en beta, contacta a soporte.',
+      },
+      { status: 503 }
+    )
+  }
+
   const insertResult = await pool.query(
     `INSERT INTO sponsorships (vendor_id, plan, amount_cents, ends_at, status)
      VALUES ($1, $2, $3, NOW() + ($4 || ' days')::INTERVAL, 'active')

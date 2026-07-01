@@ -106,7 +106,7 @@ interface AppState {
 
 export const useStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Hydration
       _hasHydrated: false,
       setHasHydrated: (v) => set({ _hasHydrated: v }),
@@ -191,8 +191,12 @@ export const useStore = create<AppState>()(
         })),
       clearCart: () => set({ cart: [] }),
       getCartTotal: () => {
-        // getter needs get, handled at call site
-        return 0
+        // Calculate from current cart state via get() to avoid stale closures.
+        // Cart items may have undefined price (safety) — treat as 0.
+        return get().cart.reduce(
+          (sum, item) => sum + (item.product.price ?? 0) * item.quantity,
+          0
+        )
       },
 
       // Orders

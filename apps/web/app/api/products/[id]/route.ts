@@ -33,6 +33,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const { name, description, price, photo_url } = await req.json()
 
+    // Verify ownership BEFORE allowing update — vendors can only edit their own products.
+    const ownership = await pool.query(
+      `SELECT p.id FROM products p
+       JOIN vendors v ON v.id = p.vendor_id
+       JOIN profiles pr ON pr.id = v.profile_id
+       WHERE p.id = $1 AND pr.user_id = $2`,
+      [productId, decoded.userId]
+    )
+    if (ownership.rows.length === 0) {
+      return NextResponse.json({ error: 'Producto no encontrado o sin permiso' }, { status: 404 })
+    }
+
     const updates: string[] = []
     const params: any[] = []
 

@@ -39,7 +39,16 @@ export async function GET(req: NextRequest) {
       params.push(profile.id)
       query += ` AND o.buyer_id = $${params.length}`
     } else if (profile.role === 'seller') {
-      params.push(profile.id)
+      // orders.vendor_id references vendors.id (not profiles.id).
+      // Look up the vendor row owned by this profile.
+      const vendorRes = await pool.query(
+        'SELECT id FROM vendors WHERE profile_id = $1',
+        [profile.id]
+      )
+      if (vendorRes.rows.length === 0) {
+        return NextResponse.json({ orders: [] })
+      }
+      params.push(vendorRes.rows[0].id)
       query += ` AND o.vendor_id = $${params.length}`
     }
 

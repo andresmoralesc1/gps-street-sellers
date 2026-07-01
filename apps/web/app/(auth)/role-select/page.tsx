@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -13,6 +13,9 @@ export default function RoleSelectPage() {
   const router = useRouter()
   const setUser = useStore((s) => s.setUser)
   const user = useStore((s) => s.user)
+
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     // Redirect if not logged in
@@ -35,32 +38,34 @@ export default function RoleSelectPage() {
   const selectRole = async (role: UserRole) => {
     if (!user) return
 
+    setError(null)
+    setIsSubmitting(true)
+
     try {
-      const res = await fetch('/api/auth/me', {
-        method: 'PATCH',
+      const res = await fetch('/api/auth/role-select', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ role }),
       })
 
-      if (!res.ok) throw new Error('Failed to update role')
+      const data = await res.json().catch(() => ({}))
 
-      const data = await res.json()
-      setUser({ ...user, role })
+      if (!res.ok) {
+        setError(data.error || 'No pudimos guardar tu elección. Intenta de nuevo.')
+        setIsSubmitting(false)
+        return
+      }
 
+      setUser({ ...user, role: data.user.role })
       if (role === 'buyer') {
         router.push('/map')
       } else {
         router.push('/dashboard')
       }
     } catch {
-      // Still allow navigation even if API fails
-      setUser({ ...user, role })
-      if (role === 'buyer') {
-        router.push('/map')
-      } else {
-        router.push('/dashboard')
-      }
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.')
+      setIsSubmitting(false)
     }
   }
 
@@ -90,11 +95,18 @@ export default function RoleSelectPage() {
           <p className="text-gray-500">Elige tu rol principal — puedes cambiar después</p>
         </div>
 
+        {error && (
+          <div role="alert" className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg text-center">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-6">
           {/* Comprador */}
           <button
             onClick={() => selectRole('buyer')}
-            className="group text-left"
+            disabled={isSubmitting}
+            className="group text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Card
               variant="elevated"
@@ -118,7 +130,8 @@ export default function RoleSelectPage() {
           {/* Vendedor */}
           <button
             onClick={() => selectRole('seller')}
-            className="group text-left"
+            disabled={isSubmitting}
+            className="group text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Card
               variant="elevated"

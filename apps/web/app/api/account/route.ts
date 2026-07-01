@@ -73,8 +73,9 @@ export async function DELETE(request: NextRequest) {
       // Anonymize favorites: drop the rows (no business value without the user).
       await client.query(`DELETE FROM favorites WHERE buyer_id = $1`, [profileId])
       // Anonymize notifications: drop (they're personal to the user).
-      await client.query(`DELETE FROM notifications WHERE profile_id = $1`, [
-        profileId,
+      // notifications.user_id FKs to users.id, not profiles.id — pass userId directly.
+      await client.query(`DELETE FROM notifications WHERE user_id = $1`, [
+        userId,
       ])
     }
 

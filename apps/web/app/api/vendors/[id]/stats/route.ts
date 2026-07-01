@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
 
 
@@ -17,6 +18,9 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
     const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
+    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
+      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
     }
     userId = decoded.userId
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
 
 
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
     const v = result.rows[0]
     const vendor = {
       id: v.id,
-      userId: v.user_id,
+      profileId: v.profile_id,
       name: v.name,
       category: v.category,
       description: v.description,
@@ -164,6 +165,9 @@ export async function PATCH(req: NextRequest) {
     const decoded = await verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
+    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
+      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
     }
     userId = decoded.userId
 

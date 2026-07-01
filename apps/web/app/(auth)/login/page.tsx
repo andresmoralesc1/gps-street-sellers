@@ -362,7 +362,7 @@ function AuthPageContent() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8">
       <Suspense fallback={
         <div className="w-full max-w-md p-8 flex items-center justify-center">
           <p className="text-gray-400">Cargando...</p>

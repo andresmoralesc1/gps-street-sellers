@@ -252,8 +252,8 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     photoUrl: vendor.photo_url || '',
     isActive: vendor.is_active,
     isVerified: vendor.is_verified || false,
-    ratingAvg: parseFloat(vendor.rating_avg) || 0,
-    reviewCount: vendor.review_count || 0,
+    ratingAvg: parseFloat(vendor.rating) || 0,
+    reviewCount: vendor.review_count ?? 0,
     createdAt: vendor.created_at,
   }
 

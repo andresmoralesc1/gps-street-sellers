@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     const itemsByOrder = new Map()
     if (orderIds.length > 0) {
       const itemsResult = await pool.query(
-        `SELECT oi.order_id, oi.id, oi.product_id, oi.quantity, oi.unit_price,
+        `SELECT oi.order_id, oi.id, oi.product_id, oi.quantity, oi.price,
                 pr.name as product_name
          FROM order_items oi
          JOIN products pr ON oi.product_id = pr.id

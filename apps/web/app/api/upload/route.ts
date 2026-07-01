@@ -50,7 +50,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 })
     }
 
-    const ext = path.extname(file.name || '.jpg').toLowerCase()
+    // Whitelist the extension from a known-safe set so the client can't
+    // rename 'evil.html' to 'evil.jpg' to bypass the MIME check.
+    const ALLOWED_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'] as const
+    const rawExt = path.extname(file.name || '').toLowerCase()
+    const ext = ALLOWED_EXTS.includes(rawExt as any) ? rawExt : '.jpg'
     const uuid = randomUUID()
     const filename = `${uuid}${ext}`
     const subdir = path.join(STORAGE_DIR, folder)

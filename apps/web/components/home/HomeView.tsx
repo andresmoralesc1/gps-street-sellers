@@ -209,13 +209,13 @@ export function HomeView() {
                 : 'Tu barrio todavía no está en el mapa. Si te registras hoy, eres el primer vendedor de tu ciudad en la app.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/register?role=seller">
+              <Link href="/register">
                 <Button size="lg" className="bg-primary hover:bg-primary-700">
                   <MapPin size={18} className="mr-2" />
                   Quiero ser vendedor
                 </Button>
               </Link>
-              <Link href="/register?role=buyer">
+              <Link href="/map">
                 <Button variant="outline" size="lg" className="border-orange-200 text-primary hover:bg-orange-50">
                   Explorar como comprador
                 </Button>

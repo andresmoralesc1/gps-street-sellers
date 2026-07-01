@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Frown } from 'lucide-react'
+import { Frown, LogIn, X } from 'lucide-react'
+import Link from 'next/link'
 import { VendorCard } from './VendorCard'
 import { useStore } from '@/store/useStore'
 import { calculateDistance } from '@/lib/core/utils/geo'
@@ -11,6 +12,7 @@ import { getCategoryInfo, COLOMBIA_CITIES } from '@/lib/core/constants'
 import type { Vendor, VendorCategory } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
 import L from 'leaflet'
+import { toast } from '@/components/ui/Toast'
 
 // Fix para íconos de Leaflet en Next.js
 import '@/lib/leaflet-icon-fix'
@@ -31,6 +33,13 @@ export function MapView() {
   const [activeVendors, setActiveVendors] = useState<Vendor[]>([])
   const filters = useStore((s) => s.filters)
   const userLocation = useStore((s) => s.userLocation)
+  const user = useStore((s) => s.user)
+  const _hasHydrated = useStore((s) => s._hasHydrated)
+  const isLoggedIn = _hasHydrated && !!user
+  const [guestBannerDismissed, setGuestBannerDismissed] = useState(false)
+
+  // Vendors are browsable for guests, but they cannot see details until
+  // they sign in. We track this as a single flag derived from auth state.
 
   // Persist city selection to localStorage
   useEffect(() => {
@@ -220,27 +229,42 @@ export function MapView() {
                 position={[vendor.latitude, vendor.longitude]}
                 icon={markerIcon}
                 eventHandlers={{
-                  click: () => setSelectedVendor(vendor),
+                  click: () => {
+                    if (!isLoggedIn) {
+                      // Guest mode — show a hint to sign in instead of
+                      // leaking vendor details on the public map.
+                      toast({
+                        kind: 'info',
+                        title: 'Inicia sesión para ver detalles',
+                        description: `${vendor.name} y otros vendedores — solo para usuarios registrados.`,
+                        action: { label: 'Ingresar', href: '/login' },
+                      })
+                      return
+                    }
+                    setSelectedVendor(vendor)
+                  },
                 }}
               >
-                <Popup>
-                  <VendorCard
-                    vendor={vendor}
-                    compact
-                    distance={getVendorDistance(vendor)}
-                    isSponsored={sponsored}
-                    onViewDetails={() => {
-                      window.location.href = `/vendor/${vendor.slug || vendor.id}`
-                    }}
-                  />
-                </Popup>
+                {isLoggedIn ? (
+                  <Popup>
+                    <VendorCard
+                      vendor={vendor}
+                      compact
+                      distance={getVendorDistance(vendor)}
+                      isSponsored={sponsored}
+                      onViewDetails={() => {
+                        window.location.href = `/vendor/${vendor.slug || vendor.id}`
+                      }}
+                    />
+                  </Popup>
+                ) : null}
               </Marker>
             )
           })
         )}
       </MapContainer>
 
-      {selectedVendor && (
+      {isLoggedIn && selectedVendor && (
         <div className="absolute bottom-4 left-4 right-4 z-[1000]">
           <VendorCard
             vendor={selectedVendor}
@@ -250,6 +274,45 @@ export function MapView() {
                 window.location.href = `/vendor/${selectedVendor.slug || selectedVendor.id}`
               }}
           />
+        </div>
+      )}
+
+      {/* Guest banner — only visible to non-logged-in users */}
+      {!isLoggedIn && !guestBannerDismissed && (
+        <div className="absolute top-4 left-4 right-4 sm:right-auto z-[1000] pointer-events-auto">
+          <div className="bg-white rounded-2xl shadow-card border border-stone-200 px-4 py-3 max-w-md flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <LogIn size={18} className="text-primary" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-stone-900">Explora el mapa</p>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Inicia sesión para ver detalles de los vendedores.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold text-primary hover:text-primary-600 transition-colors"
+                >
+                  Ingresar
+                </Link>
+                <span className="text-xs text-stone-300" aria-hidden="true">·</span>
+                <Link
+                  href="/register"
+                  className="text-xs font-semibold text-primary hover:text-primary-600 transition-colors"
+                >
+                  Registrarme
+                </Link>
+              </div>
+            </div>
+            <button
+              onClick={() => setGuestBannerDismissed(true)}
+              aria-label="Cerrar aviso"
+              className="p-1 rounded-lg hover:bg-stone-100 transition-colors flex-shrink-0"
+            >
+              <X size={16} className="text-stone-500" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
     </div>

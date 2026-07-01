@@ -1,16 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { clsx } from 'clsx'
 
 export type ToastKind = 'success' | 'error' | 'info' | 'warning'
+
+export interface ToastAction {
+  label: string
+  href: string
+}
 
 interface ToastItem {
   id: number
   kind: ToastKind
   title: string
   description?: string
+  action?: ToastAction
 }
 
 // Module-level event bus — no provider needed because toasts are global.
@@ -76,6 +83,14 @@ export function ToastContainer() {
               <p className="font-semibold text-sm leading-tight">{it.title}</p>
               {it.description && (
                 <p className="text-xs mt-0.5 opacity-80">{it.description}</p>
+              )}
+              {it.action && (
+                <Link
+                  href={it.action.href}
+                  className="inline-block mt-1.5 text-xs font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
+                >
+                  {it.action.label} →
+                </Link>
               )}
             </div>
             <button

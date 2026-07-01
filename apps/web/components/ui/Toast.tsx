@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -44,21 +44,45 @@ const COLORS: Record<ToastKind, string> = {
 
 export function ToastContainer() {
   const [items, setItems] = useState<Array<ToastItem & { entering: boolean }>>([])
+  // Track dismiss timers so we can clear them when the user manually closes
+  // the toast before auto-dismiss (prevents React setState-after-unmount warnings
+  // and memory leaks on rapid toast churn).
+  const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
+    const dismiss = (id: number) => {
+      setItems((prev) => prev.filter((it) => it.id !== id))
+      const timer = timersRef.current.get(id)
+      if (timer) {
+        clearTimeout(timer)
+        timersRef.current.delete(id)
+      }
+    }
+
     const handler = (t: Omit<ToastItem, 'id'>) => {
       const id = nextId++
       setItems((prev) => [...prev, { ...t, id, entering: true }])
       // Auto-dismiss after 3.5s
-      window.setTimeout(() => {
-        setItems((prev) => prev.filter((it) => it.id !== id))
-      }, 3500)
+      const timer = setTimeout(() => dismiss(id), 3500)
+      timersRef.current.set(id, timer)
     }
     listeners.add(handler)
     return () => {
       listeners.delete(handler)
+      // Clear all pending timers on unmount to avoid leaks.
+      timersRef.current.forEach((t) => clearTimeout(t))
+      timersRef.current.clear()
     }
   }, [])
+
+  const handleManualDismiss = (id: number) => {
+    setItems((prev) => prev.filter((x) => x.id !== id))
+    const timer = timersRef.current.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      timersRef.current.delete(id)
+    }
+  }
 
   return (
     <div
@@ -94,7 +118,7 @@ export function ToastContainer() {
               )}
             </div>
             <button
-              onClick={() => setItems((prev) => prev.filter((x) => x.id !== it.id))}
+              onClick={() => handleManualDismiss(it.id)}
               aria-label="Cerrar notificación"
               className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/5 active:scale-90 transition-transform"
             >

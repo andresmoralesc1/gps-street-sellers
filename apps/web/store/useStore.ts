@@ -169,6 +169,14 @@ export const useStore = create<AppState>()(
       setCartOpen: (open) => set({ cartOpen: open }),
       addToCart: (product) =>
         set((state) => {
+          // Cross-vendor guard: BarrioTech orders are placed per-vendor
+          // (one WhatsApp thread per vendor). If the cart already has items
+          // from a different vendor, replace the cart with the new product —
+          // toast/UI elsewhere should warn the user before this happens.
+          const existingVendorId = state.cart[0]?.product.vendorId
+          if (existingVendorId && existingVendorId !== product.vendorId) {
+            return { cart: [{ product, quantity: 1 }] }
+          }
           const existing = state.cart.find((item) => item.product.id === product.id)
           if (existing) {
             return {

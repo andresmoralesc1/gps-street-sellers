@@ -8,7 +8,6 @@ import { FilterBar } from '@/components/map/FilterBar'
 import { CitySelector } from '@/components/map/CitySelector'
 import { useStore } from '@/store/useStore'
 import { useEffect } from 'react'
-import { MOCK_VENDORS } from '@/lib/mockData'
 import type { Vendor } from '@/lib/core/types'
 
 // Dynamic import para evitar SSR con Leaflet
@@ -56,8 +55,9 @@ export default function MapPage() {
         const transformed = data.vendors.map(transformVendor)
         setVendors(transformed)
       } catch (err) {
+        // Don't show fake mock data — let the empty-state UI explain the issue.
         console.error('Error fetching vendors:', err)
-        setVendors(MOCK_VENDORS)
+        setVendors([])
       }
     }
     fetchVendors()

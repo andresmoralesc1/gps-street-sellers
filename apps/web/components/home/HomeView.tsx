@@ -4,7 +4,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin, Users, TrendingUp, Star, ArrowRight, Clock, Shield, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { getActiveVendors } from '@/lib/mockData'
 import { useEffect, useState } from 'react'
 
 // Photos from Pexels (Colombian street food / market scenes)

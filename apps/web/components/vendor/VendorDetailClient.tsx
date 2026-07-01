@@ -346,7 +346,21 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
             </div>
           </div>
 
-        <VendorProducts products={products} onAddToCart={(p) => { addToCart(p); triggerCartBounce(); toast({ kind: 'success', title: 'Agregado al carrito', description: p.name }) }} user={user} />
+        <VendorProducts products={products} onAddToCart={(p) => {
+          const existingVendorId = cart[0]?.product.vendorId
+          const switchedVendor = existingVendorId && existingVendorId !== p.vendorId
+          addToCart(p)
+          triggerCartBounce()
+          if (switchedVendor) {
+            toast({
+              kind: 'warning',
+              title: 'Carrito reemplazado',
+              description: 'Solo puedes pedir a un vendedor a la vez por WhatsApp.',
+            })
+          } else {
+            toast({ kind: 'success', title: 'Agregado al carrito', description: p.name })
+          }
+        }} user={user} />
 
         {/* Review Form */}
         {user && user.role === 'buyer' && (

@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, MapPin, Store, Star, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useStore } from '@/store/useStore'
@@ -148,215 +148,273 @@ function AuthPageContent() {
   }
 
   return (
-    <Card variant="elevated" className="w-full max-w-md p-8">
-      {/* Logo / Title */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-100 rounded-2xl mb-4 overflow-hidden">
-          <Image
-            src="/logo.png"
-            alt="BarrioTech"
-            width={40}
-            height={40}
-            className="object-contain"
-          />
+    <div className="bg-white rounded-2xl shadow-xl shadow-gray-900/5 overflow-hidden grid grid-cols-1 lg:grid-cols-2 w-full max-w-5xl">
+      {/* ── Form column ── */}
+      <div className="p-8 sm:p-10">
+        {/* Logo / Title */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-100 rounded-2xl mb-4 overflow-hidden">
+            <Image
+              src="/logo.png"
+              alt="BarrioTech"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {step === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta'}
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {step === 'login'
+              ? 'Ingresa para buscar vendedores cerca de ti'
+              : 'Gratis · Sin comisiones · Sin compromisos'}
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {step === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta'}
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {step === 'login'
-            ? 'Ingresa para buscar vendedores cerca de ti'
-            : 'Gratis · Sin comisiones · Sin compromisos'}
-        </p>
-      </div>
 
-      {/* ── LOGIN ── */}
-      {step === 'login' && (
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              disabled={isLoading}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-medium text-gray-700">Contraseña</label>
-              <span className="text-xs text-gray-400" title="Recuperación de contraseña próximamente">
-                ¿Olvidaste? <em className="not-italic text-primary">próximamente</em>
-              </span>
-            </div>
-            <div className="relative">
+        {/* ── LOGIN ── */}
+        {step === 'login' && (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
-          </div>
-
-          {error && (
-            <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
-          )}
-
-          <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
-            {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
-          </Button>
-        </form>
-      )}
-
-      {/* ── REGISTER ── */}
-      {step === 'register' && (
-        <form onSubmit={handleRegister} className="space-y-4">
-          {/* Role selector */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setSelectedRole('buyer')}
-              className={`p-3 rounded-xl border-2 text-center transition-all ${
-                selectedRole === 'buyer'
-                  ? 'border-primary bg-orange-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-2xl mb-1">🛒</div>
-              <div className="text-sm font-semibold text-gray-800">Comprador</div>
-              <div className="text-xs text-gray-500">Buscar y pedir</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedRole('seller')}
-              className={`p-3 rounded-xl border-2 text-center transition-all ${
-                selectedRole === 'seller'
-                  ? 'border-primary bg-orange-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-2xl mb-1">📍</div>
-              <div className="text-sm font-semibold text-gray-800">Vendedor</div>
-              <div className="text-xs text-gray-500">Aparecer en el mapa</div>
-            </button>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Nombre completo</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Juan Pérez"
-              disabled={isLoading}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
-            <input
-              type="email"
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              placeholder="tu@email.com"
-              disabled={isLoading}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Teléfono</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="300 123 4567"
-              disabled={isLoading}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Ciudad</label>
-            <CityInput
-              value={cityId}
-              onChange={setCityId}
-              disabled={isLoading}
-              placeholder="Busca tu ciudad..."
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Contraseña</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={regPassword}
-                onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                disabled={isLoading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Contraseña</label>
+                <span className="text-xs text-gray-400" title="Recuperación de contraseña próximamente">
+                  ¿Olvidaste? <em className="not-italic text-primary">próximamente</em>
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
-          )}
+            {error && (
+              <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
 
-          <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
-            {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
-          </Button>
-        </form>
-      )}
-
-      {/* Toggle */}
-      <div className="mt-6 text-center">
-        {step === 'login' ? (
-          <p className="text-gray-600 text-sm">
-            ¿No tienes cuenta?{' '}
-            <button
-              type="button"
-              onClick={() => { setStep('register'); setError('') }}
-              className="text-primary font-semibold hover:underline"
-            >
-              Regístrate gratis
-            </button>
-          </p>
-        ) : (
-          <p className="text-gray-600 text-sm">
-            ¿Ya tienes cuenta?{' '}
-            <button
-              type="button"
-              onClick={() => { setStep('login'); setError('') }}
-              className="text-primary font-semibold hover:underline"
-            >
-              Inicia sesión
-            </button>
-          </p>
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
+              {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
+            </Button>
+          </form>
         )}
+
+        {/* ── REGISTER ── */}
+        {step === 'register' && (
+          <form onSubmit={handleRegister} className="space-y-4">
+            {/* Role selector */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedRole('buyer')}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  selectedRole === 'buyer'
+                    ? 'border-primary bg-orange-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">🛒</div>
+                <div className="text-sm font-semibold text-gray-800">Comprador</div>
+                <div className="text-xs text-gray-500">Buscar y pedir</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('seller')}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  selectedRole === 'seller'
+                    ? 'border-primary bg-orange-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">📍</div>
+                <div className="text-sm font-semibold text-gray-800">Vendedor</div>
+                <div className="text-xs text-gray-500">Aparecer en el mapa</div>
+              </button>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Nombre completo</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Juan Pérez"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+              <input
+                type="email"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="tu@email.com"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Teléfono</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="300 123 4567"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Ciudad</label>
+              <CityInput
+                value={cityId}
+                onChange={setCityId}
+                disabled={isLoading}
+                placeholder="Busca tu ciudad..."
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Contraseña</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
+              {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+            </Button>
+          </form>
+        )}
+
+        {/* Toggle */}
+        <div className="mt-6 text-center">
+          {step === 'login' ? (
+            <p className="text-gray-600 text-sm">
+              ¿No tienes cuenta?{' '}
+              <button
+                type="button"
+                onClick={() => { setStep('register'); setError('') }}
+                className="text-primary font-semibold hover:underline"
+              >
+                Regístrate gratis
+              </button>
+            </p>
+          ) : (
+            <p className="text-gray-600 text-sm">
+              ¿Ya tienes cuenta?{' '}
+              <button
+                type="button"
+                onClick={() => { setStep('login'); setError('') }}
+                className="text-primary font-semibold hover:underline"
+              >
+                Inicia sesión
+              </button>
+            </p>
+          )}
+        </div>
       </div>
-    </Card>
+
+      {/* ── Side panel (desktop only) ── */}
+      <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary to-orange-600 p-10 text-white relative overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -left-10 w-72 h-72 bg-yellow-300/20 rounded-full blur-3xl" />
+
+        <div className="relative">
+          <h2 className="text-3xl font-bold leading-tight mb-3">
+            El sabor de tu barrio,<br />ahora en tu celular.
+          </h2>
+          <p className="text-white/85 text-base leading-relaxed">
+            Descubre vendedores informales cerca de ti — comida, frutas, artesanías y más, en tiempo real.
+          </p>
+        </div>
+
+        <ul className="relative space-y-4 my-8">
+          <li className="flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+              <MapPin size={20} />
+            </div>
+            <div>
+              <p className="font-semibold">Mapa en vivo</p>
+              <p className="text-sm text-white/80">Vendedores activos en tu barrio al instante</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+              <Store size={20} />
+            </div>
+            <div>
+              <p className="font-semibold">Vendedores verificados</p>
+              <p className="text-sm text-white/80">Reseñas reales de compradores como tú</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+              <Bell size={20} />
+            </div>
+            <div>
+              <p className="font-semibold">Avisos inteligentes</p>
+              <p className="text-sm text-white/80">Te avisamos cuando tus favoritos estén cerca</p>
+            </div>
+          </li>
+        </ul>
+
+        <div className="relative flex items-center gap-2 text-sm text-white/90">
+          <div className="flex">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} size={14} className="fill-yellow-300 text-yellow-300" />
+            ))}
+          </div>
+          <span>4.8 · Más de 200 vendedores activos</span>
+        </div>
+      </div>
+    </div>
   )
 }
 

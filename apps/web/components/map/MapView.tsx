@@ -38,6 +38,20 @@ export function MapView() {
   const isLoggedIn = _hasHydrated && !!user
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(false)
 
+  // Restore the "guest banner dismissed" flag from localStorage on mount so
+  // the auth prompt stays hidden across reloads, not just in-session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (localStorage.getItem('barriotech_guest_banner_dismissed') === '1') {
+      setGuestBannerDismissed(true)
+    }
+  }, [])
+
+  const dismissGuestBanner = () => {
+    setGuestBannerDismissed(true)
+    try { localStorage.setItem('barriotech_guest_banner_dismissed', '1') } catch {}
+  }
+
   // Vendors are browsable for guests, but they cannot see details until
   // they sign in. We track this as a single flag derived from auth state.
 
@@ -306,7 +320,7 @@ export function MapView() {
               </div>
             </div>
             <button
-              onClick={() => setGuestBannerDismissed(true)}
+              onClick={dismissGuestBanner}
               aria-label="Cerrar aviso"
               className="p-1 rounded-lg hover:bg-stone-100 transition-colors flex-shrink-0"
             >

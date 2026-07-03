@@ -9,10 +9,23 @@ const TEAM = [
   {
     name: 'Andrés Morales',
     role: 'Fundador y CEO',
-    photo: '/logo-square.png',
+    photo: '/andres.png',
     bio: 'Estratega en automatización y desarrollo de productos. Dedicado a construir la infraestructura tecnológica que empodera al comercio informal en toda Colombia.',
     web: 'https://andresmorales.com.co/',
     linkedin: 'https://www.linkedin.com/in/andresmoralesc1',
+    isPlaceholder: false,
+  },
+  // Roles that we're actively recruiting for. These render as muted
+  // "we're hiring" cards so the page doesn't feel like a one-person project
+  // but also doesn't make up names. Drop entries as people join.
+  {
+    name: '¿Te sumas al equipo?',
+    role: 'CTO / Co-founder',
+    photo: null,
+    bio: 'Buscamos un(a) co-founder técnico con experiencia en mobile-first products, geolocalización y escalabilidad. Equity + rol de liderazgo desde el día 1.',
+    web: 'mailto:hola@barriotech.com',
+    linkedin: 'https://www.linkedin.com/in/andresmoralesc1',
+    isPlaceholder: true,
   },
 ]
 
@@ -109,31 +122,55 @@ export function NosotrosView() {
         </div>
       </section>
 
-      {/* Andrés Morales */}
+      {/* Equipo */}
       <section className="py-16 px-4 bg-background-cream">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Foto circular */}
-          <div className="relative w-40 h-40 rounded-full overflow-hidden mx-auto mb-6 ring-4 ring-primary/20 shadow-lg">
-            <Image src="/andres.png" alt="Andrés Morales" fill className="object-cover" sizes="160px" unoptimized />
-          </div>
-          {/* Info */}
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">Andrés Morales</h2>
-          <p className="text-primary font-medium text-sm mb-4">Fundador y CEO</p>
-          <p className="text-gray-600 text-sm leading-relaxed mb-6 max-w-sm mx-auto">
-            Estratega en automatización y desarrollo de productos. Dedicado a construir la infraestructura tecnológica que empodera al comercio informal en toda Colombia.
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 text-center">El equipo</h2>
+          <p className="text-gray-500 text-sm text-center mb-10 max-w-md mx-auto">
+            Hoy somos un equipo pequeño. Estamos buscando personas apasionadas para construir BarrioTech juntos.
           </p>
-          {/* Links */}
-          <div className="flex justify-center gap-5">
-            <a href={TEAM[0].web} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors">
-              <Globe size={16} />
-              Web
-            </a>
-            <a href={TEAM[0].linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-              </svg>
-              LinkedIn
-            </a>
+          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {TEAM.map((member) => (
+              <div
+                key={member.name}
+                className={`bg-white rounded-2xl p-6 shadow-card text-center ${member.isPlaceholder ? 'border-2 border-dashed border-primary/30' : ''}`}
+              >
+                <div className="relative w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 ring-4 ring-primary/20 shadow-lg bg-orange-100">
+                  {member.photo ? (
+                    <Image src={member.photo} alt={member.name} fill className="object-cover" sizes="128px" unoptimized />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                      <Users size={40} className="text-primary" />
+                    </div>
+                  )}
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">{member.name}</h3>
+                <p className={`font-medium text-sm mb-3 ${member.isPlaceholder ? 'text-primary' : 'text-primary'}`}>{member.role}</p>
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">{member.bio}</p>
+                <div className="flex justify-center gap-4 text-sm">
+                  <a
+                    href={member.web}
+                    target={member.web.startsWith('http') ? '_blank' : undefined}
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors"
+                  >
+                    <Globe size={14} />
+                    {member.isPlaceholder ? 'Escríbenos' : 'Web'}
+                  </a>
+                  <a
+                    href={member.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    LinkedIn
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

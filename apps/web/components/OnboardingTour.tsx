@@ -43,22 +43,24 @@ export function OnboardingTour() {
   const [step, setStep] = useState(0)
 
   useEffect(() => {
-    // Only show on buyer pages (map, favorites, settings) and only once
-    if (
-      typeof window === 'undefined' ||
-      localStorage.getItem(STORAGE_KEY) === '1'
-    ) return
+    // Only show on buyer pages (map, favorites, settings) and only once.
+    // Run on first mount — do NOT depend on `pathname` because that would
+    // re-arm the timer on every client-side navigation and re-trigger the
+    // tour for users who already finished it (the localStorage guard below
+    // would still let it through if the storage write race-lost).
+    if (typeof window === 'undefined') return
+    if (localStorage.getItem(STORAGE_KEY) === '1') return
 
-    // Wait until user has been on the map at least once (so they have context)
-    // Also skip on auth/onboarding flows to avoid blocking the user
     const buyerPaths = ['/map', '/favorites', '/settings']
-    const skipPaths = ['/login', '/register', '/role-select', '/onboarding', '/profile']
     if (!buyerPaths.some((p) => pathname?.startsWith(p))) return
+
+    const skipPaths = ['/login', '/register', '/role-select', '/onboarding', '/profile']
     if (skipPaths.some((p) => pathname?.startsWith(p))) return
 
     const timer = setTimeout(() => setOpen(true), 1500)
     return () => clearTimeout(timer)
-  }, [pathname])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const finish = () => {
     localStorage.setItem(STORAGE_KEY, '1')
@@ -85,6 +87,7 @@ export function OnboardingTour() {
   const current = STEPS[step]
   const Icon = current.icon
   const isLast = step === STEPS.length - 1
+  const isFirst = step === 0
 
   return (
     <div
@@ -133,7 +136,7 @@ export function OnboardingTour() {
             onClick={goToStep}
             className="flex-1 px-4 py-3 rounded-xl border-2 border-amber-500 text-amber-600 font-semibold hover:bg-amber-50 transition-colors"
           >
-            Ir a {LABELS[current.target] || current.target}
+            {isFirst ? 'Entendido' : `Ir a ${LABELS[current.target] || current.target}`}
           </button>
           <button
             onClick={next}

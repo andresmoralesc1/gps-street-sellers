@@ -138,7 +138,7 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-background-cream">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">La solución · CalleViva</span>
+            <span className="text-primary text-xs font-bold uppercase tracking-wider">La solución</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
               Infraestructura tecnológica para el último kilómetro informal.
             </h2>

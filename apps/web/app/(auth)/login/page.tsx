@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -34,6 +34,18 @@ function AuthPageContent() {
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  // Live stats for the side panel — pulled from /api/stats on mount.
+  // Falls back to 0/0 if the API is unreachable; the panel hides the row
+  // in that case so we never show a stale or fake number.
+  const [stats, setStats] = useState<{ activeVendors: number; activeCities: number } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data) setStats(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   const redirectAfterLogin = (user: any) => {
     if (user.role === 'seller') {
@@ -189,9 +201,13 @@ function AuthPageContent() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-sm font-medium text-gray-700">Contraseña</label>
-                <span className="text-xs text-gray-400" title="Recuperación de contraseña próximamente">
-                  ¿Olvidaste? <em className="not-italic text-primary">próximamente</em>
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setError('Escríbenos a hola@barriotech.com para restablecer tu contraseña.')}
+                  className="text-xs text-primary hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
               </div>
               <div className="relative">
                 <input
@@ -405,14 +421,19 @@ function AuthPageContent() {
           </li>
         </ul>
 
-        <div className="relative flex items-center gap-2 text-sm text-white/90">
-          <div className="flex">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={14} className="fill-yellow-300 text-yellow-300" />
-            ))}
+        {stats && stats.activeVendors > 0 && (
+          <div className="relative flex items-center gap-2 text-sm text-white/90">
+            <div className="flex">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} size={14} className="fill-yellow-300 text-yellow-300" />
+              ))}
+            </div>
+            <span>
+              {stats.activeVendors} vendedor{stats.activeVendors === 1 ? '' : 'es'} activo{stats.activeVendors === 1 ? '' : 's'}
+              {stats.activeCities > 0 && ` · ${stats.activeCities} ciud${stats.activeCities === 1 ? 'ad' : 'ades'}`}
+            </span>
           </div>
-          <span>4.8 · Más de 200 vendedores activos</span>
-        </div>
+        )}
       </div>
     </div>
   )

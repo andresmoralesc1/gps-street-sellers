@@ -2,8 +2,65 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Heart, Globe, MapPin, Users, BarChart3, Sparkles } from 'lucide-react'
+import { Heart, Globe, MapPin, Users, BarChart3, Sparkles, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+
+// Trajectory — past milestones (verified) + future commitments (honest promises).
+// Keep dates concrete but verify before publishing. "Past" items are things
+// we have actually shipped; "Future" items are roadmap commitments.
+type TimelineItem = {
+  phase: 'past' | 'present' | 'future'
+  period: string
+  title: string
+  description: string
+  highlight?: boolean
+}
+
+const TIMELINE: readonly TimelineItem[] = [
+  {
+    phase: 'past' as const,
+    period: '2024 — Inicio',
+    title: 'Descubrimiento del problema',
+    description:
+      'Investigación de campo en Bogotá: identificamos que el 55% de la fuerza laboral colombiana trabaja en informalidad y que la mayoría de vendedores ambulantes no tenían cómo hacerse visibles digitalmente sin un local formal.',
+  },
+  {
+    phase: 'past' as const,
+    period: 'Q1 2025',
+    title: 'Primer producto funcional',
+    description:
+      'Lanzamos la primera versión de la plataforma web con mapa interactivo y registro de vendedores. El producto se probó con un grupo pequeño de vendedores de frutas y comida callejera en Bogotá.',
+  },
+  {
+    phase: 'past' as const,
+    period: 'Q2 2025',
+    title: 'Expansión a Medellín + reseñas',
+    description:
+      'Salimos de Bogotá a Medellín. Sumamos el sistema de reseñas, perfil público de vendedor y notificaciones para compradores registrados.',
+  },
+  {
+    phase: 'present' as const,
+    period: 'Hoy',
+    title: 'Operación en 2 ciudades',
+    description:
+      '9 vendedores activos utilizan la plataforma cada día. Estamos cerrando los últimos huecos del producto antes de abrirlo al público masivo.',
+    highlight: true,
+  },
+  {
+    phase: 'future' as const,
+    period: 'Q3 2026',
+    title: 'Versiones nativas (iOS + Android)',
+    description:
+      'Lanzamiento de las apps nativas para eliminar fricción en móviles y habilitar notificaciones push de vendedores cercanos.',
+  },
+  {
+    phase: 'future' as const,
+    period: 'Q4 2026',
+    title: 'Red de publicidad híbrida (vendedores como medios)',
+    description:
+      'Marcas nacionales podrán pautar en espacios físicos y digitales de los vendedores — abriendo una nueva línea de ingresos para el comercio informal.',
+  },
+] as const satisfies readonly TimelineItem[]
 
 const TEAM = [
   {
@@ -118,6 +175,63 @@ export function NosotrosView() {
                 <p className="text-gray-500 text-xs leading-tight">{v.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trayectoria + visión a futuro */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 text-center">Nuestra trayectoria</h2>
+          <p className="text-gray-500 text-sm text-center mb-12 max-w-md mx-auto">
+            Lo que ya construimos, y hacia dónde vamos.
+          </p>
+
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-4 sm:left-1/2 sm:-translate-x-1/2 top-0 bottom-0 w-0.5 bg-gray-200" aria-hidden />
+
+            <ol className="space-y-10">
+              {TIMELINE.map((item, i) => {
+                const isLeft = i % 2 === 0
+                return (
+                  <li key={item.title} className="relative sm:grid sm:grid-cols-2 sm:gap-8 items-start">
+                    {/* Dot on the line */}
+                    <div
+                      className={`absolute left-4 sm:left-1/2 sm:-translate-x-1/2 w-4 h-4 rounded-full border-4 ${
+                        item.highlight
+                          ? 'bg-primary border-primary/30 ring-4 ring-primary/10'
+                          : item.phase === 'past'
+                          ? 'bg-primary border-white'
+                          : item.phase === 'present'
+                          ? 'bg-primary border-white'
+                          : 'bg-white border-primary/40'
+                      }`}
+                      aria-hidden
+                    />
+
+                    {/* Mobile: all on right of line */}
+                    <div className="pl-12 sm:pl-0 sm:contents">
+                      <div className={`${isLeft ? 'sm:col-start-1 sm:text-right sm:pr-10' : 'sm:col-start-2 sm:pl-10'}`}>
+                        <div className={`inline-block text-xs font-semibold uppercase tracking-wider mb-1 ${
+                          item.highlight ? 'text-primary' : 'text-gray-400'
+                        }`}>
+                          {item.period}
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-1.5 sm:inline-flex">
+                          {item.phase === 'past' && <CheckCircle2 size={18} className="text-primary" />}
+                          {item.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
+                        {item.phase === 'future' && (
+                          <span className="inline-block mt-2 text-xs text-primary/70 font-medium">Próximamente</span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
           </div>
         </div>
       </section>

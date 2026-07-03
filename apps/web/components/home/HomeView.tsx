@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Users, TrendingUp, Star, ArrowRight, Clock, Shield, Zap } from 'lucide-react'
+import { MapPin, Users, TrendingUp, Star, ArrowRight, Clock, Shield, Zap, Quote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useEffect, useState } from 'react'
 
@@ -48,6 +48,37 @@ const Truck = (props: any) => (
     <circle cx="7" cy="18" r="2" />
   </svg>
 )
+
+// Stat card — visual evidence without claiming more than is true.
+function StatCard({
+  value,
+  label,
+  sublabel,
+  icon,
+  tone,
+}: {
+  value: number | string
+  label: string
+  sublabel?: string
+  icon: React.ReactNode
+  tone: 'primary' | 'secondary' | 'amber' | 'purple'
+}) {
+  const toneClass = {
+    primary: 'bg-orange-50',
+    secondary: 'bg-blue-50',
+    amber: 'bg-yellow-50',
+    purple: 'bg-purple-50',
+  }[tone]
+
+  return (
+    <div className={`text-center p-5 rounded-2xl ${toneClass}`}>
+      <div className="inline-flex w-10 h-10 rounded-lg bg-white items-center justify-center mb-3">{icon}</div>
+      <div className="text-3xl font-bold text-gray-800 mb-1 tabular-nums">{value}</div>
+      <div className="text-sm font-medium text-gray-700">{label}</div>
+      {sublabel && <div className="text-xs text-gray-500 mt-1">{sublabel}</div>}
+    </div>
+  )
+}
 
 export function HomeView() {
   const [stats, setStats] = useState({ vendors: 0, cities: 0 })
@@ -187,6 +218,94 @@ export function HomeView() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* En cifras — social proof basado en stats verificables del /api/stats */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="inline-block text-xs font-bold uppercase tracking-wider text-primary mb-3">Lo que hemos logrado</span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">BarrioTech en cifras</h2>
+            <p className="text-gray-500 text-sm max-w-md mx-auto">
+              Números reales, actualizados en vivo desde la plataforma. No prometemos cifras que aún no tenemos.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <StatCard
+              value={stats.vendors}
+              label={stats.vendors === 1 ? 'Vendedor activo' : 'Vendedores activos'}
+              icon={<Users size={20} className="text-primary" />}
+              tone="primary"
+            />
+            <StatCard
+              value={stats.cities}
+              label={stats.cities === 1 ? 'Ciudad operada' : 'Ciudades operadas'}
+              icon={<MapPin size={20} className="text-secondary" />}
+              tone="secondary"
+            />
+            <StatCard
+              value="100%"
+              label="Gratis para siempre"
+              sublabel="Sin comisiones, sin planes premium"
+              icon={<Star size={20} className="text-yellow-600" />}
+              tone="amber"
+            />
+            <StatCard
+              value="0"
+              label="Documentos requeridos"
+              sublabel="Sin RUT ni NIT para registrarse"
+              icon={<Shield size={20} className="text-purple-600" />}
+              tone="purple"
+            />
+          </div>
+
+          {/* Quote del fundador */}
+          <div className="relative max-w-3xl mx-auto bg-gradient-to-br from-orange-50 via-amber-50 to-orange-50 rounded-2xl p-8 md:p-10 border border-orange-100">
+            <Quote size={36} className="absolute top-4 left-4 text-primary/20" aria-hidden="true" />
+            <blockquote className="relative">
+              <p className="text-lg md:text-xl text-gray-800 leading-relaxed font-medium italic mb-5 pl-2">
+                "Construimos BarrioTech porque creemos que un vendedor de frutas que trabaja 12 horas al día merece la misma tecnología que una
+                gran cadena. No vendemos la promesa de inclusion — la construimos, una ciudad a la vez."
+              </p>
+              <footer className="flex items-center gap-3 pl-2">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary/30">
+                  <Image src="/andres-avatar.png" alt="Andrés Morales" fill className="object-cover" sizes="48px" unoptimized />
+                </div>
+                <div>
+                  <cite className="not-italic font-bold text-gray-800">Andrés Morales</cite>
+                  <p className="text-sm text-gray-500">Fundador & CEO · BarrioTech</p>
+                </div>
+              </footer>
+            </blockquote>
+          </div>
+
+          {/* Marcos públicos verificables que sustentan nuestra tesis.
+              No mostramos logos de medios "as featured in" porque no nos han
+              publicado — sí citamos los marcos normativos que respaldan
+              la oportunidad de mercado. Solo items públicos. */}
+          <div className="mt-12 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Fundamento normativo</p>
+            <div className="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto">
+              {[
+                { name: 'Ley 1581 / 2012', desc: 'Habeas Data · protección de datos personales' },
+                { name: 'DANE · GEIH 2024', desc: '55,1% informalidad laboral en Colombia' },
+                { name: 'Plan Nacional de Desarrollo 2022–2026', desc: 'Empleo y protección social' },
+              ].map((item) => (
+                <div
+                  key={item.name}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs"
+                  title={item.desc}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-hidden="true" />
+                  <span className="font-medium text-gray-700">{item.name}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-4 italic">
+              Las cifras y marcos en los que se sostiene BarrioTech son públicos y verificables.
+            </p>
           </div>
         </div>
       </section>

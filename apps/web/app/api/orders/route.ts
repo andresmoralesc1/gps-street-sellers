@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 
 // GET /api/orders — buyer sees own orders, vendor sees own orders
@@ -97,6 +98,18 @@ export async function GET(req: NextRequest) {
 // and compute the total server-side. The client's price field is ignored.
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 20 orders/min per IP — prevents order-spam abuse.
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown'
+    const { allowed, retryAfter } = await checkRateLimit(ip, 'order_create', 20, 60 * 1000)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas órdenes. Intenta más tarde.', retryAfter },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      )
+    }
+
     const token = getTokenFromRequest(req)
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

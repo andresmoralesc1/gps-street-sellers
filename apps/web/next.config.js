@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Disable the X-Powered-By: Next.js header (fingerprinting the stack).
+  poweredByHeader: false,
 
   // ---------------------------------------------------------------------
   // Security headers (Etapa 5)

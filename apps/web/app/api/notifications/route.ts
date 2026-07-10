@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import pool from '@/lib/db'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 
 // GET /api/notifications — list user notifications
 export async function GET(req: NextRequest) {
   try {
+    // Rate limit: 60 reads/min per IP — blocks enumeration/exfiltration.
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown'
+    const { allowed, retryAfter } = await checkRateLimit(ip, 'notifications_read', 60, 60 * 1000)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes', retryAfter },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      )
+    }
+
     // Accept Authorization header OR cookie token
     let token: string | null = null
     const authHeader = req.headers.get('authorization')

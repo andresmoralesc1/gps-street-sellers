@@ -18,7 +18,6 @@ const SUBJECT_OPTIONS = [
 
 const MAX_MESSAGE_LENGTH = 2000
 const MIN_MESSAGE_LENGTH = 10
-const EMAIL_HELLO = 'hola@barriotech.com'
 const EMAIL_INFO = 'info@andresmorales.com.co'
 const PHONE_DISPLAY = '+57 324 542 5387'
 const PHONE_RAW = '+573245425387'
@@ -126,12 +125,6 @@ export function ContactoView() {
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-800 mb-1">Email</h3>
-                  <a
-                    href={`mailto:${EMAIL_HELLO}`}
-                    className="block text-gray-500 text-sm hover:text-primary truncate"
-                  >
-                    {EMAIL_HELLO}
-                  </a>
                   <a
                     href={`mailto:${EMAIL_INFO}`}
                     className="block text-gray-500 text-sm hover:text-primary truncate"

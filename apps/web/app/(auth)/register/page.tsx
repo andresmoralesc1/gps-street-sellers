@@ -33,7 +33,7 @@ export default function RegisterPage() {
       return
     }
 
-    if (!email.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Por favor ingresa un email válido')
       setIsLoading(false)
       return
@@ -46,8 +46,8 @@ export default function RegisterPage() {
     }
 
     const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 7) {
-      setError('Ingresa un número de teléfono válido')
+    if (cleanPhone.length < 10 || (cleanPhone.startsWith('57') && cleanPhone.length < 12)) {
+      setError('Ingresa un número de teléfono colombiano válido (10 dígitos)')
       setIsLoading(false)
       return
     }

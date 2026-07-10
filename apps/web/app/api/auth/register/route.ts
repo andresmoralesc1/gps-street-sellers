@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     // more than the saved CPU. ponytail: revisit if cost rises to 12+ or if
     // duplicate-email traffic becomes significant — then consider a UNIQUE check
     // before hashing and accept the small race window back.
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await bcrypt.hash(password, 12)
 
     // Sellers go through onboarding — start as buyer, upgrade via onboarding flow
     const roleValue = 'buyer'

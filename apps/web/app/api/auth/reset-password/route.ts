@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await bcrypt.hash(password, 12)
 
     // Atomic: update password AND bump token_version so all sessions die.
     const result = await pool.query(

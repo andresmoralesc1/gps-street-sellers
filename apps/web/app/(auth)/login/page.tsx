@@ -113,7 +113,7 @@ function AuthPageContent() {
       return
     }
 
-    if (!regEmail.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
       setError('Email inválido')
       setIsLoading(false)
       return
@@ -126,8 +126,9 @@ function AuthPageContent() {
     }
 
     const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 7) {
-      setError('Número de teléfono inválido')
+    // Colombia numbers: 10 digits (mobile starts with 3). Allow +57 prefix (12 digits total).
+    if (cleanPhone.length < 10 || (cleanPhone.startsWith('57') && cleanPhone.length < 12)) {
+      setError('Ingresa un número de teléfono colombiano válido (10 dígitos)')
       setIsLoading(false)
       return
     }

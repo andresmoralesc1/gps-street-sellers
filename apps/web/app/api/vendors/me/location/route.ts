@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import pool from '@/lib/db'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 
 // PATCH /api/vendors/me/location — update vendor GPS coordinates
 export async function PATCH(req: NextRequest) {
   try {
+    // Rate limit: 30 updates/min per IP. Enough for ~2s GPS heartbeat; blocks scripted abuse.
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown'
+    const { allowed, retryAfter } = await checkRateLimit(ip, 'location_update', 30, 60 * 1000)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas actualizaciones de ubicación', retryAfter },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      )
+    }
+
     // Accept Authorization header OR cookie token
     let token: string | null = null
     const authHeader = req.headers.get('authorization')

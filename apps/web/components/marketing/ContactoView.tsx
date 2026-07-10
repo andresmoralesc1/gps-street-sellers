@@ -68,7 +68,7 @@ export function ContactoView() {
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-1">Email</h3>
                   <p className="text-gray-500 text-sm">hola@barriotech.com</p>
-                  <p className="text-gray-500 text-sm">soporte@barriotech.com</p>
+                  <p className="text-gray-500 text-sm">info@andresmorales.com.co</p>
                 </div>
               </div>
             </Card>
@@ -79,7 +79,7 @@ export function ContactoView() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-1">Teléfono</h3>
-                  <p className="text-gray-500 text-sm">+57 300 123 4567</p>
+                  <p className="text-gray-500 text-sm">+57 3245425387</p>
                   <p className="text-gray-400 text-xs mt-1">Lun - Vie, 8am - 6pm</p>
                 </div>
               </div>

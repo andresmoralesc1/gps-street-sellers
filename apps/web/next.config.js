@@ -77,6 +77,17 @@ const nextConfig = {
           // { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
         ],
       },
+      // Don't cache HTML pages — they change often (marketing copy, contact info).
+      // Static assets in /_next/static/* keep their long cache (hash-based busting).
+      {
+        source: '/((?!_next/static|sw\\.js|manifest\\.json|favicon).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
     ]
   },
 }

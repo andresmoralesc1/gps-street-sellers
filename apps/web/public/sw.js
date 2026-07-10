@@ -1,7 +1,10 @@
 // BarrioTech Service Worker
 // Handles push notifications and background sync
 
-const CACHE_NAME = 'barriotech-v1'
+// Bump CACHE_NAME on every deploy to invalidate stale HTML/marketing pages
+// in the browser. The activate handler below deletes any cache not matching
+// the current name.
+const CACHE_NAME = 'barriotech-v2'
 const OFFLINE_URL = '/'
 
 // Install event — cache core assets
@@ -98,25 +101,43 @@ self.addEventListener('notificationclick', (event) => {
   )
 })
 
-// Fetch event — network first, cache fallback
+// Fetch event — network first, cache fallback.
+// Marketing/HTML pages are NEVER cached: marketing copy and contact info change
+// often and the user expects to see the latest version. Only static assets
+// (hashed _next chunks, images, fonts) go in the cache.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
+  const url = new URL(event.request.url)
+  const isHtml = event.request.headers.get('accept')?.includes('text/html')
+  const isStaticAsset = url.pathname.startsWith('/_next/static/')
+    || url.pathname.startsWith('/icons/')
+    || /\.(png|jpg|jpeg|svg|webp|ico|css|woff2?)$/i.test(url.pathname)
+
+  // Always go to network for HTML — never serve stale marketing pages.
+  if (isHtml || !isStaticAsset) {
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        caches.match(OFFLINE_URL).then((cached) =>
+          cached || new Response('Offline', { status: 503 })
+        )
+      )
+    )
+    return
+  }
+
+  // Static assets: network first, cache fallback.
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache successful responses
         if (response.ok) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
         }
         return response
       })
-      .catch(() => {
-        // Offline: try cache
-        return caches.match(event.request).then((cached) => {
-          return cached || new Response('Offline', { status: 503 })
-        })
-      })
+      .catch(() =>
+        caches.match(event.request).then((cached) => cached || new Response('Offline', { status: 503 }))
+      )
   )
 })

@@ -39,11 +39,12 @@ test('next.config.js exports an async headers() function', () => {
   assert.equal(typeof cfg.headers, 'function', 'headers must be a function')
 })
 
-test('next.config.js headers returns an array with one wildcard source', async () => {
+test('next.config.js headers returns an array including a wildcard security rule', async () => {
   const cfg = require('../../apps/web/next.config.js')
   const result = await cfg.headers()
   assert.ok(Array.isArray(result))
-  assert.equal(result.length, 1)
+  assert.ok(result.length >= 1)
+  // The first rule must be the global security headers rule with wildcard source.
   assert.equal(result[0].source, '/(.*)')
   assert.ok(Array.isArray(result[0].headers))
   assert.ok(result[0].headers.length >= 6)

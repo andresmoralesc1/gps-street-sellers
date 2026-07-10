@@ -89,11 +89,9 @@ export async function POST(req: NextRequest) {
     // DO NOTHING makes it atomic; if rows.length === 0 the email was already taken.
     //
     // Trade-off: we now hash the password BEFORE knowing if the email is free.
-    // Bcrypt cost 10 = ~100ms wasted on the rare duplicate-email path. Acceptable
+    // Bcrypt cost 12 = ~250ms wasted on the rare duplicate-email path. Acceptable
     // because (a) duplicates are rare and (b) keeping the INSERT atomic is worth
-    // more than the saved CPU. ponytail: revisit if cost rises to 12+ or if
-    // duplicate-email traffic becomes significant — then consider a UNIQUE check
-    // before hashing and accept the small race window back.
+    // more than the saved CPU.
     const passwordHash = await bcrypt.hash(password, 12)
 
     // Sellers go through onboarding — start as buyer, upgrade via onboarding flow

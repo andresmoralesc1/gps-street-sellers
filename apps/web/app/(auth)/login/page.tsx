@@ -211,13 +211,12 @@ function AuthPageContent() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-sm font-medium text-gray-700">Contraseña</label>
-                <button
-                  type="button"
-                  onClick={() => setError('Escríbenos a info@andresmorales.com.co para restablecer tu contraseña. (Función de recuperación estará disponible pronto.)')}
+                <Link
+                  href="/forgot-password"
                   className="text-xs text-primary hover:underline"
                 >
                   ¿Olvidaste tu contraseña?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <input

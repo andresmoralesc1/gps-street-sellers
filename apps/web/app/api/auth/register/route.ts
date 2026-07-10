@@ -9,7 +9,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 // compare against password.toLowerCase(). Source: SecLists top-100, trimmed
 // to remove entries >32 chars (already blocked by min-length=8).
 const COMMON_PASSWORDS = new Set([
-  'password', 'password1', 'password123', '12345678', '123456789', '1234567890',
+  'password', 'password1', '12345678', '123456789', '1234567890',
   'qwerty', 'qwerty123', 'qwertyuiop', 'abc123', 'abc1234', '11111111', '12341234',
   'iloveyou', 'admin', 'admin123', 'administrator', 'root', 'toor', 'pass',
   'pass123', 'pass1234', 'welcome', 'welcome1', 'welcome123', 'monkey', 'dragon',

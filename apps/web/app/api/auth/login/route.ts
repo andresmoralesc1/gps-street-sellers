@@ -55,8 +55,9 @@ export async function POST(req: NextRequest) {
     const token = signTokenSync(tokenPayload, '15m')
     const refreshToken = signTokenSync(tokenPayload, '7d')
 
+    // Token is set via httpOnly cookies only — never echo it in the body
+    // (avoids leaking it to browser history, extensions, server logs).
     const response = NextResponse.json({
-      token,
       user: {
         id: user.id,
         email: user.email,

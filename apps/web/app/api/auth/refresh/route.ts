@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Token is set via httpOnly cookies only — never echo it in the body
     const response = NextResponse.json({
-      token: freshAccessToken,
       expiresIn: 900,
     })
 

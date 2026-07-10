@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     'BarrioTech es la plataforma que conecta compradores con los 13,2 millones de vendedores informales de Colombia. Conoce nuestra misión, valores y equipo.',
   alternates: {
-    canonical: 'https://gps.neuralflow.space/nosotros',
+    canonical: 'https://gps.andresmorales.com.co/nosotros',
   },
   openGraph: {
     title: 'Nosotros — BarrioTech',

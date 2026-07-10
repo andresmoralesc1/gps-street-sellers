@@ -4,7 +4,7 @@ import pool from '@/lib/db'
 // Dynamic sitemap — pulled at build time / on ISR
 // Includes all active vendor URLs (for SEO indexing) plus static marketing pages.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = 'https://gps.neuralflow.space'
+  const base = 'https://gps.andresmorales.com.co'
 
   // Static pages — kept small (high priority only)
   const staticPages: MetadataRoute.Sitemap = [

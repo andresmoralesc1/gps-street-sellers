@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     '¿Tienes preguntas o sugerencias sobre BarrioTech? Escríbenos y te respondemos en menos de 24 horas. Email, teléfono y formulario en línea.',
   alternates: {
-    canonical: 'https://gps.neuralflow.space/contacto',
+    canonical: 'https://gps.andresmorales.com.co/contacto',
   },
 }
 

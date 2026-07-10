@@ -52,7 +52,7 @@ async function resetRateLimit() {
 // Here we test the JS-only pieces.
 
 // We use the public /api/auth/login endpoint to verify end-to-end flow.
-const BASE = 'https://gps.neuralflow.space'
+const BASE = 'https://gps.andresmorales.com.co'
 
 async function fetchJSON(path, options = {}) {
   const res = await fetch(BASE + path, options)
@@ -61,7 +61,7 @@ async function fetchJSON(path, options = {}) {
   return { status: res.status, body, headers: res.headers }
 }
 
-test('POST /api/auth/login with valid creds returns 200 + token', async () => {
+test('POST /api/auth/login with valid creds returns 200 + user + sets cookies', async () => {
   await resetRateLimit()
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
@@ -69,10 +69,16 @@ test('POST /api/auth/login with valid creds returns 200 + token', async () => {
     body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
   })
   assert.equal(res.status, 200)
-  assert.ok(res.body.token, 'should have token')
+  // Token is set via httpOnly cookies only — never echo it in the body.
+  assert.equal(res.body.token, undefined, 'token must NOT be in response body')
   assert.ok(res.body.user, 'should have user')
   assert.equal(res.body.user.email, 'test@hermes.local')
   assert.equal(res.body.user.role, 'buyer')
+  // Set-Cookie should be present
+  const setCookie = res.headers.get('set-cookie') || ''
+  assert.match(setCookie, /token=/, 'should set token cookie')
+  assert.match(setCookie, /refresh-token=/, 'should set refresh-token cookie')
+  assert.match(setCookie, /HttpOnly/i, 'cookies must be HttpOnly')
 })
 
 test('POST /api/auth/login with wrong password returns 401', async () => {
@@ -119,14 +125,25 @@ test('GET /api/auth/me with invalid token returns 401', async () => {
   assert.equal(res.body.error, 'Token inválido')
 })
 
+/**
+ * Parse token from Set-Cookie header.
+ * Node's fetch returns the raw set-cookie value; we extract the 'token' cookie.
+ */
+function extractTokenFromHeaders(headers) {
+  const setCookie = headers.get('set-cookie') || ''
+  const match = setCookie.match(/token=([^;]+)/)
+  return match ? match[1] : null
+}
+
 test('GET /api/auth/me with valid token returns user', async () => {
-  // First, log in to get a token
+  // First, log in to get a token (now via Set-Cookie, not body)
   const login = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
   })
-  const token = login.body.token
+  const token = extractTokenFromHeaders(login.headers)
+  assert.ok(token, 'should have extracted token from Set-Cookie header')
 
   const me = await fetchJSON('/api/auth/me', {
     headers: { Authorization: `Bearer ${token}` },
@@ -141,12 +158,12 @@ test('GET /api/auth/me with cookie token works too', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
   })
-  // Capture Set-Cookie from login response
-  // fetch in Node doesn't expose raw Set-Cookie header easily; we test via Authorization above.
+  const token = extractTokenFromHeaders(login.headers)
+  assert.ok(token, 'should have extracted token from Set-Cookie header')
   // This is just to ensure the cookie path works through the middleware-protected route /favorites.
   const favorites = await fetch(BASE + '/favorites', {
     redirect: 'manual',
-    headers: { Cookie: `token=${login.body.token}` },
+    headers: { Cookie: `token=${token}` },
   })
   assert.notEqual(favorites.status, 500)
   // Should redirect (307) to login if cookie token is bad, or 200 if valid.
@@ -196,11 +213,12 @@ test('PATCH /api/products/[id] rejects malformed UUID', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
   })
+  const token = extractTokenFromHeaders(login.headers)
   const res = await fetchJSON('/api/products/not-a-uuid', {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${login.body.token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ name: 'x' }),
   })

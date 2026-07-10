@@ -15,4 +15,4 @@ Disallow: /notifications
 Disallow: /profile/
 
 # Sitemap
-Sitemap: https://gps.neuralflow.space/sitemap.xml
+Sitemap: https://gps.andresmorales.com.co/sitemap.xml

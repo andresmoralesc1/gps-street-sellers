@@ -8,7 +8,7 @@ import { ToastContainer } from '@/components/ui/Toast'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://gps.neuralflow.space'),
+  metadataBase: new URL('https://gps.andresmorales.com.co'),
   title: {
     default: 'BarrioTech — Vendedores informales en tu barrio, en tiempo real',
     template: '%s',
@@ -79,8 +79,8 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'BarrioTech',
-    url: 'https://gps.neuralflow.space',
-    logo: 'https://gps.neuralflow.space/logo.png',
+    url: 'https://gps.andresmorales.com.co',
+    logo: 'https://gps.andresmorales.com.co/logo.png',
     description:
       'Plataforma para conectar compradores con vendedores informales en Colombia.',
     sameAs: [
@@ -91,7 +91,7 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'BarrioTech',
-    url: 'https://gps.neuralflow.space',
+    url: 'https://gps.andresmorales.com.co',
     inLanguage: 'es-CO',
   }
 

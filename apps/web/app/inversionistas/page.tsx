@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     'BarrioTech conecta a 13,2 millones de vendedores informales en Colombia. Conoce nuestra propuesta de valor, mercado y plan de negocio para inversores y aliados estratégicos.',
   alternates: {
-    canonical: 'https://gps.neuralflow.space/inversionistas',
+    canonical: 'https://gps.andresmorales.com.co/inversionistas',
   },
   robots: {
     index: true,

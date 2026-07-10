@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     'Términos y condiciones de uso de BarrioTech para compradores y vendedores en Colombia.',
   alternates: {
-    canonical: 'https://gps.neuralflow.space/terminos',
+    canonical: 'https://gps.andresmorales.com.co/terminos',
   },
   robots: {
     index: true,

@@ -24,7 +24,7 @@ function loadEnv() {
 
 loadEnv()
 
-const BASE = 'https://gps.neuralflow.space'
+const BASE = 'https://gps.andresmorales.com.co'
 
 async function fetchJSON(path, options = {}) {
   const res = await fetch(BASE + path, options)

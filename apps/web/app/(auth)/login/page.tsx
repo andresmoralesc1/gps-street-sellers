@@ -31,6 +31,8 @@ function AuthPageContent() {
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>(
     searchParams.get('role') === 'seller' ? 'seller' : 'buyer'
   )
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -130,6 +132,12 @@ function AuthPageContent() {
       return
     }
 
+    if (!acceptedTerms || !acceptedPrivacy) {
+      setError('Debes aceptar los Términos y la Política de Tratamiento de Datos Personales para continuar.')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -141,6 +149,8 @@ function AuthPageContent() {
           phone: cleanPhone,
           cityId,
           role: selectedRole,
+          acceptedTerms,
+          acceptedPrivacy,
         }),
       })
       const data = await res.json()
@@ -203,7 +213,7 @@ function AuthPageContent() {
                 <label className="text-sm font-medium text-gray-700">Contraseña</label>
                 <button
                   type="button"
-                  onClick={() => setError('Escríbenos a hola@barriotech.com para restablecer tu contraseña.')}
+                  onClick={() => setError('Escríbenos a info@andresmorales.com.co para restablecer tu contraseña. (Función de recuperación estará disponible pronto.)')}
                   className="text-xs text-primary hover:underline"
                 >
                   ¿Olvidaste tu contraseña?
@@ -342,7 +352,41 @@ function AuthPageContent() {
               <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
-            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
+            <div className="space-y-2 pt-2">
+              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                  required
+                />
+                <span>
+                  Acepto los{' '}
+                  <Link href="/terminos" className="text-primary hover:underline" target="_blank">
+                    Términos de Servicio
+                  </Link>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                  required
+                />
+                <span>
+                  Acepto la{' '}
+                  <Link href="/privacidad" className="text-primary hover:underline" target="_blank">
+                    Política de Tratamiento de Datos Personales
+                  </Link>{' '}
+                  (Ley 1581/2012)
+                </span>
+              </label>
+            </div>
+
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading || !acceptedTerms || !acceptedPrivacy}>
               {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
             </Button>
           </form>

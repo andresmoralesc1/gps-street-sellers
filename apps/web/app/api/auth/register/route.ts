@@ -61,8 +61,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!phone || phone.replace(/\D/g, '').length < 7) {
-      return NextResponse.json({ error: 'Ingresa un número de teléfono válido' }, { status: 400 })
+    // Colombia mobile is 10 digits; allow optional +57 prefix (12 digits).
+    // Keep in sync with frontend validation in /(auth)/login and /register.
+    const cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone.length < 10 || (cleanPhone.startsWith('57') && cleanPhone.length < 12)) {
+      return NextResponse.json(
+        { error: 'Ingresa un número de teléfono colombiano válido (10 dígitos)' },
+        { status: 400 }
+      )
     }
 
     // Ley 1581/2012 art. 9 — consent must be explicit and informed.

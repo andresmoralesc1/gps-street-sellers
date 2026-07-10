@@ -199,7 +199,7 @@ test('POST /api/auth/register rejects when consent checkboxes missing', async ()
       password: 'Password123',
       name: 'Test',
       phone: '3001234567',
-      cityId: 'bog',
+      cityId: 'bogota',
       // missing acceptedTerms + acceptedPrivacy
     }),
   })

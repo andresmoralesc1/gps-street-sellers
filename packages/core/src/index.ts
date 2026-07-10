@@ -17,3 +17,5 @@ export type { CategoryInfo } from './constants/categories'
 
 // Utils
 export { calculateDistance, filterByDistance } from './utils/geo'
+export { sendEmail } from './utils/email'
+export type { SendEmailParams, SendEmailResult } from './utils/email'

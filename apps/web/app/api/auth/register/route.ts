@@ -46,15 +46,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check if user exists (case-insensitive)
-    const existing = await pool.query(
-      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
-      [email]
-    )
-    if (existing.rows.length > 0) {
-      return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
-    }
-
+    // Atomic insert — the previous SELECT-then-INSERT pattern had a TOCTOU race:
+    // two concurrent requests with the same email could both pass the existence
+    // check and the second INSERT would 500 with a unique_violation. ON CONFLICT
+    // DO NOTHING makes it atomic; if rows.length === 0 the email was already taken.
+    //
+    // Trade-off: we now hash the password BEFORE knowing if the email is free.
+    // Bcrypt cost 10 = ~100ms wasted on the rare duplicate-email path. Acceptable
+    // because (a) duplicates are rare and (b) keeping the INSERT atomic is worth
+    // more than the saved CPU. ponytail: revisit if cost rises to 12+ or if
+    // duplicate-email traffic becomes significant — then consider a UNIQUE check
+    // before hashing and accept the small race window back.
     const passwordHash = await bcrypt.hash(password, 10)
 
     // Sellers go through onboarding — start as buyer, upgrade via onboarding flow
@@ -63,9 +65,14 @@ export async function POST(req: NextRequest) {
     const userResult = await pool.query(
       `INSERT INTO users (email, password_hash, name, phone, city_id, role)
        VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (email) DO NOTHING
        RETURNING id, email, name, role, phone, city_id`,
       [email.toLowerCase(), passwordHash, name, phone, cityId || null, roleValue]
     )
+
+    if (userResult.rows.length === 0) {
+      return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+    }
 
     const user = userResult.rows[0]
 

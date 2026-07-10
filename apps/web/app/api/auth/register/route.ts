@@ -5,6 +5,20 @@ import { COLOMBIA_CITIES } from '@/lib/core/constants'
 import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 
+// Top-50 most common passwords leaked in credential dumps. Lowercase; we
+// compare against password.toLowerCase(). Source: SecLists top-100, trimmed
+// to remove entries >32 chars (already blocked by min-length=8).
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password123', '12345678', '123456789', '1234567890',
+  'qwerty', 'qwerty123', 'qwertyuiop', 'abc123', 'abc1234', '11111111', '12341234',
+  'iloveyou', 'admin', 'admin123', 'administrator', 'root', 'toor', 'pass',
+  'pass123', 'pass1234', 'welcome', 'welcome1', 'welcome123', 'monkey', 'dragon',
+  'letmein', 'trustno1', 'baseball', 'iloveu', 'master', 'sunshine', 'ashley',
+  'michael', 'shadow', 'jordan', 'superman', 'harley', 'fuckme', 'fuckyou', 'pussy',
+  '696969', 'hottie', 'loveme', 'football', 'charlie', 'jennifer', 'hunter',
+  'buster', 'soccer', 'harry', 'andrew', 'tigger', 'sunshine1', 'iloveyou1',
+])
+
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
@@ -22,6 +36,29 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    }
+
+    // Password strength: minimum 8 chars, no top-50 common passwords.
+    // Server-side enforcement — never trust the client to validate.
+    // ponytail: 50-entry list is enough — longer lists become maintenance burden.
+    // For real strength scoring, swap to zxcvbn when volume justifies it.
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: 'La contraseña debe tener al menos 8 caracteres' },
+        { status: 400 }
+      )
+    }
+    if (password.length > 128) {
+      return NextResponse.json(
+        { error: 'La contraseña es demasiado larga (máx 128 caracteres)' },
+        { status: 400 }
+      )
+    }
+    if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'Esta contraseña es muy común. Elige otra más segura.' },
+        { status: 400 }
+      )
     }
 
     if (!phone || phone.replace(/\D/g, '').length < 7) {

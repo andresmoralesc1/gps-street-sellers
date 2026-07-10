@@ -119,8 +119,8 @@ function AuthPageContent() {
       return
     }
 
-    if (regPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (regPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
       setIsLoading(false)
       return
     }
@@ -334,7 +334,7 @@ function AuthPageContent() {
                   type={showPassword ? 'text' : 'password'}
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   disabled={isLoading}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
                 />

@@ -1,107 +1,175 @@
 # GPS Street Sellers (BarrioTech)
 
-Plataforma que conecta vendedores informales de calle con consumidores cercanos usando geolocalización en tiempo real.
+> Real-time geolocation platform that connects informal street vendors with nearby buyers.
 
-## 🚀 Inicio Rápido
+![CI](https://img.shields.io/github/actions/workflow/status/andresmoralesc1/gps-street-sellers/ci.yml?branch=main&style=flat-square)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?logo=postgresql&logoColor=white&style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white&style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 
-### Requisitos
+🌐 **Live demo:** [gps.andresmorales.com.co](https://gps.andresmorales.com.co)
+🏗️ **Stack:** Next.js 16 · React 19 · PostgreSQL · React-Leaflet · Zustand · JWT
+
+[Hero screenshot — see `docs/screenshots/00-hero.png`](docs/screenshots/00-hero.png)
+
+---
+
+## ✨ Features
+
+- 🗺️ **Real-time vendor map** — buyers see nearby active sellers, GPS freshness < 5 min
+- 🛒 **Vendor profiles** — products, reviews, contact
+- 📊 **Seller dashboard** — toggle active/inactive, view live metrics
+- 🔔 **Push notifications** for stock/distance alerts
+- 🔐 **JWT auth** with edge runtime, rate-limited (5 attempts / 5 min / IP)
+- 💾 **Automated backups** + health endpoints for monitoring
+- ⚡ **PG-backed sessions** with revocation list
+
+---
+
+## 📱 Screenshots
+
+> Public screens captured against the [live demo](https://gps.andresmorales.com.co). Auth-gated screens (vendor detail, seller dashboard, edit profile, settings) live in [`docs/screenshots/`](docs/screenshots/README.md) as TODOs once a demo account is provided.
+
+| | |
+|---|---|
+| ![Landing](docs/screenshots/00-hero.png) **Landing page** | ![Onboarding](docs/screenshots/01-onboarding.png) **Onboarding** |
+| ![Sign in](docs/screenshots/02-login.png) **Sign in** | ![Role select](docs/screenshots/03-role-select.png) **Pick your role** |
+| ![Map (Buyer)](docs/screenshots/04-map-buyer.png) **Live vendor map** | |
+
+---
+
+## 🚀 Quick Start
+
+### Requirements
+
 - Node.js 18+
 - PostgreSQL 14+
 - npm
 
-### Instalación
+### Installation
 
 ```bash
-# Instalar dependencias
+# 1. Install dependencies
 npm install
 
-# Configurar variables de entorno
+# 2. Configure environment
 cp apps/web/.env.example apps/web/.env
-# Editar apps/web/.env con tus credenciales (DB, JWT_SECRET, etc.)
+# Edit apps/web/.env with your DB credentials, JWT_SECRET, etc.
 
-# Aplicar migraciones
+# 3. Generate a JWT secret
+openssl rand -base64 64   # paste into JWT_SECRET
+
+# 4. Apply migrations
 npm run migrate
 
-# Iniciar desarrollo
+# 5. Start dev server
 npm run dev
 ```
 
-La app estará disponible en `http://localhost:3000` (configurable via `PORT`).
+App runs on `http://localhost:3000` (override with `PORT`).
 
-## 📁 Estructura del Proyecto
+---
+
+## 📁 Project Structure
 
 ```
 gps-street-sellers/
 ├── apps/
-│   └── web/              # Next.js 14 App Router
+│   └── web/              # Next.js 16 App Router (UI + API routes)
 ├── packages/
-│   └── core/             # Tipos y utilidades compartidas
-├── migrations/           # SQL migrations (numeradas, idempotentes)
+│   └── core/             # Shared types and utilities
+├── migrations/           # Numbered, idempotent SQL migrations
+├── docs/                 # Ops runbooks + screenshot manifest
 └── scripts/
     ├── migrate.js        # Migration runner
+    ├── backup-db.sh      # pg_dump wrapper
     └── tests/            # node:test integration suite
 ```
 
-## 🎨 Stack Técnico
+---
 
-- **Frontend:** Next.js 14, React 18, Tailwind CSS
-- **Mapas:** React-Leaflet + OpenStreetMap
-- **Estado:** Zustand
-- **Backend:** Next.js API routes + PostgreSQL (direct via `pg`)
-- **Auth:** JWT (jose para edge/middleware, jsonwebtoken para node routes)
-- **Mobile:** Expo (próximamente)
+## 🎨 Tech Stack
 
-## 🛠️ Scripts Útiles
+| Layer | Choice |
+|---|---|
+| Frontend | Next.js 16 (App Router), React 19, Tailwind CSS |
+| Maps | React-Leaflet + OpenStreetMap tiles |
+| State | Zustand |
+| Backend | Next.js API routes + PostgreSQL (direct via `pg`) |
+| Auth | JWT — `jose` for edge/middleware, `jsonwebtoken` for node routes |
+| Push | Web Push (`web-push`) |
+| Mobile (planned) | Expo |
+
+---
+
+## 🛠️ Scripts
 
 ```bash
-npm run dev               # Development server
+npm run dev               # Dev server
 npm run build             # Production build (core + web)
 npm run migrate           # Apply pending DB migrations
 npm run migrate:status    # Show migration status
+npm run generate-vapid    # Generate VAPID keys for push
 npm test                  # Run integration tests
+npm run test:auth         # Only auth tests
+npm run test:vendors      # Only vendors/products tests
 ```
 
-## 🗄️ Base de Datos
+---
 
-Las migraciones viven en `/migrations` como archivos `NNN_description.sql` numerados.
-El runner (`scripts/migrate.js`) las aplica en orden lexicográfico y registra
-los nombres aplicados en la tabla `migrations`.
+## 🗄️ Database
 
-Para agregar una nueva migración:
+Migrations live in `/migrations` as `NNN_description.sql` files, numbered and idempotent.
+The runner (`scripts/migrate.js`) applies them in lexicographic order and records applied
+names in the `migrations` table.
 
-1. Crea `migrations/NNN_descripcion.sql` con `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ADD COLUMN IF NOT EXISTS`, etc.
-2. Hazla idempotente (segura de correr 2+ veces).
-3. Corre `npm run migrate`.
+### Add a new migration
+
+1. Create `migrations/NNN_description.sql` with `CREATE TABLE IF NOT EXISTS`,
+   `ALTER TABLE ADD COLUMN IF NOT EXISTS`, etc.
+2. Make it idempotent (safe to run twice).
+3. Run `npm run migrate`.
+
+---
 
 ## 🔐 Auth
 
-- `lib/auth-edge.ts` — funciones seguras para middleware (edge runtime)
-- `lib/auth.ts` — funciones para API routes (node runtime, incluye `jsonwebtoken`)
-- `lib/auth-db.ts` — helpers que tocan DB (`isTokenRevoked`)
-- `lib/rate-limit.ts` — rate limiter persistente en Postgres
+Three layers depending on runtime:
 
-**Secret:** `JWT_SECRET` en `apps/web/.env`. Genera con `openssl rand -base64 64`.
+- `lib/auth-edge.ts` — edge-runtime safe (middleware), uses `jose`
+- `lib/auth.ts` — node-runtime, uses `jsonwebtoken`
+- `lib/auth-db.ts` — DB-touching helpers (`isTokenRevoked`)
+- `lib/rate-limit.ts` — Postgres-backed rate limiter
+
+**Secret:** `JWT_SECRET` in `apps/web/.env`. Generate with `openssl rand -base64 64`.
+
+---
 
 ## 🧪 Tests
 
-Integration tests escritos con `node:test` (sin deps externas).
-Cada test corre contra el deployment en vivo (`https://gps.neuralflow.space`).
+Integration tests written with the built-in `node:test` runner — no external test deps.
+Each test resets `rate_limit_attempts` before starting so runs don't depend on prior state.
 
 ```bash
 npm test                  # all tests
-npm run test:auth         # solo auth
-npm run test:vendors      # solo vendors/products
+npm run test:auth         # only auth
+npm run test:vendors      # only vendors/products
 ```
 
-Cada test resetea `rate_limit_attempts` antes de empezar para no depender de runs previas.
+CI runs the full suite against a Postgres service container (see `.github/workflows/ci.yml`).
 
-## 📋 Reglas de Negocio
+---
 
-- Vendedores activos con GPS < 5 min aparecen en el mapa
-- Frecuencia de GPS: cada 15-30 segundos
-- Máximo 10 favoritos por comprador
-- Notificaciones solo si el usuario las habilita
-- Rate limit: 5 intentos de login / 5 min por IP
+## 📋 Business Rules
+
+- Active sellers with GPS update < 5 min appear on the map
+- GPS update frequency: 15–30 s
+- Maximum 10 favorites per buyer
+- Notifications only fire for opted-in users
+- Rate limit: 5 login attempts / 5 min / IP
+
+---
 
 ## 🔧 Operations
 
@@ -112,19 +180,11 @@ GET /api/health       # Cheap liveness — no DB. For load balancers.
 GET /api/health/ready # Deep readiness — pings DB. 200 OK / 503 degraded.
 ```
 
-Example:
-
 ```bash
-curl -s http://localhost:3005/api/health | jq
-# {
-#   "status": "ok",
-#   "uptime": 12345,
-#   "uptimeHuman": "3h 25m",
-#   "memory": { "heapUsedMB": 45, "rssMB": 102 },
-#   ...
-# }
+curl -s http://localhost:3000/api/health | jq
+# { "status": "ok", "uptime": 12345, "uptimeHuman": "3h 25m", ... }
 
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3005/api/health/ready
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/health/ready
 # 200
 ```
 
@@ -147,12 +207,14 @@ BACKUP_DIR=/var/backups/gps BACKUP_KEEP_DAILY=14 ./scripts/backup-db.sh
 
 Retention: 7 daily + 4 weekly (Sundays). Optional S3 upload — set `BACKUP_S3_BUCKET`.
 
-**Restore from a backup:**
+**Restore:**
 
 ```bash
 gunzip -c backups/gps_street_sellers_2026-06-28_030001.sql.gz \
   | psql -h localhost -U postgres -d gps_street_sellers
 ```
+
+---
 
 ## 🚢 Deploy
 
@@ -162,28 +224,30 @@ pm2 start "npm run start" --name gps
 # or use pm2 ecosystem.config.js
 ```
 
+---
+
 ## 📜 CI/CD
 
-`.github/workflows/ci.yml` corre build + tests en cada PR a `main`/`master`.
+`.github/workflows/ci.yml` runs lint + build + tests on every PR to `main`/`master`.
+Status badges appear at the top of this file.
 
-## 📱 Pantallas
-
-1. **Onboarding** - 3 slides de introducción
-2. **Login/Registro** - Autenticación por email
-3. **Selección de rol** - Buyer o Seller
-4. **Mapa (Buyer)** - Vendedores activos en el mapa
-5. **Detalle vendedor** - Perfil, productos, reseñas
-6. **Dashboard (Seller)** - Toggle activo/inactivo, métricas
-7. **Editar perfil** - Datos y productos del vendedor
-8. **Configuración** - Notificaciones y preferencias
+---
 
 ## 🔜 Roadmap
 
-- [x] Push notifications ✅ (Etapa 2)
-- [x] Health endpoints + backups ✅ (Etapa 3)
-- [ ] Legal Colombia (Ley 1581) — Etapa 4
-- [ ] Security headers (HSTS, CSP) + rate limits — Etapa 5
+- [x] Push notifications — Stage 2
+- [x] Health endpoints + backups — Stage 3
+- [x] Screenshot pass (this commit) — Stage 4
+- [ ] Auth-gated screenshots in [`docs/screenshots/`](docs/screenshots/README.md)
+- [ ] Legal Colombia (Ley 1581) — Stage 5
+- [ ] Security headers (HSTS, CSP) + stricter rate limits — Stage 6
 - [ ] Realtime GPS tracking (WebSockets)
 - [ ] Mobile app (Expo)
-- [ ] Pagos integrados (Wompi/Nequi)
-- [ ] Next.js 16 upgrade
+- [ ] Integrated payments (Wompi / Nequi)
+- [ ] Next.js 16 → 17 upgrade when stable
+
+---
+
+## 📄 License
+
+MIT — see [`LICENSE`](LICENSE).

@@ -61,12 +61,13 @@ async function fetchJSON(path, options = {}) {
   return { status: res.status, body, headers: res.headers }
 }
 
-test('POST /api/auth/login with valid creds returns 200 + user + sets cookies', async () => {
+test('POST /api/auth/login with valid email returns 200 + user + sets cookies', async () => {
   await resetRateLimit()
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
+    // Send as `identifier` — backend detects email vs phone.
+    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
   })
   assert.equal(res.status, 200)
   // Token is set via httpOnly cookies only — never echo it in the body.
@@ -85,7 +86,7 @@ test('POST /api/auth/login with wrong password returns 401', async () => {
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'test@hermes.local', password: 'wrong-password' }),
+    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'wrong-password' }),
   })
   assert.equal(res.status, 401)
   assert.equal(res.body.error, 'Credenciales inválidas')
@@ -105,7 +106,7 @@ test('POST /api/auth/login with non-existent user returns 401 (no info leak)', a
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'nobody-here@nowhere.local', password: 'whatever' }),
+    body: JSON.stringify({ identifier: 'nobody-here@nowhere.local', password: 'whatever' }),
   })
   assert.equal(res.status, 401)
   // Same error message as wrong-password → no user enumeration
@@ -140,7 +141,7 @@ test('GET /api/auth/me with valid token returns user', async () => {
   const login = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
+    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
   })
   const token = extractTokenFromHeaders(login.headers)
   assert.ok(token, 'should have extracted token from Set-Cookie header')
@@ -156,7 +157,7 @@ test('GET /api/auth/me with cookie token works too', async () => {
   const login = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
+    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
   })
   const token = extractTokenFromHeaders(login.headers)
   assert.ok(token, 'should have extracted token from Set-Cookie header')
@@ -173,14 +174,15 @@ test('GET /api/auth/me with cookie token works too', async () => {
 })
 
 test('POST /api/auth/register rejects invalid city', async () => {
+  const ts = Date.now()
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'unique-fresh-' + Date.now() + '@test.local',
+      email: 'unique-fresh-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: '3001234567',
+      phone: String(ts).slice(-10), // unique per run
       cityId: 'atlantis', // not in COLOMBIA_CITIES
       role: 'buyer',
       acceptedTerms: true,   // Ley 1581/2012 — Etapa 4
@@ -192,14 +194,15 @@ test('POST /api/auth/register rejects invalid city', async () => {
 })
 
 test('POST /api/auth/register rejects when consent checkboxes missing', async () => {
+  const ts = Date.now()
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'no-consent-' + Date.now() + '@test.local',
+      email: 'no-consent-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: '3001234567',
+      phone: String(ts).slice(-10), // unique per run
       cityId: 'bogota',
       role: 'buyer',
       // missing acceptedTerms + acceptedPrivacy
@@ -212,14 +215,15 @@ test('POST /api/auth/register rejects when consent checkboxes missing', async ()
 test('POST /api/auth/register rejects when role missing', async () => {
   // Etapa 5: role is selected during registration (single-step).
   // No more "register as buyer, escalate later" — must be explicit.
+  const ts = Date.now()
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'no-role-' + Date.now() + '@test.local',
+      email: 'no-role-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: '3001234567',
+      phone: String(ts).slice(-10), // unique per run
       cityId: 'bogota',
       acceptedTerms: true,
       acceptedPrivacy: true,
@@ -231,14 +235,15 @@ test('POST /api/auth/register rejects when role missing', async () => {
 })
 
 test('POST /api/auth/register rejects invalid role value', async () => {
+  const ts = Date.now()
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'bad-role-' + Date.now() + '@test.local',
+      email: 'bad-role-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: '3001234567',
+      phone: String(ts).slice(-10), // unique per run
       cityId: 'bogota',
       role: 'admin', // only 'buyer' or 'seller' allowed
       acceptedTerms: true,
@@ -250,14 +255,15 @@ test('POST /api/auth/register rejects invalid role value', async () => {
 })
 
 test('POST /api/auth/register creates user as seller when role=seller', async () => {
+  const ts = Date.now()
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'new-seller-' + Date.now() + '@test.local',
+      email: 'new-seller-' + ts + '@test.local',
       password: 'Password123',
       name: 'Fresh Seller',
-      phone: '3001234567',
+      phone: String(ts).slice(-10), // unique per run
       cityId: 'bogota',
       role: 'seller',
       acceptedTerms: true,
@@ -270,14 +276,15 @@ test('POST /api/auth/register creates user as seller when role=seller', async ()
 })
 
 test('POST /api/auth/register creates user as buyer when role=buyer', async () => {
+  const ts = Date.now()
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'new-buyer-' + Date.now() + '@test.local',
+      email: 'new-buyer-' + ts + '@test.local',
       password: 'Password123',
       name: 'Fresh Buyer',
-      phone: '3001234567',
+      phone: String(ts).slice(-10), // unique per run
       cityId: 'bogota',
       role: 'buyer',
       acceptedTerms: true,
@@ -292,7 +299,7 @@ test('PATCH /api/products/[id] rejects malformed UUID', async () => {
   const login = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'test@hermes.local', password: 'TestPassword123' }),
+    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
   })
   const token = extractTokenFromHeaders(login.headers)
   const res = await fetchJSON('/api/products/not-a-uuid', {
@@ -305,4 +312,172 @@ test('PATCH /api/products/[id] rejects malformed UUID', async () => {
   })
   assert.equal(res.status, 400)
   assert.equal(res.body.error, 'ID inválido')
+})
+
+// ════════════════════════════════════════════════════════════════════════
+// Phone-only registration + login tests (Etapa 8 — login flexibility)
+// ════════════════════════════════════════════════════════════════════════
+//
+// These cover the new "at least one of (email, phone) required" model.
+// Many informal vendors in Cali don't have email — they sign up with just
+// a phone number, and later log in using the same phone as identifier.
+
+test('POST /api/auth/register allows phone-only registration (no email)', async () => {
+  await resetRateLimit()
+  const ts = Date.now()
+  const phone = String(ts).slice(-10) // 10 unique digits
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      // no email field
+      password: 'Password123',
+      name: 'Phone Only Seller',
+      phone,
+      cityId: 'cali',
+      role: 'seller',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 200)
+  assert.equal(res.body.user.email, '', 'email should be empty string when not provided')
+  assert.equal(res.body.user.phone, phone)
+  assert.equal(res.body.user.role, 'seller')
+})
+
+test('POST /api/auth/register rejects when both email AND phone are missing', async () => {
+  const ts = Date.now()
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      // no email, no phone
+      password: 'Password123',
+      name: 'No Contact',
+      cityId: 'cali',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /email.*teléfono|al menos uno/i)
+})
+
+test('POST /api/auth/register rejects invalid email format', async () => {
+  const ts = Date.now()
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'not-an-email',
+      password: 'Password123',
+      name: 'Bad Email',
+      phone: String(ts).slice(-10),
+      cityId: 'cali',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /email|formato/i)
+})
+
+test('POST /api/auth/register rejects invalid phone format', async () => {
+  const ts = Date.now()
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'bad-phone-' + ts + '@test.local',
+      password: 'Password123',
+      name: 'Bad Phone',
+      phone: '123', // not 10 digits
+      cityId: 'cali',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /teléfono|10 dígitos/i)
+})
+
+test('POST /api/auth/register rejects duplicate phone', async () => {
+  const ts = Date.now()
+  const phone = String(ts).slice(-10)
+  // First registration with phone only
+  await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      password: 'Password123',
+      name: 'First',
+      phone,
+      cityId: 'cali',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  // Second attempt with same phone + different email
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'second-' + ts + '@test.local',
+      password: 'Password123',
+      name: 'Second',
+      phone,
+      cityId: 'cali',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /teléfono ya está registrado/i)
+})
+
+test('POST /api/auth/login accepts a phone as identifier', async () => {
+  // Register a phone-only user first
+  await resetRateLimit()
+  const ts = Date.now()
+  const phone = String(ts).slice(-10)
+  const regRes = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      password: 'Password123',
+      name: 'Phone Login Test',
+      phone,
+      cityId: 'cali',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(regRes.status, 200)
+
+  // Now login with the phone (no email involved)
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: phone, password: 'Password123' }),
+  })
+  assert.equal(loginRes.status, 200)
+  assert.equal(loginRes.body.user.phone, phone)
+  assert.equal(loginRes.body.user.email, '')
+})
+
+test('POST /api/auth/login rejects an unparseable identifier (not email, not phone)', async () => {
+  const res = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: 'just-some-text', password: 'whatever' }),
+  })
+  assert.equal(res.status, 401)
+  assert.equal(res.body.error, 'Credenciales inválidas')
 })

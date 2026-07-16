@@ -19,46 +19,46 @@ type TimelineItem = {
 const TIMELINE: readonly TimelineItem[] = [
   {
     phase: 'past' as const,
-    period: '2024 — Inicio',
-    title: 'Descubrimiento del problema',
+    period: 'Este año — Inicio',
+    title: 'Nace el proyecto en Cali',
     description:
-      'Investigación de campo en Bogotá: identificamos que el 55% de la fuerza laboral colombiana trabaja en informalidad y que la mayoría de vendedores ambulantes no tenían cómo hacerse visibles digitalmente sin un local formal.',
-  },
-  {
-    phase: 'past' as const,
-    period: 'Q1 2025',
-    title: 'Primer producto funcional',
-    description:
-      'Lanzamos la primera versión de la plataforma web con mapa interactivo y registro de vendedores. El producto se probó con un grupo pequeño de vendedores de frutas y comida callejera en Bogotá.',
-  },
-  {
-    phase: 'past' as const,
-    period: 'Q2 2025',
-    title: 'Expansión a Medellín + reseñas',
-    description:
-      'Salimos de Bogotá a Medellín. Sumamos el sistema de reseñas, perfil público de vendedor y notificaciones para compradores registrados.',
+      'Empezamos este año con un plan de proyecto enfocado en identificar y atacar el problema de la informalidad que viven los vendedores en Cali. Investigación de campo, conversaciones con vendedores ambulantes y construcción del primer producto funcional.',
   },
   {
     phase: 'present' as const,
     period: 'Hoy',
-    title: 'Operación en 2 ciudades',
+    title: 'Plataforma en desarrollo',
     description:
-      '9 vendedores activos utilizan la plataforma cada día. Estamos cerrando los últimos huecos del producto antes de abrirlo al público masivo.',
+      'La plataforma sigue tomando forma: mapa interactivo, registro de vendedores, perfil público y reseñas. Estamos validando el producto con un grupo inicial de vendedores de Cali antes de abrir al público masivo.',
     highlight: true,
   },
   {
     phase: 'future' as const,
-    period: 'Q3 2026',
-    title: 'Versiones nativas (iOS + Android)',
+    period: 'Próximamente',
+    title: 'Lanzamiento público en Cali',
     description:
-      'Lanzamiento de las apps nativas para eliminar fricción en móviles y habilitar notificaciones push de vendedores cercanos.',
+      'Abrir la plataforma al público caleño para que cualquier vendedor informal pueda registrarse y aparecer en el mapa, y cualquier persona pueda encontrarlos.',
   },
   {
     phase: 'future' as const,
-    period: 'Q4 2026',
-    title: 'Red de publicidad híbrida (vendedores como medios)',
+    period: 'A futuro',
+    title: 'Expansión a otras ciudades',
     description:
-      'Marcas nacionales podrán pautar en espacios físicos y digitales de los vendedores — abriendo una nueva línea de ingresos para el comercio informal.',
+      'Llevar la plataforma a más ciudades de Colombia, llevando visibilidad digital al comercio informal en regiones donde hoy no existe.',
+  },
+  {
+    phase: 'future' as const,
+    period: 'A futuro',
+    title: 'Apps nativas (iOS + Android)',
+    description:
+      'Versiones nativas para eliminar la fricción de los móviles y habilitar notificaciones push cuando un vendedor cercano está activo.',
+  },
+  {
+    phase: 'future' as const,
+    period: 'A futuro',
+    title: 'Red de publicidad híbrida',
+    description:
+      'Que los vendedores puedan monetizar su espacio físico y digital, abriendo una nueva línea de ingresos para el comercio informal y un canal único para marcas nacionales.',
   },
 ] as const satisfies readonly TimelineItem[]
 

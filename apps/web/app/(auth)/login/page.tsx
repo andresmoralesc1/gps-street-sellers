@@ -19,13 +19,13 @@ function AuthPageContent() {
   const [showPassword, setShowPassword] = useState(false)
 
   // Login
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
 
   // Register
   const [fullName, setFullName] = useState('')
-  const [regEmail, setRegEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [contact, setContact] = useState('')
+  const [altContact, setAltContact] = useState('')
   const [cityId, setCityId] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>(
@@ -36,6 +36,11 @@ function AuthPageContent() {
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Used by the login input to switch its keyboard mode based on what the user
+  // is typing — better mobile UX (numeric keypad for phones).
+  const isIdentifierEmail = identifier.includes('@')
+  const isContactEmail = contact.includes('@')
   // Live stats for the side panel — pulled from /api/stats on mount.
   // Falls back to 0/0 if the API is unreachable; the panel hides the row
   // in that case so we never show a stale or fake number.
@@ -62,7 +67,7 @@ function AuthPageContent() {
     setError('')
     setIsLoading(true)
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       setError('Completa todos los campos')
       setIsLoading(false)
       return
@@ -72,7 +77,8 @@ function AuthPageContent() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        // Send as `identifier` — backend detects email vs phone.
+        body: JSON.stringify({ identifier, password }),
       })
 
       let data
@@ -107,14 +113,14 @@ function AuthPageContent() {
     setError('')
     setIsLoading(true)
 
-    if (!fullName || !regEmail || !regPassword || !phone) {
-      setError('Completa todos los campos')
+    if (!fullName || !regPassword) {
+      setError('Completa tu nombre y contraseña')
       setIsLoading(false)
       return
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
-      setError('Email inválido')
+    if (!contact && !altContact) {
+      setError('Necesitas al menos un email o un teléfono para registrarte')
       setIsLoading(false)
       return
     }
@@ -125,34 +131,34 @@ function AuthPageContent() {
       return
     }
 
-    const cleanPhone = phone.replace(/\D/g, '')
-    // Colombia numbers: 10 digits (mobile starts with 3). Allow +57 prefix (12 digits total).
-    if (cleanPhone.length < 10 || (cleanPhone.startsWith('57') && cleanPhone.length < 12)) {
-      setError('Ingresa un número de teléfono colombiano válido (10 dígitos)')
-      setIsLoading(false)
-      return
-    }
-
     if (!acceptedTerms || !acceptedPrivacy) {
       setError('Debes aceptar los Términos y la Política de Tratamiento de Datos Personales para continuar.')
       setIsLoading(false)
       return
     }
 
+    // Build payload — backend normalizes email/phone.
+    const payload: Record<string, unknown> = {
+      password: regPassword,
+      name: fullName,
+      cityId,
+      role: selectedRole,
+      acceptedTerms,
+      acceptedPrivacy,
+    }
+    if (contact.includes('@')) {
+      payload.email = contact
+      if (altContact) payload.phone = altContact
+    } else {
+      payload.phone = contact
+      if (altContact.includes('@')) payload.email = altContact
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: regEmail,
-          password: regPassword,
-          name: fullName,
-          phone: cleanPhone,
-          cityId,
-          role: selectedRole,
-          acceptedTerms,
-          acceptedPrivacy,
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
 
@@ -199,12 +205,12 @@ function AuthPageContent() {
         {step === 'login' && (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Email o teléfono</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
+                type={isIdentifierEmail ? 'email' : 'tel'}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="tu@email.com o 300 123 4567"
                 disabled={isLoading}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
               />
@@ -294,28 +300,33 @@ function AuthPageContent() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Email o teléfono</label>
               <input
-                type="email"
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
-                placeholder="tu@email.com"
+                type={isContactEmail ? 'email' : 'tel'}
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                placeholder="tu@email.com o 300 123 4567"
                 disabled={isLoading}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
               />
+              <p className="text-xs text-gray-500 mt-1">Necesitas al menos uno.</p>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Teléfono</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="300 123 4567"
-                disabled={isLoading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-              />
-            </div>
+            {contact && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                  {isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
+                </label>
+                <input
+                  type={isContactEmail ? 'tel' : 'email'}
+                  value={altContact}
+                  onChange={(e) => setAltContact(e.target.value)}
+                  placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Ciudad</label>

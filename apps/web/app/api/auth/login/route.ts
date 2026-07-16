@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { isEmail, normalizeEmail, normalizePhone } from '@/lib/auth-helpers'
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -17,15 +18,45 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, password } = await req.json()
+    const { identifier, password } = await req.json()
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return NextResponse.json({ error: 'Faltan credenciales' }, { status: 400 })
     }
 
+    const id = identifier.trim()
+
+    // Detect whether the identifier is an email or a phone. The helper rules
+    // are shared with /api/auth/register so users can log in with whichever
+    // they registered with.
+    let lookupColumn: 'email' | 'phone'
+    let lookupValue: string
+
+    if (isEmail(id)) {
+      lookupColumn = 'email'
+      const normalized = normalizeEmail(id)
+      if (!normalized) {
+        // Shouldn't happen given isEmail() passed, but be defensive.
+        return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+      }
+      lookupValue = normalized
+    } else {
+      // Try to interpret as phone. If it doesn't even look like a phone,
+      // return 401 (don't leak whether the format is wrong vs the user doesn't exist).
+      const normalized = normalizePhone(id)
+      if (!normalized) {
+        return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+      }
+      lookupColumn = 'phone'
+      lookupValue = normalized
+    }
+
+    // Lookup by either email or phone. We use a parameter binding to avoid SQLi.
     const result = await pool.query(
-      'SELECT u.*, p.token_version FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE LOWER(u.email) = LOWER($1)',
-      [email]
+      `SELECT u.*, p.token_version FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.${lookupColumn} = $1`,
+      [lookupValue]
     )
 
     if (result.rows.length === 0) {
@@ -45,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Access token (15 min) — used by middleware + API routes.
-// Refresh token (7 days) — used only by /api/auth/refresh.
+    // Refresh token (7 days) — used only by /api/auth/refresh.
     const tokenPayload = {
       userId: user.id,
       email: user.email,
@@ -60,7 +91,7 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email || '',
         fullName: user.name,
         role: user.role,
         avatarUrl: '',

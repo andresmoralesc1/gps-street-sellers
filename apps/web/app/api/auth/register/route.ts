@@ -4,6 +4,12 @@ import pool from '@/lib/db'
 import { COLOMBIA_CITIES } from '@/lib/core/constants'
 import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import {
+  isEmail,
+  isPhone,
+  normalizeEmail,
+  normalizePhone,
+} from '@/lib/auth-helpers'
 
 // Top-50 most common passwords leaked in credential dumps. Lowercase; we
 // compare against password.toLowerCase(). Source: SecLists top-100, trimmed
@@ -34,12 +40,12 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password, name, phone, cityId, role, acceptedTerms, acceptedPrivacy } = await req.json()
 
-    if (!email || !password || !name) {
+    // ── Required: name + role + password + at least one of (email, phone)
+    if (!name || !password) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    // Role is selected during registration (single-step signup). Must be one of
-    // the allowed values — silent default to 'buyer' would surprise sellers.
+    // Role must be explicit — silent default to 'buyer' would surprise sellers.
     if (role !== 'buyer' && role !== 'seller') {
       return NextResponse.json(
         { error: 'Selecciona un tipo de cuenta: vendedor o comprador' },
@@ -47,10 +53,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Password strength: minimum 8 chars, no top-50 common passwords.
-    // Server-side enforcement — never trust the client to validate.
-    // ponytail: 50-entry list is enough — longer lists become maintenance burden.
-    // For real strength scoring, swap to zxcvbn when volume justifies it.
+    // ── Password strength: minimum 8 chars, no top-50 common passwords.
     if (password.length < 8) {
       return NextResponse.json(
         { error: 'La contraseña debe tener al menos 8 caracteres' },
@@ -70,19 +73,43 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Colombia mobile is 10 digits; allow optional +57 prefix (12 digits).
-    // Keep in sync with frontend validation in /(auth)/login and /register.
-    const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 10 || (cleanPhone.startsWith('57') && cleanPhone.length < 12)) {
+    // ── Email/phone validation: at least one must be present and valid.
+    // Both can be present (we store both). Frontend decides which to require.
+    // DB CHECK constraint enforces the at-least-one invariant at the schema level.
+    const rawEmail = typeof email === 'string' ? email.trim() : ''
+    const rawPhone = typeof phone === 'string' ? phone.trim() : ''
+
+    let cleanEmail: string | null = null
+    let cleanPhone: string | null = null
+
+    if (rawEmail) {
+      cleanEmail = normalizeEmail(rawEmail)
+      if (!cleanEmail) {
+        return NextResponse.json(
+          { error: 'El email no tiene un formato válido' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (rawPhone) {
+      cleanPhone = normalizePhone(rawPhone)
+      if (!cleanPhone) {
+        return NextResponse.json(
+          { error: 'Ingresa un número de teléfono colombiano válido (10 dígitos)' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (!cleanEmail && !cleanPhone) {
       return NextResponse.json(
-        { error: 'Ingresa un número de teléfono colombiano válido (10 dígitos)' },
+        { error: 'Necesitas al menos un email o un teléfono para registrarte' },
         { status: 400 }
       )
     }
 
-    // Ley 1581/2012 art. 9 — consent must be explicit and informed.
-    // The frontend must send acceptedTerms and acceptedPrivacy = true
-    // after the user ticked the boxes. We refuse registration otherwise.
+    // ── Ley 1581/2012 art. 9 — consent must be explicit and informed.
     if (!acceptedTerms || !acceptedPrivacy) {
       return NextResponse.json(
         { error: 'Debes aceptar los Términos y la Política de Tratamiento de Datos Personales' },
@@ -98,36 +125,47 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Atomic insert — the previous SELECT-then-INSERT pattern had a TOCTOU race:
-    // two concurrent requests with the same email could both pass the existence
-    // check and the second INSERT would 500 with a unique_violation. ON CONFLICT
-    // DO NOTHING makes it atomic; if rows.length === 0 the email was already taken.
+    // ── Atomic insert — handles both duplicate-email AND duplicate-phone races.
+    // ON CONFLICT DO NOTHING makes it atomic; if no rows return, a row matched
+    // the unique key (email or phone) and we report which one collided.
     //
-    // Trade-off: we now hash the password BEFORE knowing if the email is free.
-    // Bcrypt cost 12 = ~250ms wasted on the rare duplicate-email path. Acceptable
-    // because (a) duplicates are rare and (b) keeping the INSERT atomic is worth
-    // more than the saved CPU.
+    // Trade-off: we now hash the password BEFORE knowing if the email/phone is
+    // free. Bcrypt cost 12 = ~250ms wasted on rare duplicates. Acceptable.
     const passwordHash = await bcrypt.hash(password, 12)
-
-    // Respect the role chosen during signup. /api/auth/role-select remains
-    // available as a legacy path for any orphan users where role=NULL.
     const roleValue = role
 
     const userResult = await pool.query(
       `INSERT INTO users (email, password_hash, name, phone, city_id, role)
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (email) DO NOTHING
+       ON CONFLICT DO NOTHING
        RETURNING id, email, name, role, phone, city_id`,
-      [email.toLowerCase(), passwordHash, name, phone, cityId || null, roleValue]
+      [cleanEmail, passwordHash, name, cleanPhone, cityId || null, roleValue]
     )
 
     if (userResult.rows.length === 0) {
-      return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+      // Could be email OR phone conflict — narrow it down so the user knows
+      // which field to change.
+      if (cleanEmail) {
+        const dup = await pool.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [cleanEmail])
+        if (dup.rows.length > 0) {
+          return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+        }
+      }
+      if (cleanPhone) {
+        const dup = await pool.query('SELECT 1 FROM users WHERE phone = $1 LIMIT 1', [cleanPhone])
+        if (dup.rows.length > 0) {
+          return NextResponse.json({ error: 'El teléfono ya está registrado' }, { status: 400 })
+        }
+      }
+      // Both NULL — race condition we couldn't narrow down.
+      return NextResponse.json({ error: 'No se pudo crear la cuenta. Verifica email y teléfono.' }, { status: 400 })
     }
 
     const user = userResult.rows[0]
 
-    // Create profile entry with token_version = 1
+    // Create profile entry with token_version = 1.
+    // For phone-only users we mirror email as NULL — the partial UNIQUE index
+    // allows multiple NULLs.
     await pool.query(
       `INSERT INTO profiles (id, user_id, email, name, role, token_version)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, 1)
@@ -135,11 +173,7 @@ export async function POST(req: NextRequest) {
       [user.id, user.email, user.name, roleValue]
     )
 
-    // Ley 1581/2012 — record the consent the user gave at registration.
-    // The frontend already validated that the boxes were checked (we 400'd
-    // earlier otherwise). Logged for audit / ARCO rights requests.
-    // We do NOT block registration if this insert fails — it's an audit log,
-    // not part of the user identity. A failure is logged for ops to follow up.
+    // ── Ley 1581/2012 — record the consent. Non-fatal on failure (audit only).
     try {
       const policyVersion = process.env.POLICY_VERSION || 'v1.0'
       await pool.query(
@@ -161,9 +195,9 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email || '',
         fullName: user.name,
-        phone: user.phone,
+        phone: user.phone || '',
         cityId: user.city_id,
         role: user.role,
         avatarUrl: '',
@@ -174,14 +208,14 @@ export async function POST(req: NextRequest) {
     response.cookies.set('token', token, {
       httpOnly: true,
       path: '/',
-      maxAge: 60 * 15, // 15 minutes — matches access token expiry
+      maxAge: 60 * 15,
       sameSite: 'lax',
       secure: isProd,
     })
     response.cookies.set('refresh-token', refreshToken, {
       httpOnly: true,
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       sameSite: 'lax',
       secure: isProd,
     })

@@ -18,44 +18,44 @@ export default function RegisterPage() {
   const router = useRouter()
   const setUser = useStore((s) => s.setUser)
   const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  // Single contact field — user types either an email or a phone number,
+  // and we detect which one it is before sending to the backend. They can
+  // ALSO fill the other field if they want both — at least one is required.
+  const [contact, setContact] = useState('')
+  const [altContact, setAltContact] = useState('')
   const [cityId, setCityId] = useState('')
   const [password, setPassword] = useState('')
   // Single-step signup: user picks buyer/seller right here in the form.
-  // Before, this sent everyone as buyer + asked again at /role-select (broken).
   const [accountType, setAccountType] = useState<AccountType>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
+  // Heuristic to decide which input is the primary identifier — the first
+  // non-empty one. The backend re-detects on its end, this just helps us
+  // show the right placeholder/hint.
+  const isContactEmail = contact.includes('@')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    if (!fullName || !email || !password || !phone) {
-      setError('Por favor completa todos los campos')
+    if (!fullName || !password) {
+      setError('Por favor completa tu nombre y contraseña')
       setIsLoading(false)
       return
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Por favor ingresa un email válido')
+    if (!contact && !altContact) {
+      setError('Necesitas al menos un email o un teléfono para registrarte')
       setIsLoading(false)
       return
     }
 
     if (password.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres')
-      setIsLoading(false)
-      return
-    }
-
-    const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 10 || (cleanPhone.startsWith('57') && cleanPhone.length < 12)) {
-      setError('Ingresa un número de teléfono colombiano válido (10 dígitos)')
       setIsLoading(false)
       return
     }
@@ -73,20 +73,29 @@ export default function RegisterPage() {
       return
     }
 
+    // Build the payload — backend will normalize + detect email vs phone.
+    // We send both fields if the user filled both; backend accepts either.
+    const payload: Record<string, unknown> = {
+      password,
+      name: fullName,
+      cityId,
+      role: accountType,
+      acceptedTerms,
+      acceptedPrivacy,
+    }
+    if (contact.includes('@')) {
+      payload.email = contact
+      if (altContact) payload.phone = altContact
+    } else {
+      payload.phone = contact
+      if (altContact.includes('@')) payload.email = altContact
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          name: fullName,
-          phone: cleanPhone,
-          cityId,
-          role: accountType,
-          acceptedTerms,
-          acceptedPrivacy,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
@@ -97,9 +106,7 @@ export default function RegisterPage() {
         return
       }
 
-      // El API ya puso la cookie HttpOnly — usamos los datos del registro
       setUser(data.user)
-      // Send each role straight to its home (no more /role-select detour).
       if (data.user.role === 'seller') {
         router.push('/onboarding')
       } else {
@@ -180,24 +187,33 @@ export default function RegisterPage() {
             disabled={isLoading}
             required
           />
+
+          {/* Single contact field: user types email OR phone, backend detects. */}
           <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="tu@email.com"
+            label="Email o teléfono"
+            type={isContactEmail ? 'email' : 'tel'}
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="tu@email.com o 300 123 4567"
             disabled={isLoading}
             required
           />
-          <Input
-            label="Teléfono"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="300 123 4567"
-            disabled={isLoading}
-            required
-          />
+          <p className="text-xs text-gray-500 -mt-2">
+            Necesitas al menos uno. Si quieres, agrega el otro abajo.
+          </p>
+
+          {/* Optional alt contact — only show if user filled the first one. */}
+          {contact && (
+            <Input
+              label={isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
+              type={isContactEmail ? 'tel' : 'email'}
+              value={altContact}
+              onChange={(e) => setAltContact(e.target.value)}
+              placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
+              disabled={isLoading}
+            />
+          )}
+
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Ciudad</label>
             <CityInput
@@ -218,8 +234,7 @@ export default function RegisterPage() {
             required
           />
 
-          {/* Ley 1581/2012 — explicit, informed consent. Boxes are unchecked
-              by default (pre-checked would violate the law). */}
+          {/* Ley 1581/2012 — explicit, informed consent. */}
           <div className="space-y-2 pt-2 border-t border-gray-100">
             <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
               <input

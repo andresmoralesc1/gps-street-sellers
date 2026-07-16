@@ -7,13 +7,9 @@ import { BarChart3, Package, Settings, Edit3, ChevronRight, Camera } from 'lucid
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Input } from '@/components/ui/Input'
 import { ActiveToggle } from '@/components/seller/ActiveToggle'
 import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { useStore } from '@/store/useStore'
-import { CATEGORIES } from '@/lib/core/constants'
-import { CityInput } from '@/components/ui/CityInput'
-import type { VendorCategory } from '@/lib/core/types'
 
 interface Product {
   id: string
@@ -26,10 +22,7 @@ interface Product {
 export default function SellerDashboardPage() {
   const router = useRouter()
   const user = useStore((s) => s.user)
-  const setUser = useStore((s) => s.setUser)
-  const setVendorId = useStore((s) => s.setVendorId)
-  const setVendorProducts = useStore((s) => s.setVendorProducts)
-  const [vendorId, setVendorIdLocal] = useState<string | null>(null)
+  const [vendorId, setVendorId] = useState<string | null>(null)
   const [vendorData, setVendorData] = useState<any>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,16 +31,6 @@ export default function SellerDashboardPage() {
   const [sharingLocation, setSharingLocation] = useState(false)
   const [locationError, setLocationError] = useState('')
   const [locationSuccess, setLocationSuccess] = useState(false)
-
-  // Create vendor form state
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createDescription, setCreateDescription] = useState('')
-  const [createCategory, setCreateCategory] = useState<VendorCategory>('comida')
-  const [createPhone, setCreatePhone] = useState('')
-  const [createCityId, setCreateCityId] = useState('')
-  const [createError, setCreateError] = useState('')
-  const [creating, setCreating] = useState(false)
 
   const [hasHydrated, setHasHydrated] = useState(false)
 
@@ -67,90 +50,22 @@ export default function SellerDashboardPage() {
       .then((data) => {
         if (data.vendor) {
           const vid = data.vendor.id
-          const vdata = data.vendor
           setVendorId(vid)
-          setVendorIdLocal(vid)
-          setVendorData(vdata)
-
-          return fetch(`/api/products?vendorId=${vid}`, {
-            credentials: 'include',
-          })
+          setVendorData(data.vendor)
+          return fetch(`/api/products?vendorId=${vid}`, { credentials: 'include' })
         } else {
-          setVendorId(null)
-          setVendorIdLocal(null)
-          setLoading(false)
+          // Seller huérfano (legacy account) → al onboarding para crear vendor
+          router.push('/onboarding')
           return null
         }
       })
       .then((r) => r?.json())
       .then((data) => {
-        if (data?.products) {
-          setProducts(data.products)
-          setVendorProducts(data.products)
-        }
+        if (data?.products) setProducts(data.products)
         setLoading(false)
       })
-      .catch(() => {
-        setLoading(false)
-      })
-  }, [user, router, setVendorId, setVendorProducts])
-
-  const handleCreateVendor = async () => {
-    if (!createName.trim()) {
-      setCreateError('El nombre del negocio es requerido')
-      return
-    }
-    if (!createCategory) {
-      setCreateError('Selecciona una categoría')
-      return
-    }
-
-    setCreating(true)
-    setCreateError('')
-
-    try {
-      const res = await fetch('/api/vendors/me', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: createName.trim(),
-          description: createDescription.trim(),
-          category: createCategory,
-          phone: createPhone.replace(/\D/g, ''),
-          cityId: createCityId || 'bogota',
-        }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setCreateError(data.error || 'Error al crear el perfil')
-        setCreating(false)
-        return
-      }
-
-      const newVid = data.vendor.id
-      setVendorId(newVid)
-      setVendorIdLocal(newVid)
-      setShowCreateForm(false)
-
-      // Update user role to seller
-      if (user) {
-        setUser({ ...user, role: 'seller' })
-      }
-
-      // Pre-populate phone for next time
-      if (createPhone) {
-        localStorage.setItem('lastPhone', createPhone)
-      }
-    } catch {
-      setCreateError('Error de conexión')
-      setCreating(false)
-    }
-  }
+      .catch(() => setLoading(false))
+  }, [user, router, hasHydrated])
 
   const handleShareLocation = async () => {
     if (!navigator.geolocation) {
@@ -206,12 +121,6 @@ export default function SellerDashboardPage() {
     router.push('/')
   }
 
-  // Pre-fill phone from previous entry
-  useEffect(() => {
-    const lastPhone = localStorage.getItem('lastPhone')
-    if (lastPhone) setCreatePhone(lastPhone)
-  }, [])
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background-cream flex items-center justify-center">
@@ -239,97 +148,6 @@ export default function SellerDashboardPage() {
       </header>
 
       <div className="p-4 space-y-4">
-        {!vendorId && !showCreateForm && (
-          <Card variant="outlined" className="p-8 text-center">
-            <p className="text-gray-500 mb-4">Aún no tienes un perfil de vendedor</p>
-            <p className="text-sm text-gray-400 mb-6">
-              Crea tu perfil para empezar a recibir pedidos
-            </p>
-            <Button onClick={() => setShowCreateForm(true)}>
-              Crear mi perfil
-            </Button>
-          </Card>
-        )}
-
-        {!vendorId && showCreateForm && (
-          <Card variant="outlined" className="p-6 space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <button onClick={() => setShowCreateForm(false)} className="text-gray-400 hover:text-gray-600">
-                <ChevronRight size={20} className="rotate-180" />
-              </button>
-              <h2 className="text-lg font-bold">Crear perfil de vendedor</h2>
-            </div>
-
-            <Input
-              label="Nombre del negocio"
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              placeholder="Ej: Don Juan Empanadas"
-            />
-
-            <Input
-              label="Teléfono"
-              type="tel"
-              value={createPhone}
-              onChange={(e) => setCreatePhone(e.target.value)}
-              placeholder="300 123 4567"
-            />
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Ciudad</label>
-              <CityInput
-                value={createCityId}
-                onChange={setCreateCityId}
-                placeholder="Busca tu ciudad..."
-                rounded="lg"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Categoría</label>
-              <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setCreateCategory(cat.id as VendorCategory)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                      createCategory === cat.id
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary'
-                    }`}
-                  >
-                    {cat.emoji} {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Descripción</label>
-              <textarea
-                value={createDescription}
-                onChange={(e) => setCreateDescription(e.target.value)}
-                placeholder="Cuéntales a tus clientes qué vendes..."
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
-                rows={3}
-              />
-            </div>
-
-            {createError && (
-              <p className="text-red-500 text-sm text-center">{createError}</p>
-            )}
-
-            <Button
-              onClick={handleCreateVendor}
-              className="w-full"
-              size="lg"
-              disabled={creating}
-            >
-              {creating ? 'Creando...' : 'Crear mi perfil'}
-            </Button>
-          </Card>
-        )}
-
         {vendorId && vendorData && (
           <>
             {/* Completar perfil banner */}

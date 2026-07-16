@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Camera, Package, MapPin, MessageCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { VendorFormSlide } from './VendorFormSlide'
 
 const STORAGE_KEY = 'seller_onboarding_done'
 
@@ -39,7 +40,10 @@ interface SellerOnboardingSliderProps {
 }
 
 export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingSliderProps) {
+  // Index 0 = vendor form (obligatorio). 1..N = slides educativos.
+  const TOTAL_STEPS = SLIDES.length + 1
   const [current, setCurrent] = useState(0)
+  const [vendorId, setVendorId] = useState<string | null>(null)
 
   // Check if already completed on mount
   useEffect(() => {
@@ -49,20 +53,22 @@ export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingS
     }
   }, [onComplete])
 
-  const next = () => {
-    if (current < SLIDES.length - 1) {
+  const goNext = () => {
+    if (current < TOTAL_STEPS - 1) {
       setCurrent(current + 1)
     } else {
-      // Mark as done and complete
       localStorage.setItem(STORAGE_KEY, 'true')
       onComplete()
     }
   }
 
   const prev = () => {
-    if (current > 0) {
-      setCurrent(current - 1)
-    }
+    if (current > 0) setCurrent(current - 1)
+  }
+
+  const handleFormComplete = (newVendorId: string) => {
+    setVendorId(newVendorId)
+    goNext()
   }
 
   const handleSkip = () => {
@@ -70,17 +76,21 @@ export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingS
     onSkip?.()
   }
 
-  const handleComplete = () => {
-    localStorage.setItem(STORAGE_KEY, 'true')
-    onComplete()
+  // Render: form primero, luego slides educativos
+  if (current === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-white px-6">
+        <VendorFormSlide onCreated={handleFormComplete} />
+      </div>
+    )
   }
 
-  const slide = SLIDES[current]
+  const slide = SLIDES[current - 1]
   const IconComponent = slide.Icon
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
-      {/* Skip button */}
+      {/* Skip button — solo en slides educativos, no en el form */}
       {onSkip && (
         <button
           onClick={handleSkip}
@@ -121,7 +131,7 @@ export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingS
 
       {/* Progress */}
       <div className="flex gap-2 mb-8">
-        {SLIDES.map((_, i) => (
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <div
             key={i}
             className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -145,10 +155,10 @@ export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingS
         )}
         <Button
           size="lg"
-          onClick={current === SLIDES.length - 1 ? handleComplete : next}
+          onClick={goNext}
           className="flex-1"
         >
-          {current === SLIDES.length - 1 ? (
+          {current === TOTAL_STEPS - 1 ? (
             'Finalizar'
           ) : (
             <span className="flex items-center gap-2">

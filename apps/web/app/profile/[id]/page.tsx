@@ -1,5 +1,10 @@
 import { VendorDetailClient } from '@/components/vendor/VendorDetailClient'
 
-export default function PublicVendorProfile({ params }: { params: { id: string } }) {
-  return <VendorDetailClient vendorId={params.id} />
+export default async function PublicVendorProfile({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  return <VendorDetailClient vendorId={id} />
 }

@@ -13,7 +13,7 @@ const PROTECTED_ROUTES = [
 ]
 
 // Routes that require SELLER role
-const SELLER_ROUTES = ['/dashboard', '/profile/edit']
+const SELLER_ROUTES = ['/dashboard', '/profile/edit', '/products']
 
 // Routes that should redirect to /login if unauthenticated
 // Note: /favorites and /orders handle their own unauthenticated state

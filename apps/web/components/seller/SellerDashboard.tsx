@@ -125,6 +125,7 @@ export function SellerDashboard({
       setVendor((prev: any) => prev ?? {
         id: vendorId,
         name: statsData.vendorName ?? 'Tu tienda',
+        description: statsData.description ?? '',
         category: statsData.category ?? 'otros',
         photoUrl: vendorPhotoUrl,
         rating,
@@ -293,6 +294,9 @@ export function SellerDashboard({
       <Card variant="outlined" className="p-4">
         <h3 className="font-semibold text-gray-800 mb-3">Quick Start Checklist</h3>
         <div className="space-y-2">
+          <ChecklistItem done={!!vendor.name} label="Nombre del negocio" />
+          <ChecklistItem done={!!vendor.description} label="Descripción" />
+          <ChecklistItem done={!!vendor.category && vendor.category !== 'otros'} label="Categoría" />
           <ChecklistItem done={!!vendor.photoUrl} label="Foto de perfil" />
           <ChecklistItem done={productCount > 0} label="Agregar productos" />
           <ChecklistItem done={!!vendor.latitude} label="Compartir ubicación" />

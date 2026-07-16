@@ -8,6 +8,14 @@ export type VendorCategory =
   | 'ropa'
   | 'otros'
 
+export type VehicleType =
+  | 'bicicleta'
+  | 'moto'
+  | 'carro'
+  | 'triciclo'
+  | 'pie'
+  | 'otro'
+
 export interface Vendor {
   id: string
   slug?: string
@@ -21,6 +29,9 @@ export interface Vendor {
   ratingAvg: number
   reviewCount: number
   createdAt: string
+  vehicleType?: VehicleType
+  vehiclePhotoUrl?: string
+  phone?: string
   // ponytail: lat/lng from API, add to type for convenience
   latitude?: number
   longitude?: number

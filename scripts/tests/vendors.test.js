@@ -40,6 +40,14 @@ test('GET /api/vendors returns vendor list', async () => {
   assert.ok(res.body.vendors.length > 0, 'should have at least one vendor')
 })
 
+test('GET /api/vendors exposes vehicle fields in payload', async () => {
+  const res = await fetchJSON('/api/vendors')
+  const sample = res.body.vendors[0]
+  // The API should always return these keys, even if null — UI uses them.
+  assert.ok('vehicleType' in sample, 'vendor payload should expose vehicleType key')
+  assert.ok('vehiclePhotoUrl' in sample, 'vendor payload should expose vehiclePhotoUrl key')
+})
+
 test('GET /api/vendors?active=true only returns active vendors', async () => {
   const res = await fetchJSON('/api/vendors?active=true')
   assert.equal(res.status, 200)

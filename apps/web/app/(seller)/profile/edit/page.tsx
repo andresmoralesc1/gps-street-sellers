@@ -10,7 +10,8 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { CATEGORIES } from '@/lib/core/constants'
-import type { VendorCategory } from '@/lib/core/types'
+import { VEHICLE_TYPES } from '@/lib/core/constants/vehicles'
+import type { VendorCategory, VehicleType } from '@/lib/core/types'
 import { useStore } from '@/store/useStore'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
@@ -35,6 +36,8 @@ export default function EditProfilePage() {
   const [category, setCategory] = useState<VendorCategory>('comida')
   const [phone, setPhone] = useState('')
   const [photoUrl, setPhotoUrl] = useState('')
+  const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')
+  const [vehiclePhotoUrl, setVehiclePhotoUrl] = useState('')
 
   useEffect(() => {
     if (user?.role !== 'seller') {
@@ -65,6 +68,9 @@ export default function EditProfilePage() {
           setCategory(data.vendor.category || 'comida')
           setPhone(data.vendor.phone || '')
           setPhotoUrl(data.vendor.photoUrl || '')
+          // Backend returns camelCase vehicleType / vehiclePhotoUrl.
+          setVehicleType(data.vendor.vehicleType ?? '')
+          setVehiclePhotoUrl(data.vendor.vehiclePhotoUrl || '')
         }
         setLoading(false)
       })
@@ -90,6 +96,8 @@ export default function EditProfilePage() {
           category,
           phone,
           photo_url: photoUrl,
+          vehicle_type: vehicleType || null,
+          vehicle_photo_url: vehiclePhotoUrl || null,
         }),
       })
 
@@ -208,6 +216,39 @@ export default function EditProfilePage() {
               placeholder="Describe tu negocio..."
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
               rows={3}
+            />
+          </div>
+        </Card>
+
+        {/* Vehículo / carrito */}
+        <Card variant="outlined" className="p-4 space-y-4">
+          <p className="text-sm font-medium text-gray-700">Tu vehículo o puesto</p>
+          <p className="text-xs text-gray-500 -mt-2">
+            Opcional. Mostramos esto a los clientes para que te reconozcan en la calle.
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {VEHICLE_TYPES.map((v) => (
+              <Badge
+                key={v.id}
+                variant={vehicleType === v.id ? 'primary' : 'outline'}
+                className="cursor-pointer flex items-center gap-1"
+                onClick={() => setVehicleType(vehicleType === v.id ? '' : v.id)}
+              >
+                <span aria-hidden="true">{v.emoji}</span>
+                {v.label}
+              </Badge>
+            ))}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Foto del carrito / vehículo <span className="text-gray-400">(opcional)</span>
+            </label>
+            <ImageUpload
+              value={vehiclePhotoUrl}
+              onChange={setVehiclePhotoUrl}
+              folder="vendors/vehicles"
             />
           </div>
         </Card>

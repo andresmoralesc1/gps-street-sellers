@@ -2,16 +2,6 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getTokenFromRequest, verifyTokenEdge } from '@/lib/auth-edge'
 
-// Routes that require authentication
-const PROTECTED_ROUTES = [
-  '/dashboard',
-  '/orders',
-  '/settings',
-  '/favorites',
-  '/profile/edit',
-  '/notifications',
-]
-
 // Routes that require SELLER role
 const SELLER_ROUTES = ['/dashboard', '/profile/edit', '/products']
 

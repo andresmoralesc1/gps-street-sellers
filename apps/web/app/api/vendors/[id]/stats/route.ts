@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
 
     // Verify ownership
     const ownerCheck = await pool.query(
-      'SELECT id, name, category, city_id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
+      'SELECT id, name, description, category, city_id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
       [vendorId, userId]
     )
     if (ownerCheck.rows.length === 0) {
@@ -113,6 +113,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
 
     return NextResponse.json({
       vendorName: vendor.name,
+      description: vendor.description,
       category: vendor.category,
       totalOrders: Number(ordersResult.rows[0].total),
       viewsToday: Number(viewsTodayResult.rows[0].total),

@@ -128,7 +128,13 @@ export function MapView() {
       const query = filters.searchQuery.toLowerCase()
       if (!v.name?.toLowerCase().includes(query)) return false
     }
-    if (userLocation && v.latitude && v.longitude) {
+    // null = sin límite de distancia (Todos)
+    if (
+      filters.maxDistanceMeters !== null &&
+      userLocation &&
+      v.latitude &&
+      v.longitude
+    ) {
       const dist = calculateDistance(userLocation.lat, userLocation.lng, v.latitude, v.longitude)
       if (dist > filters.maxDistanceMeters) return false
     }
@@ -188,7 +194,7 @@ export function MapView() {
                   <p className="text-sm text-gray-500 mt-1">
                     No hay vendedores de esta categoría
                   </p>
-                ) : filters.maxDistanceMeters !== 2000 ? (
+                ) : filters.maxDistanceMeters !== null ? (
                   <p className="text-sm text-gray-500 mt-1">
                     No hay vendedores en este radio
                   </p>

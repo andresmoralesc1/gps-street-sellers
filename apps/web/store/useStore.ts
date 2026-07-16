@@ -16,7 +16,8 @@ export interface User {
 
 interface Filters {
   category: VendorCategory | null
-  maxDistanceMeters: number
+  // null = sin límite (mostrar todos). Número = filtrar hasta esa distancia en metros.
+  maxDistanceMeters: number | null
   searchQuery: string
 }
 
@@ -122,7 +123,7 @@ export const useStore = create<AppState>()(
       // Filtros
       filters: {
         category: null,
-        maxDistanceMeters: 2000,
+        maxDistanceMeters: null,
         searchQuery: '',
       },
       setFilters: (filters) =>

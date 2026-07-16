@@ -25,20 +25,24 @@ const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   otros: Package,
 }
 
-const DISTANCES = [
+// null = "Todos" (sin límite de distancia). Número = metros máximos.
+const DISTANCES: { label: string; value: number | null }[] = [
+  { label: 'Todos', value: null },
   { label: '500m', value: 500 },
   { label: '1km', value: 1000 },
   { label: '2km', value: 2000 },
+  { label: '5km', value: 5000 },
+  { label: '10km', value: 10000 },
 ]
 
 export function FilterBar() {
   const filters = useStore((s) => s.filters)
   const setFilters = useStore((s) => s.setFilters)
 
-  const hasActiveFilters = filters.category !== null || filters.maxDistanceMeters !== 2000 || filters.searchQuery !== ''
+  const hasActiveFilters = filters.category !== null || filters.maxDistanceMeters !== null || filters.searchQuery !== ''
 
   const clearFilters = () => {
-    setFilters({ category: null, maxDistanceMeters: 2000, searchQuery: '' })
+    setFilters({ category: null, maxDistanceMeters: null, searchQuery: '' })
   }
 
   return (
@@ -106,7 +110,7 @@ export function FilterBar() {
         <div className="flex gap-2 flex-wrap">
           {DISTANCES.map((dist) => (
             <button
-              key={dist.value}
+              key={dist.value ?? 'all'}
               onClick={() => setFilters({ maxDistanceMeters: dist.value })}
               className={clsx(
                 'shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 min-h-[36px]',
@@ -115,7 +119,7 @@ export function FilterBar() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
-              <MapPin size={14} />
+              {dist.value !== null && <MapPin size={14} />}
               {dist.label}
             </button>
           ))}

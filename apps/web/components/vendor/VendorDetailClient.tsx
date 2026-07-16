@@ -274,6 +274,8 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     ratingAvg: parseFloat(vendor.rating) || 0,
     reviewCount: vendor.reviewCount ?? 0,
     createdAt: vendor.createdAt,
+    vehicleType: vendor.vehicleType,
+    vehiclePhotoUrl: vendor.vehiclePhotoUrl,
   }
 
   return (

@@ -4,8 +4,8 @@ import { clsx } from 'clsx'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Star, Circle, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package } from 'lucide-react'
-import type { Vendor, VendorCategory } from '@/lib/core/types'
-import { getCategoryInfo } from '@/lib/core/constants'
+import type { Vendor, VendorCategory, VehicleType } from '@/lib/core/types'
+import { getCategoryInfo, VEHICLE_TYPES } from '@/lib/core/constants'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -86,6 +86,37 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
           <p className="text-gray-600 mt-4">{vendor.description}</p>
         </div>
       </div>
+
+      {/* Vehicle / carrito */}
+      {(vendor.vehicleType || vendor.vehiclePhotoUrl) && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+            Su vehículo
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {vendor.vehiclePhotoUrl && (
+              <img
+                src={vendor.vehiclePhotoUrl}
+                alt={
+                  VEHICLE_TYPES.find((v) => v.id === vendor.vehicleType)?.label ?? 'Vehículo'
+                }
+                className="w-20 h-20 rounded-xl object-cover border border-gray-200"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+            )}
+            {vendor.vehicleType && (
+              <Badge variant="outline" className="flex items-center gap-1.5 text-sm">
+                <span aria-hidden="true">
+                  {VEHICLE_TYPES.find((v) => v.id === vendor.vehicleType)?.emoji}
+                </span>
+                {VEHICLE_TYPES.find((v) => v.id === vendor.vehicleType)?.label ?? vendor.vehicleType}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

@@ -1,0 +1,52 @@
+import pool from '@/lib/db'
+import { recordJobRun } from '@/lib/job-status'
+
+/**
+ * N11 — Business hours auto-toggle.
+ * Runs every 5 minutes. For vendors with business_hours_enabled = TRUE:
+ *   - Inside window + matching day  → is_active = TRUE
+ *   - Outside window OR non-matching day → is_active = FALSE
+ *
+ * Uses setInterval (no node-cron dependency).
+ */
+
+async function run() {
+  try {
+    const sql = `
+      WITH now_local AS (
+        SELECT
+          (NOW() AT TIME ZONE 'America/Bogota') AS ts,
+          EXTRACT(DOW FROM (NOW() AT TIME ZONE 'America/Bogota'))::int AS dow,
+          TO_CHAR((NOW() AT TIME ZONE 'America/Bogota'), 'HH24:MI') AS hm
+      )
+      UPDATE vendors v
+      SET is_active = (
+        v.business_hours_enabled = TRUE
+        AND EXISTS (
+          SELECT 1 FROM now_local n
+          WHERE n.dow::text = ANY(v.business_days)
+            AND v.business_hours_start::time <= n.hm::time
+            AND (v.business_hours_end::time IS NULL OR v.business_hours_end::time > n.hm::time)
+        )
+      )
+      WHERE v.business_hours_enabled = TRUE
+    `
+    const result = await pool.query(sql)
+    const updated = result.rowCount ?? 0
+    await recordJobRun('business-hours', { updated, ts: new Date().toISOString() })
+    console.log(`[business-hours] Updated ${updated} vendors`)
+  } catch (err) {
+    console.error('[business-hours] Error:', err)
+    await recordJobRun('business-hours', { error: String(err) })
+  }
+}
+
+export function startBusinessHoursCron() {
+  if (process.env.NODE_ENV !== 'production') return
+  // Run every 5 minutes. Skip when running in build context.
+  if (process.env.NEXT_PHASE === 'phase-production-build') return
+  const interval = setInterval(run, 5 * 60 * 1000)
+  // Don't keep the process alive just for this timer.
+  if (typeof interval.unref === 'function') interval.unref()
+  console.log('[business-hours] Cron scheduled (every 5 min)')
+}

@@ -14,9 +14,11 @@ interface VendorProductsProps {
   onAddToCart?: (product: Product) => void
   compact?: boolean
   user?: UserType | null
+  /** N12: extra photos per product id */
+  extraPhotos?: Record<string, string[]>
 }
 
-export function VendorProducts({ products, onAddToCart, compact, user }: VendorProductsProps) {
+export function VendorProducts({ products, onAddToCart, compact, user, extraPhotos }: VendorProductsProps) {
   const router = useRouter()
 
   if (products.length === 0) {
@@ -39,6 +41,7 @@ export function VendorProducts({ products, onAddToCart, compact, user }: VendorP
             onAddToCart={onAddToCart}
             user={user}
             router={router}
+            extraPhotos={extraPhotos?.[product.id]}
           />
         ))}
       </div>
@@ -52,11 +55,15 @@ interface ProductCardProps {
   onAddToCart?: (product: Product) => void
   user?: UserType | null
   router: ReturnType<typeof useRouter>
+  extraPhotos?: string[]
 }
 
-function ProductCard({ product, compact, onAddToCart, user, router }: ProductCardProps) {
+function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos }: ProductCardProps) {
   const [imgFailed, setImgFailed] = useState(false)
-  const showPhoto = !!product.photoUrl && !imgFailed
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const allPhotos = [product.photoUrl, ...(extraPhotos ?? [])].filter(Boolean) as string[]
+  const showPhoto = allPhotos.length > 0 && !imgFailed
+  const currentPhoto = allPhotos[photoIdx] || product.photoUrl
 
   return (
     <Card variant="outlined" className="overflow-hidden p-0">
@@ -64,7 +71,7 @@ function ProductCard({ product, compact, onAddToCart, user, router }: ProductCar
         <div className="w-full aspect-square bg-gray-100 overflow-hidden relative">
           {showPhoto ? (
             <img
-              src={product.photoUrl}
+              src={currentPhoto}
               alt={product.name}
               loading="lazy"
               onError={() => setImgFailed(true)}
@@ -73,6 +80,22 @@ function ProductCard({ product, compact, onAddToCart, user, router }: ProductCar
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <Package size={32} className="text-gray-400" />
+            </div>
+          )}
+          {/* N12: dots indicator for multi-photo carousel */}
+          {allPhotos.length > 1 && (
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+              {allPhotos.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setPhotoIdx(idx)}
+                  aria-label={`Foto ${idx + 1} de ${allPhotos.length}`}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    idx === photoIdx ? 'bg-white w-4' : 'bg-white/60'
+                  }`}
+                />
+              ))}
             </div>
           )}
         </div>

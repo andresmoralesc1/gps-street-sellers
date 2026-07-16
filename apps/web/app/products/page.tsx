@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Package, BarChart3, Settings, Edit3, ChevronLeft, Trash2, Plus, X } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ImageUpload } from '@/components/ui/ImageUpload'
+import { MultiPhotoUploader } from '@/components/seller/MultiPhotoUploader'
 import { useStore } from '@/store/useStore'
 
 interface Product {
@@ -342,6 +343,15 @@ export default function ProductsPage() {
                     </Button>
                   </div>
                 </div>
+                {/* N12: extra photos (collapsed by default for visual cleanliness) */}
+                <details className="mt-3">
+                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 select-none">
+                    📷 Más fotos (hasta 6)
+                  </summary>
+                  <div className="mt-3">
+                    <MultiPhotoUploader productId={product.id} />
+                  </div>
+                </details>
               </Card>
             ))}
           </div>

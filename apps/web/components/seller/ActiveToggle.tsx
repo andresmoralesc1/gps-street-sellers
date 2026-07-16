@@ -12,9 +12,52 @@ export function ActiveToggle({ vendorId }: ActiveToggleProps) {
   const isActive = useStore((s) => s.isSellerActive)
   const setSellerActive = useStore((s) => s.setSellerActive)
   const userLocation = useStore((s) => s.userLocation)
-  const locationIntervalRef = useRef<NodeJS.Timeout>()
+  const setUserLocation = useStore((s) => s.setUserLocation)
+  const locationIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Sync with backend when isActive changes
+  // B1 fix: separate location-tracking lifecycle from state-sync.
+  // Track location every 10s ONLY when isActive; do NOT depend on
+  // userLocation in deps (avoids destroy/recreate on every tick).
+  useEffect(() => {
+    if (!isActive) {
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current)
+        locationIntervalRef.current = null
+      }
+      return
+    }
+
+    if (!navigator.geolocation) return
+
+    // Prime one immediate sample so the marker moves instantly when toggled on.
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    )
+
+    locationIntervalRef.current = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 5000 }
+      )
+    }, 10000)
+
+    return () => {
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current)
+        locationIntervalRef.current = null
+      }
+    }
+  }, [isActive, setUserLocation])
+
+  // Sync to backend when isActive or position changes.
+  // B8 fix: also include setSellerActive indirectly via isActive.
   useEffect(() => {
     if (!vendorId) return
 
@@ -30,31 +73,6 @@ export function ActiveToggle({ vendorId }: ActiveToggleProps) {
     }).catch(console.error)
   }, [isActive, vendorId, userLocation])
 
-  // Update location periodically when active
-  useEffect(() => {
-    if (isActive && userLocation) {
-      locationIntervalRef.current = setInterval(() => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              useStore.getState().setUserLocation({
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-              })
-            },
-            () => {}
-          )
-        }
-      }, 10000) // Update every 10 seconds
-    }
-
-    return () => {
-      if (locationIntervalRef.current) {
-        clearInterval(locationIntervalRef.current)
-      }
-    }
-  }, [isActive, userLocation])
-
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm">
       <div>
@@ -66,7 +84,12 @@ export function ActiveToggle({ vendorId }: ActiveToggleProps) {
         </p>
       </div>
 
+      {/* B8 fix: role="switch" + aria-checked for screen readers */}
       <button
+        type="button"
+        role="switch"
+        aria-checked={isActive}
+        aria-label={isActive ? 'Desactivar visibilidad' : 'Activar visibilidad'}
         onClick={() => setSellerActive(!isActive)}
         className={clsx(
           'relative w-14 h-8 rounded-full transition-colors',

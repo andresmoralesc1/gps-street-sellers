@@ -52,6 +52,8 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
   // Micro-interaction states — heart pop + cart badge bounce on add
   const [heartPop, setHeartPop] = useState(false)
   const [cartBounce, setCartBounce] = useState(false)
+  // N12: extra product photos (carousel).
+  const [productPhotos, setProductPhotos] = useState<Record<string, string[]>>({})
   const triggerHeartPop = () => {
     setHeartPop(true)
     window.setTimeout(() => setHeartPop(false), 400)
@@ -101,6 +103,23 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
             createdAt: r.created_at,
           }))
         )
+        // N12: fetch extra photos for each product
+        return Promise.all(
+          (data.products || []).map((p: any) =>
+            fetch(`/api/products/${p.id}/photos`)
+              .then((r) => r.ok ? r.json() : { photos: [] })
+              .then((pd) => ({ productId: p.id, photos: pd.photos || [] }))
+              .catch(() => ({ productId: p.id, photos: [] }))
+          )
+        )
+      })
+      .then((photoResults: any) => {
+        if (!Array.isArray(photoResults)) return
+        const map: Record<string, string[]> = {}
+        for (const r of photoResults) {
+          map[r.productId] = r.photos.map((p: any) => p.url)
+        }
+        setProductPhotos(map)
       })
       .catch(() => router.push('/map'))
   }, [vendorId, router])
@@ -346,7 +365,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
             </div>
           </div>
 
-        <VendorProducts products={products} onAddToCart={(p) => {
+        <VendorProducts products={products} extraPhotos={productPhotos} onAddToCart={(p) => {
           const existingVendorId = cart[0]?.product.vendorId
           const switchedVendor = existingVendorId && existingVendorId !== p.vendorId
           addToCart(p)

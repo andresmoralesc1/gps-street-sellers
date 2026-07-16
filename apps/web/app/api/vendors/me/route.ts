@@ -24,21 +24,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
 
+    // N16: return ALL vendors owned by this user.
     const result = await pool.query(
       `SELECT v.*, c.label as category_label
        FROM vendors v
        LEFT JOIN categories c ON v.category = c.id
        JOIN profiles p ON p.id = v.profile_id
-       WHERE p.user_id = $1`,
+       WHERE p.user_id = $1
+       ORDER BY v.created_at ASC`,
       [decoded.userId]
     )
 
     if (result.rows.length === 0) {
-      return NextResponse.json({ vendor: null })
+      return NextResponse.json({ vendors: [], vendor: null })
     }
 
-    const v = result.rows[0]
-    const vendor = {
+    const map = (v: any) => ({
       id: v.id,
       profileId: v.profile_id,
       name: v.name,
@@ -54,9 +55,12 @@ export async function GET(req: NextRequest) {
       longitude: v.longitude,
       category_label: v.category_label,
       phone: v.phone,
-    }
+      slug: v.slug,
+    })
 
-    return NextResponse.json({ vendor })
+    const vendors = result.rows.map(map)
+    // Backwards compat: also return single `vendor` (first one) for legacy callers.
+    return NextResponse.json({ vendors, vendor: vendors[0] })
   } catch (err) {
     console.error('Vendor me error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
@@ -117,14 +121,15 @@ export async function POST(req: NextRequest) {
       await pool.query("UPDATE profiles SET role = 'seller' WHERE id = $1", [profileId])
     }
 
-    // Check if vendor already exists
-    const existingVendor = await pool.query(
-      'SELECT id FROM vendors WHERE profile_id = $1',
+    // N16: removed the "ya tienes un perfil de vendedor" guard so a user
+    // can own multiple vendors (e.g. family members or sister businesses).
+    // Optionally cap at 3 vendors per user to prevent abuse.
+    const vendorCount = await pool.query(
+      'SELECT COUNT(*) as c FROM vendors WHERE profile_id = $1',
       [profileId]
     )
-
-    if (existingVendor.rows.length > 0) {
-      return NextResponse.json({ error: 'Ya tienes un perfil de vendedor' }, { status: 400 })
+    if (Number(vendorCount.rows[0].c) >= 3) {
+      return NextResponse.json({ error: 'Máximo 3 tiendas por usuario' }, { status: 400 })
     }
 
     // Create vendor

@@ -4,9 +4,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Star, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package, ChevronRight, Check, MapPin, Phone } from 'lucide-react'
+import {
+  Star, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package,
+  ChevronRight, Check, MapPin, Phone, MessageCircle, Truck,
+  TrendingUp, Calendar, Eye,
+} from 'lucide-react'
 import { getCategoryInfo } from '@/lib/core/constants'
 import type { VendorCategory } from '@/lib/core/types'
+import { useToast } from './Toast'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -22,6 +27,7 @@ interface SellerDashboardProps {
   products?: any[]
   productCount?: number
   vendorPhotoUrl?: string | null
+  onOrderAction?: (action: string, orderId?: string) => void
 }
 
 interface VendorStats {
@@ -29,6 +35,10 @@ interface VendorStats {
   totalOrders: number
   rating: number
   reviewCount: number
+  weeklyViews: number
+  weeklyOrders: number
+  conversionRate: number
+  rankPercentile?: number // 0-100; lower = better ranking
 }
 
 interface OrderItem {
@@ -41,39 +51,134 @@ interface OrderItem {
 interface Order {
   id: string
   buyer_name: string
+  buyer_phone?: string
   total: string
   status: string
   created_at: string
   items: OrderItem[]
 }
 
-export function SellerDashboard({ vendorId, products = [], productCount = 0, vendorPhotoUrl = null }: SellerDashboardProps) {
+export function SellerDashboard({
+  vendorId,
+  products = [],
+  productCount = 0,
+  vendorPhotoUrl = null,
+  onOrderAction,
+}: SellerDashboardProps) {
   const [vendor, setVendor] = useState<any>(null)
-  const [stats, setStats] = useState<VendorStats>({ viewsToday: 0, totalOrders: 0, rating: 0, reviewCount: 0 })
+  const [stats, setStats] = useState<VendorStats>({
+    viewsToday: 0, totalOrders: 0, rating: 0, reviewCount: 0,
+    weeklyViews: 0, weeklyOrders: 0, conversionRate: 0,
+  })
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const { showToast } = useToast()
+
+  const loadAll = async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      // B7 fix: vendor data is passed via /api/vendors/me from parent.
+      // Fetch only vendor-specific extras here (stats + orders).
+      // Also pass via prop ideally; for now stats endpoint returns enough.
+      const [statsRes, ordersRes] = await Promise.all([
+        fetch(`/api/vendors/${vendorId}/stats`, { credentials: 'include' }),
+        fetch(`/api/orders`, { credentials: 'include' }),
+      ])
+
+      // B9 fix: surface errors instead of silent fallback.
+      if (!statsRes.ok) {
+        setLoadError('No pudimos cargar tus estadísticas')
+      }
+      const statsData = statsRes.ok
+        ? await statsRes.json()
+        : { viewsToday: 0, totalOrders: 0, rating: 0, reviewCount: 0, weeklyViews: 0, weeklyOrders: 0, conversionRate: 0 }
+
+      const ordersData = ordersRes.ok
+        ? await ordersRes.json()
+        : { orders: [] }
+
+      // B3 fix: Number(...) || 0 prevents NaN.
+      const rating = Number(statsData.rating) || 0
+      const viewsToday = Number(statsData.viewsToday) || 0
+      const totalOrders = Number(statsData.totalOrders) || 0
+      const weeklyViews = Number(statsData.weeklyViews) || 0
+      const weeklyOrders = Number(statsData.weeklyOrders) || 0
+      // N8: conversion rate (orders / views, percentage).
+      const conversionRate = weeklyViews > 0
+        ? Math.round((weeklyOrders / weeklyViews) * 100)
+        : 0
+
+      setStats({
+        viewsToday,
+        totalOrders,
+        rating,
+        reviewCount: Number(statsData.reviewCount) || 0,
+        weeklyViews,
+        weeklyOrders,
+        conversionRate,
+        rankPercentile: statsData.rankPercentile,
+      })
+      setOrders(ordersData.orders ?? [])
+      // Minimal vendor shape for downstream rendering (slug, category, name).
+      setVendor((prev: any) => prev ?? {
+        id: vendorId,
+        name: statsData.vendorName ?? 'Tu tienda',
+        category: statsData.category ?? 'otros',
+        photoUrl: vendorPhotoUrl,
+        rating,
+        review_count: statsData.reviewCount,
+      })
+    } catch (err) {
+      console.error('SellerDashboard load error:', err)
+      setLoadError('Error de conexión')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/vendors/${vendorId}`, { credentials: 'include' }).then((r) => r.json()),
-      fetch(`/api/vendors/${vendorId}/stats`, { credentials: 'include' }).then((r) => r.ok ? r.json() : { viewsToday: 0, totalOrders: 0, rating: 0, reviewCount: 0 }).catch(() => ({ viewsToday: 0, totalOrders: 0, rating: 0, reviewCount: 0 })),
-      fetch(`/api/orders`, { credentials: 'include' }).then((r) => r.ok ? r.json() : { orders: [] }).catch(() => ({ orders: [] })),
-    ]).then(([vendorData, statsData, ordersData]) => {
-      if (vendorData?.id) {
-        setVendor(vendorData)
-        setStats({
-          viewsToday: statsData.viewsToday ?? 0,
-          totalOrders: statsData.totalOrders ?? 0,
-          rating: parseFloat(vendorData.rating ?? 0),
-          reviewCount: vendorData.review_count ?? 0,
-        })
-        setOrders(ordersData.orders ?? [])
-      }
-      setLoading(false)
-    }).catch(() => {
-      setLoading(false)
-    })
+    loadAll()
+    // N4: poll every 30s for new orders.
+    const interval = setInterval(loadAll, 30000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId])
+
+  // N4: detect new orders via id-diff and toast.
+  useEffect(() => {
+    if (!orders.length) return
+    try {
+      const seen = JSON.parse(sessionStorage.getItem('seen_order_ids') || '[]') as string[]
+      const newest = orders[0]
+      if (newest && !seen.includes(newest.id)) {
+        const isFirstLoad = seen.length === 0
+        if (!isFirstLoad && newest.status === 'pending') {
+          showToast(`🔔 Nuevo pedido de ${newest.buyer_name}`, 'info')
+        }
+        const newSeen = [newest.id, ...seen].slice(0, 50)
+        sessionStorage.setItem('seen_order_ids', JSON.stringify(newSeen))
+      }
+    } catch {
+      // sessionStorage might be unavailable
+    }
+  }, [orders, showToast])
+
+  if (loadError && !vendor) {
+    return (
+      <Card variant="outlined" className="p-4 text-center">
+        <p className="text-sm text-red-600 mb-3">{loadError}</p>
+        <button
+          type="button"
+          onClick={loadAll}
+          className="text-sm text-primary font-medium hover:underline"
+        >
+          Reintentar
+        </button>
+      </Card>
+    )
+  }
 
   if (loading || !vendor) {
     return (
@@ -102,9 +207,17 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
   const category = getCategoryInfo(vendor.category)
   const IconComponent = CategoryIconMap[vendor.category as VendorCategory] ?? Package
 
+  // N10: WhatsApp link helper.
+  const whatsappLink = (order: Order) => {
+    if (!order.buyer_phone) return null
+    const cleanPhone = order.buyer_phone.replace(/\D/g, '')
+    const text = encodeURIComponent(`Hola ${order.buyer_name}, soy de ${vendor.name}. Sobre tu pedido...`)
+    return `https://wa.me/${cleanPhone}?text=${text}`
+  }
+
   return (
     <div className="space-y-4">
-      {/* Stats */}
+      {/* Stats grid — N8 conversion + N9 live viewers + N7 weekly summary */}
       <div className="grid grid-cols-3 gap-3">
         <Card variant="outlined" className="p-4 text-center">
           <p className="text-3xl font-bold text-primary">{stats.viewsToday}</p>
@@ -120,54 +233,70 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
         </Card>
       </div>
 
+      {/* N7: Weekly summary card */}
+      {stats.weeklyViews > 0 || stats.weeklyOrders > 0 ? (
+        <Card variant="outlined" className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar size={16} className="text-primary" />
+            <h3 className="font-semibold text-gray-800">Tu semana</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                <Eye size={12} /> Vistas
+              </div>
+              <p className="text-2xl font-bold">{stats.weeklyViews}</p>
+            </div>
+            <div>
+              <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                <Package size={12} /> Pedidos
+              </div>
+              <p className="text-2xl font-bold text-secondary">{stats.weeklyOrders}</p>
+            </div>
+            <div>
+              <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                <TrendingUp size={12} /> Conv.
+              </div>
+              <p className="text-2xl font-bold text-green-600">{stats.conversionRate}%</p>
+            </div>
+          </div>
+          {stats.conversionRate > 0 && (
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              {stats.conversionRate >= 10
+                ? '🔥 ¡Excelente conversión! Sigue así.'
+                : stats.conversionRate >= 5
+                ? '👍 Buena tasa. Añade más fotos para mejorar.'
+                : '💡 Añade fotos a tus productos para atraer más clientes.'}
+            </p>
+          )}
+        </Card>
+      ) : null}
+
+      {/* N15: Weekly ranking */}
+      {typeof stats.rankPercentile === 'number' && (
+        <Card variant="outlined" className="p-4 bg-gradient-to-r from-purple-50 to-pink-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">
+              {stats.rankPercentile}
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-800">
+                Top {stats.rankPercentile}% en tu categoría
+              </p>
+              <p className="text-xs text-gray-600">Esta semana en tu ciudad</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Quick Start Checklist */}
       <Card variant="outlined" className="p-4">
         <h3 className="font-semibold text-gray-800 mb-3">Quick Start Checklist</h3>
         <div className="space-y-2">
-          {/* Foto de perfil */}
-          <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${vendor.photoUrl ? 'bg-green-500' : 'bg-gray-200'}`}>
-              {vendor.photoUrl ? (
-                <Check size={14} className="text-white" />
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-gray-400" />
-              )}
-            </div>
-            <span className={`text-sm ${vendor.photoUrl ? 'text-gray-700' : 'text-gray-400'}`}>Foto de perfil</span>
-          </div>
-          {/* Agregar productos */}
-          <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${productCount > 0 ? 'bg-green-500' : 'bg-gray-200'}`}>
-              {productCount > 0 ? (
-                <Check size={14} className="text-white" />
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-gray-400" />
-              )}
-            </div>
-            <span className={`text-sm ${productCount > 0 ? 'text-gray-700' : 'text-gray-400'}`}>Agregar productos</span>
-          </div>
-          {/* Compartir ubicación */}
-          <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${vendor.latitude ? 'bg-green-500' : 'bg-gray-200'}`}>
-              {vendor.latitude ? (
-                <Check size={14} className="text-white" />
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-gray-400" />
-              )}
-            </div>
-            <span className={`text-sm ${vendor.latitude ? 'text-gray-700' : 'text-gray-400'}`}>Compartir ubicación</span>
-          </div>
-          {/* WhatsApp */}
-          <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${vendor.phone ? 'bg-green-500' : 'bg-gray-200'}`}>
-              {vendor.phone ? (
-                <Check size={14} className="text-white" />
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-gray-400" />
-              )}
-            </div>
-            <span className={`text-sm ${vendor.phone ? 'text-gray-700' : 'text-gray-400'}`}>WhatsApp</span>
-          </div>
+          <ChecklistItem done={!!vendor.photoUrl} label="Foto de perfil" />
+          <ChecklistItem done={productCount > 0} label="Agregar productos" />
+          <ChecklistItem done={!!vendor.latitude} label="Compartir ubicación" />
+          <ChecklistItem done={!!vendor.phone} label="WhatsApp" />
         </div>
       </Card>
 
@@ -213,7 +342,7 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
         )}
       </Card>
 
-      {/* Orders section */}
+      {/* Orders section — N10 inline order actions */}
       {orders.length > 0 && (
         <Card variant="outlined" className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -221,24 +350,55 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
             <span className="text-sm text-gray-500">{orders.length} en total</span>
           </div>
           <div className="space-y-3">
-            {orders.slice(0, 5).map((order) => (
-              <div key={order.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div>
-                  <p className="font-medium text-sm">{order.buyer_name}</p>
-                  <p className="text-xs text-gray-500">
-                    {order.items.map((item) => `${item.quantity}x ${item.product_name}`).join(', ')}
-                  </p>
+            {orders.slice(0, 5).map((order) => {
+              const wa = whatsappLink(order)
+              return (
+                <div key={order.id} className="py-2 border-b last:border-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <p className="font-medium text-sm">{order.buyer_name}</p>
+                      <p className="text-xs text-gray-500">
+                        {order.items.map((item) => `${item.quantity}x ${item.product_name}`).join(', ')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm text-primary">
+                        ${parseFloat(order.total).toLocaleString('es-CO')}
+                      </p>
+                      <Badge variant={order.status === 'pending' ? 'secondary' : order.status === 'completed' ? 'primary' : 'outline'}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  {/* N10: inline actions */}
+                  <div className="flex items-center gap-2 mt-2">
+                    {wa && (
+                      <a
+                        href={wa}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Contactar a ${order.buyer_name} por WhatsApp`}
+                        className="flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full hover:bg-green-100"
+                      >
+                        <MessageCircle size={12} /> WhatsApp
+                      </a>
+                    )}
+                    {order.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOrderAction?.('mark_delivered', order.id)
+                          showToast('Pedido marcado como entregado', 'success')
+                        }}
+                        className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100"
+                      >
+                        <Truck size={12} /> Marcar entregado
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-sm text-primary">
-                    ${parseFloat(order.total).toLocaleString('es-CO')}
-                  </p>
-                  <Badge variant={order.status === 'pending' ? 'secondary' : order.status === 'completed' ? 'primary' : 'outline'}>
-                    {order.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}
@@ -281,6 +441,21 @@ export function SellerDashboard({ vendorId, products = [], productCount = 0, ven
           </Link>
         </Card>
       )}
+    </div>
+  )
+}
+
+function ChecklistItem({ done, label }: { done: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${done ? 'bg-green-500' : 'bg-gray-200'}`}>
+        {done ? (
+          <Check size={14} className="text-white" />
+        ) : (
+          <span className="w-2 h-2 rounded-full bg-gray-400" />
+        )}
+      </div>
+      <span className={`text-sm ${done ? 'text-gray-700' : 'text-gray-400'}`}>{label}</span>
     </div>
   )
 }

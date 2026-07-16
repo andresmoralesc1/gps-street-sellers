@@ -1,10 +1,16 @@
 /** @type {import('next').NextConfig} */
 const { withSentryConfig } = require('@sentry/nextjs')
 
+const path = require('path')
+
 const nextConfig = {
   reactStrictMode: true,
   // Disable the X-Powered-By: Next.js header (fingerprinting the stack).
   poweredByHeader: false,
+
+  // Explicit workspace root — Next.js was getting confused by /home/telchar/bun.lock
+  // (an orphaned file from a different project) and warning about inferred root.
+  outputFileTracingRoot: path.join(__dirname, '../../'),
 
   // ---------------------------------------------------------------------
   // Image optimization (Etapa 13)
@@ -132,5 +138,10 @@ module.exports = withSentryConfig(nextConfig, {
   authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
   hideSourceMaps: true,
-  disableLogger: true,
+  // disableLogger is deprecated in @sentry/nextjs 10+ — use the
+  // webpack treeshake option instead. Equivalent effect: no Sentry
+  // debug logs in production builds.
+  webpack: {
+    treeshake: { removeDebugLogging: true },
+  },
 })

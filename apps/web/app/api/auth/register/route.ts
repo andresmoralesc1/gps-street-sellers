@@ -38,6 +38,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
+    // Role is selected during registration (single-step signup). Must be one of
+    // the allowed values — silent default to 'buyer' would surprise sellers.
+    if (role !== 'buyer' && role !== 'seller') {
+      return NextResponse.json(
+        { error: 'Selecciona un tipo de cuenta: vendedor o comprador' },
+        { status: 400 }
+      )
+    }
+
     // Password strength: minimum 8 chars, no top-50 common passwords.
     // Server-side enforcement — never trust the client to validate.
     // ponytail: 50-entry list is enough — longer lists become maintenance burden.
@@ -100,8 +109,9 @@ export async function POST(req: NextRequest) {
     // more than the saved CPU.
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // Sellers go through onboarding — start as buyer, upgrade via onboarding flow
-    const roleValue = 'buyer'
+    // Respect the role chosen during signup. /api/auth/role-select remains
+    // available as a legacy path for any orphan users where role=NULL.
+    const roleValue = role
 
     const userResult = await pool.query(
       `INSERT INTO users (email, password_hash, name, phone, city_id, role)

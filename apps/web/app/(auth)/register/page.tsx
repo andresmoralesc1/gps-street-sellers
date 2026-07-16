@@ -3,11 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ShoppingCart, Store } from 'lucide-react'
+import { clsx } from 'clsx'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { useStore } from '@/store/useStore'
 import { CityInput } from '@/components/ui/CityInput'
+import type { UserRole } from '@/lib/core/types'
+
+type AccountType = UserRole | null
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -17,6 +22,9 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState('')
   const [cityId, setCityId] = useState('')
   const [password, setPassword] = useState('')
+  // Single-step signup: user picks buyer/seller right here in the form.
+  // Before, this sent everyone as buyer + asked again at /role-select (broken).
+  const [accountType, setAccountType] = useState<AccountType>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [error, setError] = useState('')
@@ -52,6 +60,12 @@ export default function RegisterPage() {
       return
     }
 
+    if (!accountType) {
+      setError('Elige si quieres comprar o vender')
+      setIsLoading(false)
+      return
+    }
+
     // Ley 1581/2012 art. 9 — consent must be explicit and informed.
     if (!acceptedTerms || !acceptedPrivacy) {
       setError('Debes aceptar los Términos y la Política de Tratamiento de Datos Personales para continuar.')
@@ -69,6 +83,7 @@ export default function RegisterPage() {
           name: fullName,
           phone: cleanPhone,
           cityId,
+          role: accountType,
           acceptedTerms,
           acceptedPrivacy,
         }),
@@ -84,7 +99,12 @@ export default function RegisterPage() {
 
       // El API ya puso la cookie HttpOnly — usamos los datos del registro
       setUser(data.user)
-      router.push('/role-select')
+      // Send each role straight to its home (no more /role-select detour).
+      if (data.user.role === 'seller') {
+        router.push('/onboarding')
+      } else {
+        router.push('/map')
+      }
     } catch {
       setError('Error de conexión')
       setIsLoading(false)
@@ -100,6 +120,57 @@ export default function RegisterPage() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Single-step role picker — 2 visible cards, buyer/seller. */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">¿Qué quieres hacer?</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setAccountType('buyer')}
+                aria-pressed={accountType === 'buyer'}
+                className={clsx(
+                  'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
+                  accountType === 'buyer'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                )}
+              >
+                <ShoppingCart
+                  className={clsx(
+                    'w-8 h-8',
+                    accountType === 'buyer' ? 'text-primary' : 'text-gray-400'
+                  )}
+                />
+                <span className="text-sm font-semibold">Comprar</span>
+                <span className="text-xs text-gray-500 text-center leading-tight">
+                  Encontrar vendedores cerca
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('seller')}
+                aria-pressed={accountType === 'seller'}
+                className={clsx(
+                  'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
+                  accountType === 'seller'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                )}
+              >
+                <Store
+                  className={clsx(
+                    'w-8 h-8',
+                    accountType === 'seller' ? 'text-primary' : 'text-gray-400'
+                  )}
+                />
+                <span className="text-sm font-semibold">Vender</span>
+                <span className="text-xs text-gray-500 text-center leading-tight">
+                  Publicar mis productos
+                </span>
+              </button>
+            </div>
+          </div>
+
           <Input
             label="Nombre completo"
             type="text"

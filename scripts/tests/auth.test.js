@@ -182,6 +182,7 @@ test('POST /api/auth/register rejects invalid city', async () => {
       name: 'Test',
       phone: '3001234567',
       cityId: 'atlantis', // not in COLOMBIA_CITIES
+      role: 'buyer',
       acceptedTerms: true,   // Ley 1581/2012 — Etapa 4
       acceptedPrivacy: true,
     }),
@@ -200,11 +201,91 @@ test('POST /api/auth/register rejects when consent checkboxes missing', async ()
       name: 'Test',
       phone: '3001234567',
       cityId: 'bogota',
+      role: 'buyer',
       // missing acceptedTerms + acceptedPrivacy
     }),
   })
   assert.equal(res.status, 400)
   assert.match(res.body.error, /Términos|Tratamiento/i)
+})
+
+test('POST /api/auth/register rejects when role missing', async () => {
+  // Etapa 5: role is selected during registration (single-step).
+  // No more "register as buyer, escalate later" — must be explicit.
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'no-role-' + Date.now() + '@test.local',
+      password: 'Password123',
+      name: 'Test',
+      phone: '3001234567',
+      cityId: 'bogota',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+      // role intentionally omitted
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /vendedor|comprador|tipo de cuenta/i)
+})
+
+test('POST /api/auth/register rejects invalid role value', async () => {
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'bad-role-' + Date.now() + '@test.local',
+      password: 'Password123',
+      name: 'Test',
+      phone: '3001234567',
+      cityId: 'bogota',
+      role: 'admin', // only 'buyer' or 'seller' allowed
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error, /vendedor|comprador|tipo de cuenta/i)
+})
+
+test('POST /api/auth/register creates user as seller when role=seller', async () => {
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'new-seller-' + Date.now() + '@test.local',
+      password: 'Password123',
+      name: 'Fresh Seller',
+      phone: '3001234567',
+      cityId: 'bogota',
+      role: 'seller',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 200)
+  assert.equal(res.body.user.role, 'seller')
+  assert.equal(res.body.user.email.includes('new-seller-'), true)
+})
+
+test('POST /api/auth/register creates user as buyer when role=buyer', async () => {
+  const res = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'new-buyer-' + Date.now() + '@test.local',
+      password: 'Password123',
+      name: 'Fresh Buyer',
+      phone: '3001234567',
+      cityId: 'bogota',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(res.status, 200)
+  assert.equal(res.body.user.role, 'buyer')
 })
 
 test('PATCH /api/products/[id] rejects malformed UUID', async () => {

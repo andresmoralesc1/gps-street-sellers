@@ -1,8 +1,40 @@
 /** @type {import('next').NextConfig} */
+const { withSentryConfig } = require('@sentry/nextjs')
+
 const nextConfig = {
   reactStrictMode: true,
   // Disable the X-Powered-By: Next.js header (fingerprinting the stack).
   poweredByHeader: false,
+
+  // ---------------------------------------------------------------------
+  // Image optimization (Etapa 13)
+  //
+  // Whitelist external hosts so <Image src="https://..." /> can optimize.
+  // Currently used by product photos uploaded to Supabase Storage.
+  // ---------------------------------------------------------------------
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.in',
+        pathname: '/storage/v1/object/**',
+      },
+      // Allow Carrd / marketing landing pages hosted externally to render OG previews.
+      {
+        protocol: 'https',
+        hostname: 'andresmorales.com.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'gps.andresmorales.com.co',
+      },
+    ],
+  },
 
   // ---------------------------------------------------------------------
   // Security headers (Etapa 5)
@@ -92,4 +124,13 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withSentryConfig(nextConfig, {
+  // Source-map upload config. No-op when SENTRY_AUTH_TOKEN isn't set,
+  // so dev builds work without a Sentry account.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  hideSourceMaps: true,
+  disableLogger: true,
+})

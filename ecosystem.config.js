@@ -14,6 +14,8 @@
  *   pm2 reload gps                            # after code changes (zero-downtime)
  *   pm2 restart gps                           # hard restart (faster than reload)
  *   pm2 logs gps                              # tail logs
+ *   pm2 save                                  # persist current process list across reboots
+ *   pm2 resurrect                             # restore on server boot (after `pm2 save`)
  *
  * Safe: only this app is managed. n8n, twenty, minio, postgres, redis, caddy
  * are all separate (systemd / docker / standalone) and are NOT touched.
@@ -32,7 +34,13 @@ module.exports = {
       // min_uptime=30s, a flaky process gives up after 10 quick failures.
       max_restarts: 10,
       min_uptime: '30s',
-      // Give Next.js a chance to drain in-flight requests on reload.
+      // Auto-restart if RSS exceeds 500 MB. Sellers running GPS for hours on
+      // mobile can leak memory via the SSE stream; this keeps the box healthy.
+      max_memory_restart: '500M',
+      // Graceful shutdown: PM2 sends SIGINT first, waits `kill_timeout` for the
+      // process to drain, then SIGKILL. Our instrumentation.ts catches SIGTERM
+      // and closes the pg pool + cron intervals before exit.
+      kill_signal: 'SIGINT',
       kill_timeout: 8000,
       wait_ready: false,
       // Load .env explicitly so the port and secrets are present at process start.
@@ -42,6 +50,12 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: '3005',
       },
+      // Out-of-band log files. pm2-logrotate watches these and rotates when
+      // either exceeds 50M. We keep 10 compressed copies.
+      out_file: '/home/telchar/.pm2/logs/gps-out.log',
+      error_file: '/home/telchar/.pm2/logs/gps-error.log',
+      merge_logs: false,
+      time: true,
     },
   ],
 }

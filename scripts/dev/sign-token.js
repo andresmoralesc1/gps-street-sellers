@@ -3,9 +3,10 @@
 // Reads token_version from DB so the JWT survives isTokenRevoked().
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const path = require('path');
 const { Client } = require('pg');
 
-const env = fs.readFileSync('/home/telchar/gps-street-sellers/apps/web/.env', 'utf8');
+const env = fs.readFileSync(path.join(__dirname, '..', '..', 'apps', 'web', '.env'), 'utf8');
 const secret = env.match(/JWT_SECRET=["']?([^"'\n]+)["']?/)?.[1];
 const host = env.match(/DB_HOST=["']?([^"'\n]+)["']?/)?.[1] || 'localhost';
 const port = parseInt(env.match(/DB_PORT=["']?([^"'\n]+)["']?/)?.[1] || '5432', 10);

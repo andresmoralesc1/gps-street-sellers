@@ -109,12 +109,12 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, 
         <button
           onClick={onClose}
           aria-label="Cerrar"
-          className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-900"
+          className="absolute top-2 right-2 z-10 p-1.5 rounded-full hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-900"
         >
           <X size={18} aria-hidden="true" />
         </button>
       )}
-      <div className="flex gap-4">
+      <div className="flex gap-4 pr-8">
         {showPhoto ? (
           <img
             src={vendor.photoUrl}

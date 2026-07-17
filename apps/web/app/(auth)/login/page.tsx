@@ -54,6 +54,14 @@ function AuthPageContent() {
     return () => { cancelled = true }
   }, [])
 
+  // Surface a friendly message when the user lands here because their
+  // session actually expired (api-client triggered the redirect).
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') {
+      setError('Tu sesión expiró. Vuelve a iniciar sesión.')
+    }
+  }, [searchParams])
+
   const redirectAfterLogin = (user: any) => {
     if (user.role === 'seller') {
       router.push('/dashboard')

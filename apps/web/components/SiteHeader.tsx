@@ -21,7 +21,7 @@ export function SiteHeader() {
   const pathname = usePathname()
 
   // Hide the redundant "Ingresar" / "Registrarme" buttons when user is already on those pages
-  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/role-select'
+  const isAuthPage = pathname === '/login' || pathname === '/register'
   const onLogin = pathname === '/login'
   const onRegister = pathname === '/register'
 

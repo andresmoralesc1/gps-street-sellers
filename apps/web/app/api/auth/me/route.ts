@@ -57,12 +57,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
     }
 
-    const { role, name, phone, cityId } = await req.json()
+    const { name, phone, cityId } = await req.json()
 
-    // SECURITY: 'role' is intentionally NOT updatable here. Role changes must
-    // go through /api/auth/role-select (separate flow) to prevent privilege
-    // escalation via PATCH /api/auth/me.
-    void role
+    // SECURITY: 'role' is intentionally NOT updatable here. Role is set once at
+    // /api/auth/register and is immutable for the lifetime of the account. To
+    // change role, contact support (intentional friction to prevent silent
+    // privilege escalation from buyer to seller or vice versa).
+    void 0
 
     const updates: string[] = []
     const values: any[] = []

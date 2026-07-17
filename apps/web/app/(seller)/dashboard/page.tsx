@@ -139,7 +139,9 @@ function DashboardContent() {
     if (!hasHydrated) return
     if (user === null) return
     if (user?.role !== 'seller') {
-      router.push('/role-select')
+      // Seller-only page. Since role is immutable post-register, redirect
+      // non-sellers to the public map.
+      router.push('/map')
       return
     }
     cancelledRef.current = false

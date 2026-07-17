@@ -42,7 +42,10 @@ export default function ProductsPage() {
 
   useEffect(() => {
     if (user?.role !== 'seller') {
-      router.push('/role-select')
+      // Seller-only page. Since role is immutable post-register, redirect
+      // non-sellers to the public map. If they need a seller account, they
+      // must register a new one.
+      router.push('/map')
       return
     }
 

@@ -54,7 +54,7 @@ export function OnboardingTour() {
     const buyerPaths = ['/map', '/favorites', '/settings']
     if (!buyerPaths.some((p) => pathname?.startsWith(p))) return
 
-    const skipPaths = ['/login', '/register', '/role-select', '/onboarding', '/profile']
+    const skipPaths = ['/login', '/register', '/onboarding', '/profile']
     if (skipPaths.some((p) => pathname?.startsWith(p))) return
 
     const timer = setTimeout(() => setOpen(true), 1500)

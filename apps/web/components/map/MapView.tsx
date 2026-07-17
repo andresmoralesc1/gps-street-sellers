@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Frown, LogIn, X } from 'lucide-react'
 import Link from 'next/link'
@@ -12,7 +12,6 @@ import { getCategoryInfo, COLOMBIA_CITIES } from '@/lib/core/constants'
 import type { Vendor, VendorCategory } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
 import L from 'leaflet'
-import { toast } from '@/components/ui/Toast'
 
 // Fix para íconos de Leaflet en Next.js
 import '@/lib/leaflet-icon-fix'
@@ -25,12 +24,45 @@ function MapUpdater({ center }: { center: LatLng }) {
   return null
 }
 
+// Closes the selected vendor when the user clicks empty map (not on a marker).
+function MapClickCloser({ onMapClick }: { onMapClick: () => void }) {
+  useMapEvents({
+    click: () => onMapClick(),
+  })
+  return null
+}
+
+// Pans the map so the selected vendor stays visible above the floating card.
+// `pixelOffsetBy` is the height in pixels the floating card occupies at the
+// bottom of the viewport — we pan up by that amount so the marker isn't
+// hidden under the card.
+function MapPanToVendor({
+  vendor,
+  bottomOffsetPx,
+}: {
+  vendor: Vendor | null
+  bottomOffsetPx: number
+}) {
+  const map = useMap()
+  useEffect(() => {
+    if (!vendor || vendor.latitude == null || vendor.longitude == null) return
+    const point = map.latLngToContainerPoint([vendor.latitude, vendor.longitude])
+    // Move the vendor marker up by the card height + small breathing room.
+    const targetPoint = L.point(point.x, point.y - bottomOffsetPx)
+    const targetLatLng = map.containerPointToLatLng(targetPoint)
+    map.panTo(targetLatLng, { animate: true, duration: 0.4 })
+  }, [map, vendor, bottomOffsetPx])
+  return null
+}
+
 export function MapView() {
   const selectedCity = useStore((s) => s.selectedCity)
   const setSelectedCity = useStore((s) => s.setSelectedCity)
   const [center, setCenter] = useState<[number, number]>(selectedCity.center)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [activeVendors, setActiveVendors] = useState<Vendor[]>([])
+  const [cardHeightPx, setCardHeightPx] = useState(0)
+  const cardRef = useRef<HTMLDivElement | null>(null)
   const filters = useStore((s) => s.filters)
   const userLocation = useStore((s) => s.userLocation)
   const user = useStore((s) => s.user)
@@ -122,6 +154,31 @@ export function MapView() {
     setCenter(selectedCity.center)
   }, [selectedCity])
 
+  // Measure the floating card so MapPanToVendor can offset the marker.
+  useEffect(() => {
+    if (!selectedVendor || !cardRef.current) return
+    const el = cardRef.current
+    const update = () => setCardHeightPx(el.getBoundingClientRect().height)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    window.addEventListener('resize', update)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [selectedVendor])
+
+  // Esc closes the selected vendor card.
+  useEffect(() => {
+    if (!selectedVendor) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedVendor(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedVendor])
+
   const filteredVendors = activeVendors.filter((v) => {
     if (filters.category && v.category !== filters.category) return false
     if (filters.searchQuery) {
@@ -179,6 +236,8 @@ export function MapView() {
         )}
 
         <MapUpdater center={{ lat: center[0], lng: center[1] } as LatLng} />
+        <MapClickCloser onMapClick={() => setSelectedVendor(null)} />
+        <MapPanToVendor vendor={selectedVendor} bottomOffsetPx={cardHeightPx + 16} />
 
         {filteredVendors.length === 0 ? (
           <Marker position={center}>
@@ -250,17 +309,6 @@ export function MapView() {
                 icon={markerIcon}
                 eventHandlers={{
                   click: () => {
-                    if (!isLoggedIn) {
-                      // Guest mode — show a hint to sign in instead of
-                      // leaking vendor details on the public map.
-                      toast({
-                        kind: 'info',
-                        title: 'Inicia sesión para ver detalles',
-                        description: `${vendor.name} y otros vendedores — solo para usuarios registrados.`,
-                        action: { label: 'Ingresar', href: '/login' },
-                      })
-                      return
-                    }
                     setSelectedVendor(vendor)
                   },
                 }}
@@ -284,16 +332,46 @@ export function MapView() {
         )}
       </MapContainer>
 
-      {isLoggedIn && selectedVendor && (
-        <div className="absolute bottom-4 left-4 right-4 z-[1000]">
+      {selectedVendor && (
+        <div
+          ref={cardRef}
+          className="absolute left-3 right-3 sm:left-4 sm:right-4 bottom-[72px] sm:bottom-4 z-[1000] max-w-md mx-auto animate-slide-up"
+          role="dialog"
+          aria-label={`Detalles de ${selectedVendor.name}`}
+        >
           <VendorCard
             vendor={selectedVendor}
             distance={getVendorDistance(selectedVendor)}
             onClose={() => setSelectedVendor(null)}
-              onViewDetails={() => {
-                window.location.href = `/vendor/${selectedVendor.slug || selectedVendor.id}`
-              }}
+            onViewDetails={
+              isLoggedIn
+                ? () => {
+                    window.location.href = `/vendor/${selectedVendor.slug || selectedVendor.id}`
+                  }
+                : undefined
+            }
           />
+          {!isLoggedIn && (
+            <div className="mt-2 bg-white rounded-xl shadow-card border border-stone-200 px-4 py-3 text-center">
+              <p className="text-sm font-semibold text-stone-900 mb-2">
+                Inicia sesión para ver detalles
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-600 transition-colors"
+                >
+                  Ingresar
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200 transition-colors"
+                >
+                  Registrarme
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

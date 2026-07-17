@@ -14,6 +14,7 @@ import {
   Package,
   MapPin,
   Star,
+  X,
 } from 'lucide-react'
 import type { Vendor, VendorCategory } from '@/lib/core/types'
 import { getCategoryInfo } from '@/lib/core/constants'
@@ -103,7 +104,16 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, 
   }
 
   return (
-    <Card variant="elevated" className="p-4">
+    <Card variant="elevated" className="p-4 relative">
+      {onClose && (
+        <button
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-900"
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
+      )}
       <div className="flex gap-4">
         {showPhoto ? (
           <img

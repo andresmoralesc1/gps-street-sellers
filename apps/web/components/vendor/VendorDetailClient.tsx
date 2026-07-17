@@ -401,7 +401,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
               )}
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <button key={n} type="button" onClick={() => setReviewRating(n)} className="text-2xl">
+                    <button key={n} type="button" onClick={() => setReviewRating(n)} aria-label={`${n} ${n === 1 ? 'estrella' : 'estrellas'}`} aria-pressed={n <= reviewRating} className="text-2xl">
                       <Star
                         size={24}
                         className={n <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}

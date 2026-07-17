@@ -38,9 +38,21 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    const { latitude, longitude } = await req.json()
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    }
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Body requerido' }, { status: 400 })
+    }
+    const { latitude, longitude } = body as { latitude?: unknown; longitude?: unknown }
 
-    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    if (
+      typeof latitude !== 'number' || typeof longitude !== 'number' ||
+      !Number.isFinite(latitude) || !Number.isFinite(longitude)
+    ) {
       return NextResponse.json({ error: 'Latitud y longitud son requeridas y deben ser números' }, { status: 400 })
     }
 

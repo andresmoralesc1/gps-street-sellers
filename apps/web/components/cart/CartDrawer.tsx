@@ -62,8 +62,8 @@ export function CartDrawer({ vendorPhone, vendorName = 'Vendedor', onCheckout, i
             <ShoppingBag size={24} className="text-primary" />
             <h2 className="text-lg font-bold">Tu pedido</h2>
           </div>
-          <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-            <X size={20} />
+          <button onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" className="p-2 hover:bg-gray-100 rounded-full">
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

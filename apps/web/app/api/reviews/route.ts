@@ -33,16 +33,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solo compradores pueden dejar reseñas' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const vendor_id = body.vendor_id || body.vendorId
-    const { rating, comment } = body
-
-    if (!vendor_id || !rating || !comment) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
     }
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Body requerido' }, { status: 400 })
+    }
+    const b = body as { vendor_id?: unknown; vendorId?: unknown; rating?: unknown; comment?: unknown }
+    const vendor_id = (b.vendor_id ?? b.vendorId) as string | undefined
+    const rating = b.rating
+    const comment = b.comment
 
-    if (rating < 1 || rating > 5) {
-      return NextResponse.json({ error: 'Rating debe ser entre 1 y 5' }, { status: 400 })
+    if (!vendor_id || typeof vendor_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(vendor_id)) {
+      return NextResponse.json({ error: 'vendor_id (UUID) requerido' }, { status: 400 })
+    }
+    if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return NextResponse.json({ error: 'Rating debe ser un entero entre 1 y 5' }, { status: 400 })
+    }
+    if (typeof comment !== 'string' || comment.trim().length < 3 || comment.length > 1000) {
+      return NextResponse.json(
+        { error: 'Comentario requerido (3-1000 caracteres)' },
+        { status: 400 }
+      )
     }
 
     // Security: ALWAYS use the authenticated user's profile name — never

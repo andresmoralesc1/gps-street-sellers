@@ -56,10 +56,6 @@ export function VendorFormSlide({ onCreated, initialName = '' }: VendorFormSlide
         return
       }
 
-      if (phone) {
-        localStorage.setItem('lastPhone', phone)
-      }
-
       onCreated(data.vendor.id)
     } catch {
       setError('Error de conexión')

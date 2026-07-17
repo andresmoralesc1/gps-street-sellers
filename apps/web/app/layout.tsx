@@ -5,6 +5,7 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { CookieBanner } from '@/components/CookieBanner'
 import { OnboardingTour } from '@/components/OnboardingTour'
 import { ToastContainer } from '@/components/ui/Toast'
+import { UmamiAnalytics } from '@/components/UmamiAnalytics'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -115,6 +116,7 @@ export default function RootLayout({
           <CookieBanner />
           <OnboardingTour />
           <ToastContainer />
+          <UmamiAnalytics />
         </Providers>
       </body>
     </html>

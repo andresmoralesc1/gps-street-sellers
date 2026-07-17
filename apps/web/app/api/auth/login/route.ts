@@ -5,6 +5,18 @@ import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { isEmail, normalizeEmail, normalizePhone } from '@/lib/auth-helpers'
 
+// Defense against user-enumeration via response timing:
+// On startup we hash a fixed string with bcrypt cost 12 so the dummy-hash path
+// takes ~as long as a real compare. Module-level memoization — runs once per
+// process. The hash itself is throwaway (we never check what it produces).
+let DUMMY_HASH_PROMISE: Promise<string> | null = null
+function getDummyHash(): Promise<string> {
+  if (!DUMMY_HASH_PROMISE) {
+    DUMMY_HASH_PROMISE = bcrypt.hash('dummy-not-a-real-password', 12)
+  }
+  return DUMMY_HASH_PROMISE
+}
+
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
@@ -59,13 +71,20 @@ export async function POST(req: NextRequest) {
       [lookupValue]
     )
 
+    // Defense against user-enumeration via response timing:
+    // if no row, still hash a dummy password so the request takes ~as long as a
+    // real bcrypt compare (~250ms with cost 12). The error message stays the
+    // same ("Credenciales inválidas") so neither path leaks which field is wrong.
     if (result.rows.length === 0) {
+      await bcrypt.compare(password, await getDummyHash())
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
     }
 
     const user = result.rows[0]
 
     if (!user.is_active) {
+      // Same timing even for inactive users — hash to mask the deactivated branch.
+      await bcrypt.compare(password, user.password_hash)
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
     }
 

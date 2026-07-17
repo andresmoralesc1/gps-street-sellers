@@ -21,3 +21,23 @@ All photos in this directory are sourced from [Pexels](https://www.pexels.com/li
 | `ropa-combo.jpg` | 10493094 | T-shirts and caps display |
 
 Pexels License allows commercial and non-commercial use without permission. Attribution is appreciated but not required.
+
+## Added 2026-07-17 — semantic-matched Pexels photos for products that had wrong/recycled images
+
+| File | Pexels ID | Photographer | Profile | Alt |
+|------|-----------|--------------|---------|-----|
+| `empanada-carne.jpg` | 37025257 | Christian Bolaños | https://www.pexels.com/@christian-bolanos-2158732257 | Colombian empanadas fritas on wooden board |
+| `empanada-pollo.jpg` | 37025258 | Christian Bolaños | https://www.pexels.com/@christian-bolanos-2158732257 | Empanadas with meat and rice filling |
+| `bandeja-paisa.jpg` | 37039787 | Christian Bolaños | https://www.pexels.com/@christian-bolanos-2158732257 | Colombian plate with rice, meat, avocado and sancocho |
+| `combo-almuerzo.jpg` | 36982101 | rakhmat suwandi | https://www.pexels.com/@rakhmat-suwandi | Lunch plate with fried chicken, rice and vegetables |
+| `sopa-del-dia.jpg` | 27397338 | Maggi Paraguay | https://www.pexels.com/@maggi-paraguay | Soup with chicken and yuca |
+| `calentado-paisa.jpg` | 37347242 | new perspectives | https://www.pexels.com/@new-perspectives | Hearty breakfast with eggs, beans, avocado and bollos |
+| `sancocho-gallina.jpg` | 29538429 | Nano Erdozain | https://www.pexels.com/@nano-erdozain | Chicken corn soup with avocado |
+| `jugo-naranja.jpg` | 30900665 | Stephen Leonardi | https://www.pexels.com/@stephen-leonardi | Glass of fresh orange juice |
+| `limonada-coco.jpg` | 32625067 | RITRATTO VISUAL | https://www.pexels.com/@ritratto-visual | Tropical lime drink in Palomino Colombia |
+| `banano.jpg` | 30893278 | Matheus Bertelli | https://www.pexels.com/@matheus-bertelli | Bunches of ripe yellow bananas at market |
+| `coca-cola.jpg` | 15205136 | David Guerrero | https://www.pexels.com/@david-guerrero | Glass of Coca-Cola with ice |
+| `auto-asignado.jpg` | 37039789 | Christian Bolaños | https://www.pexels.com/@christian-bolanos-2158732257 | Colombian plate with rice, chicharrón and avocado |
+
+**Verification note**: Each photo was checked with vision AI for semantic match with the product name.
+2 mismatches caught and not used as-is (bandeja-paisa shows ajiaco; limonada-coco shows regular lime drink). Manual aliases applied.

@@ -11,12 +11,18 @@ import pool from '@/lib/db'
  *   semanal   — 7 days   — COP $20.000
  *   mensual   — 30 days  — COP $60.000
  *
- * Payment integration with Wompi is OUT OF SCOPE for this endpoint — it
- * returns a "pending_payment" sponsorship and a checkout URL placeholder.
- * The Wompi webhook will flip status to 'active' when payment confirms.
+ * Payment flow:
+ *   1. Client POSTs here → row created with status='pending_payment'.
+ *   2. We (would) hand back a Wompi checkout URL + reference.
+ *   3. Wompi webhook (NOT IMPLEMENTED — see lib/payments/WOMPI_INTEGRATION.md)
+ *      flips status to 'active' on confirmed payment.
  *
- * For now this endpoint can mark sponsorship as 'active' immediately
- * (manual payment / transfer / Nequi direct — useful for the beta).
+ * Beta mode (ENABLE_BETA_SPONSORSHIPS=true):
+ *   Skips the payment step and inserts with status='active'. This is the
+ *   documented dev/test shortcut; it does NOT bypass the no-stack check.
+ *   In production leave the env var unset — POSTs will create
+ *   pending_payment rows that will never resolve. Until Wompi is wired,
+ *   surface that clearly to users (see 503 response below).
  */
 
 const PRICING = {
@@ -122,11 +128,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Beta gate: sponsorship activation requires explicit opt-in via env var.
-    // In production, payment verification (Wompi webhook) is required BEFORE
-    // activation. Setting ENABLE_BETA_SPONSORSHIPS=true in .env re-enables the
-    // dev/beta shortcut. Default = disabled (safer for prod).
-    if (process.env.ENABLE_BETA_SPONSORSHIPS !== 'true') {
+    // Payment gate.
+    //
+    // Production: rows are created with status='pending_payment' and never get
+    // promoted in this endpoint. The Wompi webhook (or admin tooling) is the
+    // only path that can flip to 'active'. Until Wompi is wired, every call
+    // gets a 503 so users get an honest "payments not wired" message and we
+    // don't accidentally ship free sponsorships.
+    //
+    // Beta: ENABLE_BETA_SPONSORSHIPS=true in .env skips the payment step and
+    // inserts directly with status='active'. Use this for manual onboarding
+    // until the Wompi integration lands. The no-stack guard above still runs.
+    const isBeta = process.env.ENABLE_BETA_SPONSORSHIPS === 'true'
+
+    if (!isBeta) {
       await client.query('ROLLBACK')
       return NextResponse.json(
         {
@@ -144,7 +159,7 @@ export async function POST(req: NextRequest) {
        RETURNING id, plan, amount_cents, starts_at, ends_at, status`,
       [auth.vendorId, plan, config.amount_cents, config.days]
     )
-    insertedRow = insertResult.rows[0]
+    insertedRow = insertResult.rows[0] // beta path: status='active'
 
     await client.query('COMMIT')
   } catch (err) {

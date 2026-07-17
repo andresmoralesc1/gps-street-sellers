@@ -77,15 +77,21 @@ export async function GET(request: NextRequest) {
       ordersPlaced = r.rows
     }
 
-    // 5. Orders received (vendor side).
-    const ordersReceived: unknown[] = []
-    for (const v of (vendorRes.rows as Array<{ id: string }>)) {
+    // 5. Orders received (vendor side). There is exactly one vendor per
+    //    profile in practice (profile_id is currently 1:1 with vendor in the
+    //    DB), so we fetch directly by profile_id via a single JOIN — no N+1.
+    //    If we ever allow multiple vendors per profile, switch to ANY().
+    let ordersReceived: unknown[] = []
+    if (profileId) {
       const r = await pool.query(
-        `SELECT id, status, total, created_at
-         FROM orders WHERE vendor_id = $1 ORDER BY created_at DESC`,
-        [v.id]
+        `SELECT o.id, o.status, o.total, o.created_at
+         FROM orders o
+         JOIN vendors v ON v.id = o.vendor_id
+         WHERE v.profile_id = $1
+         ORDER BY o.created_at DESC`,
+        [profileId]
       )
-      ordersReceived.push(...r.rows)
+      ordersReceived = r.rows
     }
 
     // 6. Favorites (just vendor IDs).

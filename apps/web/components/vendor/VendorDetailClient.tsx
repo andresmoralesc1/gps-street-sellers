@@ -8,6 +8,7 @@ import { toast } from '@/components/ui/Toast'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
 import { VendorReviews } from '@/components/vendor/VendorReviews'
+import { VendorLocationMap } from '@/components/vendor/VendorLocationMap'
 import { CartDrawer } from '@/components/cart/CartDrawer'
 import { useStore } from '@/store/useStore'
 import type { Vendor, Product, Review } from '@/lib/core/types'
@@ -358,6 +359,18 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
             </span>
           )}
         </div>
+
+        {/* Mini-mapa: ubicación en vivo del vendedor.
+            Solo se renderiza si hay lat/lng. Click → Google Maps directions. */}
+        {vendor.latitude != null && vendor.longitude != null && (
+          <VendorLocationMap
+            lat={vendor.latitude}
+            lng={vendor.longitude}
+            name={vendor.name}
+            category={vendor.category}
+            stationType={vendor.stationType}
+          />
+        )}
 
           {/* Action buttons — visible to everyone */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">

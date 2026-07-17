@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { Vendor, VendorCategory } from '@/lib/core/types'
 import { getCategoryInfo } from '@/lib/core/constants'
+import { formatBusinessHoursShort } from '@/lib/business-hours'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -89,6 +90,17 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, 
               <span className="ml-2 text-secondary font-medium">• {formatDistance(distance)}</span>
             )}
           </p>
+          {vendor.businessHours && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              {vendor.isOpen !== false ? (
+                <span className="text-green-600 font-medium">● Abierto</span>
+              ) : (
+                <span className="text-gray-500">● Cerrado</span>
+              )}
+              {' · '}
+              {formatBusinessHoursShort(vendor.businessHours)}
+            </p>
+          )}
         </div>
         {onViewDetails && (
           <button

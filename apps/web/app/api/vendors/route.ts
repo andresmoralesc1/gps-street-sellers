@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isOpenNow } from '@/lib/business-hours'
 
 // Public: GET /api/vendors
 //
@@ -88,6 +89,7 @@ export async function GET(req: NextRequest) {
       photoUrl: v.photo_url,
       vehicleType: v.vehicle_type,
       vehiclePhotoUrl: v.vehicle_photo_url,
+      stationType: v.station_type,
       isActive: v.is_active,
       isVerified: v.is_verified || false,
       isSponsored: v.is_sponsored || false,
@@ -99,6 +101,20 @@ export async function GET(req: NextRequest) {
       longitude: v.longitude,
       cityId: v.city_id,
       locationUpdatedAt: v.location_updated_at,
+      businessHoursEnabled: v.business_hours_enabled || false,
+      businessHoursStart: v.business_hours_start,
+      businessHoursEnd: v.business_hours_end,
+      businessDays: v.business_days,
+      // Server-side computed: is the vendor currently open given their schedule?
+      // Returns true if business hours are disabled (always open) or if right
+      // now falls inside their open window on an open day. Used by clients to
+      // hide closed fixed-station vendors from the map without a second
+      // round-trip.
+      isOpen: !v.business_hours_enabled || isOpenNow(
+        v.business_hours_start,
+        v.business_hours_end,
+        v.business_days
+      ),
     }))
 
     // Pull active ad campaigns for this city/category context.

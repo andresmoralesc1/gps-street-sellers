@@ -12,6 +12,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer'
 import { useStore } from '@/store/useStore'
 import type { Vendor, Product, Review } from '@/lib/core/types'
 import { isUuid } from '@/lib/core/utils/slug'
+import { formatBusinessHoursShort } from '@/lib/business-hours'
 
 interface Props {
   /**
@@ -327,6 +328,36 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
 
       <div className="p-4 space-y-6 max-w-5xl mx-auto md:p-6 md:space-y-8">
         <VendorProfile vendor={adaptedVendor} />
+
+        {/* Visibility badge — tells the buyer whether the vendor is reachable right now.
+            Closed right now? We show the next open window so they don't bounce.
+            station_type tells them if the vendor is "me muevo" or "puesto fijo". */}
+        <div className="flex flex-wrap items-center gap-2">
+          {vendor.isOpen !== undefined && (
+            <span
+              className={
+                'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ' +
+                (vendor.isOpen
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-200 text-gray-700')
+              }
+              aria-label={vendor.isOpen ? 'Abierto ahora' : 'Cerrado ahora'}
+            >
+              <span className={'w-1.5 h-1.5 rounded-full ' + (vendor.isOpen ? 'bg-green-600' : 'bg-gray-500')} />
+              {vendor.isOpen ? 'Abierto ahora' : 'Cerrado'}
+            </span>
+          )}
+          {vendor.stationType && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-700">
+              {vendor.stationType === 'fixed' ? '📍 Puesto fijo' : '🛵 Se mueve por la ciudad'}
+            </span>
+          )}
+          {vendor.businessHours && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-50 text-stone-600">
+              🕐 {formatBusinessHoursShort(vendor.businessHours)}
+            </span>
+          )}
+        </div>
 
           {/* Action buttons — visible to everyone */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">

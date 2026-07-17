@@ -41,8 +41,15 @@ export async function POST(req: NextRequest) {
     const { email, password, name, phone, cityId, role, acceptedTerms, acceptedPrivacy } = await req.json()
 
     // ── Required: name + role + password + at least one of (email, phone)
-    if (!name || !password) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    const trimmedName = typeof name === 'string' ? name.trim() : ''
+    if (!trimmedName) {
+      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
+    }
+    if (trimmedName.length > 100) {
+      return NextResponse.json(
+        { error: 'El nombre es demasiado largo (máx 100 caracteres)' },
+        { status: 400 }
+      )
     }
 
     // Role must be explicit — silent default to 'buyer' would surprise sellers.
@@ -139,7 +146,7 @@ export async function POST(req: NextRequest) {
        VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT DO NOTHING
        RETURNING id, email, name, role, phone, city_id`,
-      [cleanEmail, passwordHash, name, cleanPhone, cityId || null, roleValue]
+      [cleanEmail, passwordHash, trimmedName, cleanPhone, cityId || null, roleValue]
     )
 
     if (userResult.rows.length === 0) {

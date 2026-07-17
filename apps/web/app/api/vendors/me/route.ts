@@ -56,6 +56,8 @@ export async function GET(req: NextRequest) {
       category_label: v.category_label,
       phone: v.phone,
       slug: v.slug,
+      vehicleType: v.vehicle_type,
+      stationType: v.station_type,
     })
 
     const vendors = result.rows.map(map)
@@ -217,6 +219,7 @@ export async function PATCH(req: NextRequest) {
       photoUrl: 'photo_url',
       vehicleType: 'vehicle_type',
       vehiclePhotoUrl: 'vehicle_photo_url',
+      stationType: 'station_type',
     }
     const updates: string[] = []
     const values: any[] = []

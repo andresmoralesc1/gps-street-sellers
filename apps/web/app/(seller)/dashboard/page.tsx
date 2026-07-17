@@ -17,6 +17,7 @@ import { ConfirmToast, useToast } from '@/components/seller/Toast'
 import { VendorSwitcher } from '@/components/seller/VendorSwitcher'
 import { LiveViewers } from '@/components/seller/LiveViewers'
 import { BusinessHours } from '@/components/seller/BusinessHours'
+import { VendorVisibility } from '@/components/seller/VendorVisibility'
 import { WhatsAppCatalog } from '@/components/seller/WhatsAppCatalog'
 import { LocationHistory } from '@/components/seller/LocationHistory'
 import { useStore } from '@/store/useStore'
@@ -317,6 +318,13 @@ function DashboardContent() {
 
               {/* N11: Business hours */}
               <BusinessHours vendorId={vendorId} />
+
+              {/* station_type picker — fixed (sits in one spot) vs mobile (rolls around) */}
+              <VendorVisibility
+                vendorId={vendorId}
+                initialIsActive={vendorData?.isActive ?? true}
+                initialStationType={vendorData?.stationType ?? 'mobile'}
+              />
 
               {/* Compartir ubicación GPS */}
               <Card variant="outlined" className="p-4">

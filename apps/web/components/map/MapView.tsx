@@ -276,7 +276,11 @@ export function MapView() {
             const catColor = getCategoryInfo(cat).color
             // Sponsored vendors get a gold ring + star badge to differentiate
             // from organic placement. Same icon, different border treatment.
-            const sponsored = (vendor as any).isSponsored
+            const sponsored = vendor.isSponsored
+            // Show a small "Cerrado" overlay when business hours say we're closed.
+            // Server already filtered `is_active=true` vendors, so this only hides
+            // ones whose auto schedule turned them off right now.
+            const showClosedBadge = vendor.isOpen === false
             const ringColor = sponsored ? '#F59E0B' : 'white'
             const ringWidth = sponsored ? 4 : 3
             const markerIcon = new L.DivIcon({
@@ -295,6 +299,8 @@ export function MapView() {
                 position: relative;
               "><span style="transform: rotate(45deg);">${emoji}</span>${
                 sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
+              }${
+                showClosedBadge ? '<span style="position:absolute;bottom:-4px;left:-4px;background:#6B7280;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);color:white;font-weight:600;">⏻</span>' : ''
               }</div>`,
               className: 'vendor-category-marker',
               iconSize: [42, 42],

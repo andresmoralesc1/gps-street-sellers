@@ -26,11 +26,23 @@ export interface Vendor {
   photoUrl: string
   isActive: boolean
   isVerified?: boolean
+  isSponsored?: boolean
   ratingAvg: number
   reviewCount: number
   createdAt: string
   vehicleType?: VehicleType
   vehiclePhotoUrl?: string
+  // 'fixed' = sits in one spot all day, 'mobile' = moves around the city
+  stationType?: 'fixed' | 'mobile'
+  // Computed server-side using vendor's business_hours and current Bogota time
+  isOpen?: boolean
+  // Raw business_hours payload (only present on /api/vendors list response)
+  businessHours?: {
+    enabled: boolean
+    start: string | null
+    end: string | null
+    days: string[]
+  }
   phone?: string
   // ponytail: lat/lng from API, add to type for convenience
   latitude?: number

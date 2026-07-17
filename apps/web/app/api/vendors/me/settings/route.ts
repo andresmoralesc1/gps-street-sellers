@@ -1,0 +1,178 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import pool from '@/lib/db'
+
+/**
+ * PATCH /api/vendors/me/settings
+ *
+ * Body (all fields optional — only what you send gets updated):
+ *   {
+ *     station_type?:              'fixed' | 'mobile'
+ *     is_active?:                 boolean   (vendor-controlled visibility toggle)
+ *     business_hours_enabled?:    boolean   (if false, schedule is ignored — vendor is always open)
+ *     business_hours_start?:      string    "HH:MM"  (24h)
+ *     business_hours_end?:        string    "HH:MM"  (24h)
+ *     business_days?:             string[]  subset of ['mon','tue','wed','thu','fri','sat','sun']
+ *   }
+ *
+ * Auth:
+ *   Vendor-only. Returns 403 if the user is not a seller, 404 if they don't
+ *   own a vendor row.
+ *
+ * Validation:
+ *   - station_type / days enum-checked
+ *   - hours must match HH:MM
+ *   - end > start (a vendor can't close before opening)
+ *
+ * Scope:
+ *   This endpoint only edits the *currently selected* vendor. Multi-vendor
+ *   users (rare) can pass ?vendorId=<uuid>; we still verify ownership.
+ */
+const VALID_DAYS = ['mon','tue','wed','thu','fri','sat','sun'] as const
+
+function parseHHMM(s: unknown): { h: number; m: number } | null {
+  if (typeof s !== 'string') return null
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim())
+  if (!m) return null
+  const hh = Number(m[1]), mm = Number(m[2])
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null
+  return { h: hh, m: mm }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const token = getTokenFromRequest(req)
+    if (!token) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    const decoded = await verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
+    if (decoded.role !== 'seller') {
+      return NextResponse.json({ error: 'Solo vendedores pueden editar su perfil' }, { status: 403 })
+    }
+
+    let body: any
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    }
+
+    // ── Resolve which vendor we edit. Default = current active_vendor_id from
+    // localStorage mirror on the client; here we just take the first vendor
+    // the user owns (they're allowed to switch via ?vendorId).
+    const url = new URL(req.url)
+    const requestedVendorId = url.searchParams.get('vendorId')
+
+    let vendorId: string
+    if (requestedVendorId) {
+      const own = await pool.query(
+        'SELECT id FROM vendors WHERE id = $1 AND profile_id = (SELECT id FROM profiles WHERE user_id = $2)',
+        [requestedVendorId, decoded.userId]
+      )
+      if (own.rows.length === 0) {
+        return NextResponse.json({ error: 'Vendedor no encontrado o no te pertenece' }, { status: 404 })
+      }
+      vendorId = own.rows[0].id
+    } else {
+      const first = await pool.query(
+        'SELECT id FROM vendors WHERE profile_id = (SELECT id FROM profiles WHERE user_id = $1) ORDER BY created_at ASC LIMIT 1',
+        [decoded.userId]
+      )
+      if (first.rows.length === 0) {
+        return NextResponse.json({ error: 'No tienes un vendedor asociado' }, { status: 404 })
+      }
+      vendorId = first.rows[0].id
+    }
+
+    // ── Build dynamic SET clause. Each field validated before adding.
+    const sets: string[] = []
+    const params: any[] = []
+    let i = 1
+
+    if (body.station_type !== undefined) {
+      if (body.station_type !== null && body.station_type !== 'fixed' && body.station_type !== 'mobile') {
+        return NextResponse.json({ error: 'station_type debe ser "fixed" o "mobile"' }, { status: 400 })
+      }
+      sets.push(`station_type = $${i++}`)
+      params.push(body.station_type)
+    }
+
+    if (body.is_active !== undefined) {
+      if (typeof body.is_active !== 'boolean') {
+        return NextResponse.json({ error: 'is_active debe ser booleano' }, { status: 400 })
+      }
+      sets.push(`is_active = $${i++}`)
+      params.push(body.is_active)
+    }
+
+    if (body.business_hours_enabled !== undefined) {
+      if (typeof body.business_hours_enabled !== 'boolean') {
+        return NextResponse.json({ error: 'business_hours_enabled debe ser booleano' }, { status: 400 })
+      }
+      sets.push(`business_hours_enabled = $${i++}`)
+      params.push(body.business_hours_enabled)
+    }
+
+    // For start/end/days we require consistent state: if any of the three is
+    // present, all three are required (otherwise the schedule is ambiguous).
+    const hasStart = body.business_hours_start !== undefined
+    const hasEnd = body.business_hours_end !== undefined
+    const hasDays = body.business_days !== undefined
+    if (hasStart || hasEnd || hasDays) {
+      if (!(hasStart && hasEnd && hasDays)) {
+        return NextResponse.json(
+          { error: 'Si modificas horario, debes enviar start, end Y days' },
+          { status: 400 }
+        )
+      }
+      const start = parseHHMM(body.business_hours_start)
+      const end = parseHHMM(body.business_hours_end)
+      if (!start || !end) {
+        return NextResponse.json(
+          { error: 'Horario debe ser HH:MM (24h)' },
+          { status: 400 }
+        )
+      }
+      const startMin = start.h * 60 + start.m
+      const endMin = end.h * 60 + end.m
+      if (endMin <= startMin) {
+        return NextResponse.json(
+          { error: 'La hora de cierre debe ser después de la hora de apertura' },
+          { status: 400 }
+        )
+      }
+      if (!Array.isArray(body.business_days) || body.business_days.length === 0) {
+        return NextResponse.json({ error: 'business_days debe ser un array no vacío' }, { status: 400 })
+      }
+      const daysClean: string[] = []
+      for (const d of body.business_days) {
+        if (typeof d !== 'string' || !(VALID_DAYS as readonly string[]).includes(d)) {
+          return NextResponse.json(
+            { error: `Día inválido: ${String(d)}. Usa: mon tue wed thu fri sat sun` },
+            { status: 400 }
+          )
+        }
+        daysClean.push(d)
+      }
+      sets.push(`business_hours_start = $${i++}`); params.push(`${String(start.h).padStart(2,'0')}:${String(start.m).padStart(2,'0')}`)
+      sets.push(`business_hours_end = $${i++}`);   params.push(`${String(end.h).padStart(2,'0')}:${String(end.m).padStart(2,'0')}`)
+      sets.push(`business_days = $${i++}`);         params.push(daysClean)
+    }
+
+    if (sets.length === 0) {
+      return NextResponse.json({ error: 'No enviaste campos para actualizar' }, { status: 400 })
+    }
+
+    params.push(vendorId)
+    const sql = `UPDATE vendors SET ${sets.join(', ')} WHERE id = $${i} RETURNING id, station_type, is_active, business_hours_enabled, business_hours_start, business_hours_end, business_days`
+
+    const result = await pool.query(sql, params)
+    return NextResponse.json({ vendor: result.rows[0] })
+  } catch (err) {
+    console.error('vendors/me/settings PATCH error:', err)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}

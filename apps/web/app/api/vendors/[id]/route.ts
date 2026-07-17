@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
+import { isOpenNow } from '@/lib/business-hours'
 
 
 type RouteContext = {
@@ -125,8 +126,15 @@ export async function GET(req: NextRequest, context: RouteContext) {
       photoUrl: vendorRow.photo_url,
       vehicleType: vendorRow.vehicle_type,
       vehiclePhotoUrl: vendorRow.vehicle_photo_url,
+      stationType: vendorRow.station_type,
       isActive: vendorRow.is_active,
       isVerified: vendorRow.is_verified || false,
+      businessHours: {
+        enabled: vendorRow.business_hours_enabled || false,
+        start: vendorRow.business_hours_start || null,
+        end: vendorRow.business_hours_end || null,
+        days: vendorRow.business_days || [],
+      },
       isSponsored: vendorRow.is_sponsored || false,
       sponsoredUntil: vendorRow.sponsored_until,
       rating: avgRating,
@@ -136,6 +144,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
       cityId: vendorRow.city_id,
       createdAt: vendorRow.created_at,
       locationUpdatedAt: vendorRow.location_updated_at,
+      isOpen: !(vendorRow.business_hours_enabled || false) || isOpenNow(
+        vendorRow.business_hours_start,
+        vendorRow.business_hours_end,
+        vendorRow.business_days
+      ),
     }
 
     return NextResponse.json({

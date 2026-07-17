@@ -7,18 +7,6 @@ import { checkRateLimit } from '@/lib/rate-limit'
 // PATCH /api/vendors/me/location — update vendor GPS coordinates
 export async function PATCH(req: NextRequest) {
   try {
-    // Rate limit: 30 updates/min per IP. Enough for ~2s GPS heartbeat; blocks scripted abuse.
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || req.headers.get('x-real-ip')
-      || 'unknown'
-    const { allowed, retryAfter } = await checkRateLimit(ip, 'location_update', 30, 60 * 1000)
-    if (!allowed) {
-      return NextResponse.json(
-        { error: 'Demasiadas actualizaciones de ubicación', retryAfter },
-        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
-      )
-    }
-
     // Accept Authorization header OR cookie token
     let token: string | null = null
     const authHeader = req.headers.get('authorization')
@@ -38,6 +26,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
     userId = decoded.userId
+
+    // Rate limit: 30 updates/min per user (post-auth). Limits are per-account,
+    // not per-IP, so attackers behind NAT don't punish legitimate sellers
+    // and an attacker without a valid JWT can't fill our rate-limit table.
+    const { allowed, retryAfter } = await checkRateLimit(userId, 'location_update', 30, 60 * 1000)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas actualizaciones de ubicación', retryAfter },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      )
+    }
 
     const { latitude, longitude } = await req.json()
 

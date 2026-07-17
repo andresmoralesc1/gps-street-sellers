@@ -49,6 +49,24 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const vendor = vendorResult.rows[0]
     const vendorId: string = vendor.id
 
+    // Determine if caller is the owner — phone is only visible to the owner
+    // and to buyers with an active order/favorite (out of scope here; conservative
+    // default: hide from everyone except owner).
+    let isOwner = false
+    try {
+      const token = getTokenFromRequest(req)
+      if (token) {
+        const decoded = await verifyToken(token)
+        if (decoded) {
+          const ownerCheck = await pool.query(
+            'SELECT 1 FROM profiles WHERE id = $1 AND user_id = $2',
+            [vendor.profile_id, decoded.userId]
+          )
+          isOwner = ownerCheck.rows.length > 0
+        }
+      }
+    } catch {}
+
     // Fetch products
     const productsResult = await pool.query(
       'SELECT * FROM products WHERE vendor_id = $1 ORDER BY created_at DESC',
@@ -61,18 +79,30 @@ export async function GET(req: NextRequest, context: RouteContext) {
       [vendorId]
     )
 
-    // Track view
+    // Track view — gated on consent to comply with Ley 1581/2012 (Colombia).
+    // Only logged-in users who have recorded consent via /api/consent are
+    // persisted; anonymous visits are not stored.
     try {
       const token = getTokenFromRequest(req)
       let userId: string | null = null
+      let hasConsent = false
       if (token) {
         const decoded = await verifyToken(token)
-        if (decoded) userId = decoded.userId
+        if (decoded) {
+          userId = decoded.userId
+          const consentRes = await pool.query(
+            'SELECT 1 FROM consent_logs WHERE user_id = $1 LIMIT 1',
+            [userId]
+          )
+          hasConsent = consentRes.rows.length > 0
+        }
       }
-      await pool.query(
-        'INSERT INTO vendor_views (vendor_id, user_id) VALUES ($1, $2)',
-        [vendorId, userId]
-      )
+      if (userId && hasConsent) {
+        await pool.query(
+          'INSERT INTO vendor_views (vendor_id, user_id) VALUES ($1, $2)',
+          [vendorId, userId]
+        )
+      }
     } catch {}
 
     const reviews = reviewsResult.rows
@@ -91,7 +121,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       category: vendorRow.category,
       categoryLabel: vendorRow.category_label,
       description: vendorRow.description,
-      phone: vendorRow.phone,
+      phone: isOwner ? vendorRow.phone : null,
       photoUrl: vendorRow.photo_url,
       vehicleType: vendorRow.vehicle_type,
       vehiclePhotoUrl: vendorRow.vehicle_photo_url,

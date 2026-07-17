@@ -56,25 +56,45 @@ export async function POST(req: NextRequest) {
       name = profileResult.rows[0].name
     }
 
-    const result = await pool.query(
-      `INSERT INTO reviews (vendor_id, author_name, rating, comment)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [vendor_id, name, rating, comment]
-    )
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
 
-    // Update vendor's rating cache
-    const stats = await pool.query(
-      'SELECT AVG(rating)::numeric(3,2) as avg_rating, COUNT(*) as count FROM reviews WHERE vendor_id = $1',
-      [vendor_id]
-    )
-    if (stats.rows.length > 0) {
-      await pool.query(
+      // Lock the vendor row so concurrent reviews serialize and can't
+      // race the AVG/COUNT recompute (was a HIGH bug — two simultaneous
+      // reviews would each compute against their own stale snapshot).
+      const vendorLock = await client.query(
+        'SELECT id FROM vendors WHERE id = $1 FOR UPDATE',
+        [vendor_id]
+      )
+      if (vendorLock.rows.length === 0) {
+        await client.query('ROLLBACK')
+        return NextResponse.json({ error: 'Vendedor no encontrado' }, { status: 404 })
+      }
+
+      const result = await client.query(
+        `INSERT INTO reviews (vendor_id, author_name, rating, comment)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [vendor_id, name, rating, comment]
+      )
+
+      const stats = await client.query(
+        'SELECT AVG(rating)::numeric(3,2) as avg_rating, COUNT(*)::int as count FROM reviews WHERE vendor_id = $1',
+        [vendor_id]
+      )
+      await client.query(
         'UPDATE vendors SET rating = $1, review_count = $2 WHERE id = $3',
         [stats.rows[0].avg_rating, stats.rows[0].count, vendor_id]
       )
-    }
 
-    return NextResponse.json({ review: result.rows[0] }, { status: 201 })
+      await client.query('COMMIT')
+      return NextResponse.json({ review: result.rows[0] }, { status: 201 })
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
+    }
   } catch (err) {
     console.error('Reviews POST error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

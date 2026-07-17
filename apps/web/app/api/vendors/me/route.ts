@@ -205,20 +205,27 @@ export async function PATCH(req: NextRequest) {
     // NOTE: 'is_verified' is intentionally NOT here — only admins can verify vendors.
     // vehicle_type + vehicle_photo_url let vendors show what cart/vehicle they use
     // (used for the "anunciate en el carrito" revenue stream and buyer trust).
-    const allowedFields = [
-      'name', 'description', 'category', 'phone', 'city_id', 'is_active',
-      'photo_url', 'vehicle_type', 'vehicle_photo_url',
-    ]
+    // Map client camelCase keys to DB snake_case columns.
+    // Keys not in this map are ignored (intentional: prevents arbitrary column writes).
+    const clientToDb: Record<string, string> = {
+      name: 'name',
+      description: 'description',
+      category: 'category',
+      phone: 'phone',
+      cityId: 'city_id',
+      isActive: 'is_active',
+      photoUrl: 'photo_url',
+      vehicleType: 'vehicle_type',
+      vehiclePhotoUrl: 'vehicle_photo_url',
+    }
     const updates: string[] = []
     const values: any[] = []
     let paramIndex = 1
 
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        // Map camelCase JS fields to snake_case DB columns
-        const dbField = field === 'photoUrl' ? 'photo_url' : field
+    for (const [clientKey, dbField] of Object.entries(clientToDb)) {
+      if (body[clientKey] !== undefined) {
         updates.push(`${dbField} = $${paramIndex}`)
-        values.push(body[field])
+        values.push(body[clientKey])
         paramIndex++
       }
     }

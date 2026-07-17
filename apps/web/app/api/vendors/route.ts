@@ -22,6 +22,11 @@ export async function GET(req: NextRequest) {
     const vehicleType = searchParams.get('vehicleType')
     const bbox = searchParams.get('bbox')
 
+    // Pagination — capped at 500 to keep the map query bounded.
+    // Default 200 is what the map page typically renders in a single viewport.
+    const limit = Math.min(parseInt(searchParams.get('limit') || '200', 10) || 200, 500)
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
+
     // Build filter against the view (so we get is_sponsored for free)
     let query = `
       SELECT v.*, c.label AS category_label
@@ -69,7 +74,7 @@ export async function GET(req: NextRequest) {
     query += ' ORDER BY v.is_sponsored DESC NULLS LAST, v.location_updated_at DESC NULLS LAST, v.created_at DESC'
 
     // Reasonable cap — the map view only shows what's in the visible bbox anyway.
-    query += ' LIMIT 500'
+    query += ` LIMIT ${limit} OFFSET ${offset}`
 
     const result = await pool.query(query, params)
 
@@ -119,6 +124,35 @@ export async function GET(req: NextRequest) {
     }
     adsQuery += ' ORDER BY created_at DESC LIMIT 5'
 
+    // Run vendor query + count + ads in parallel — saves 2 round-trips.
+    // Both queries share the same filter, so we duplicate the WHERE clause.
+    const buildWhere = (placeholder: (n: number) => string): { where: string; args: any[] } => {
+      const w: string[] = ['WHERE 1=1']
+      const a: any[] = []
+      const p = (v: any) => { a.push(v); return `$${a.length}` }
+      if (category) w.push(`AND v.category = ${p(category)}`)
+      if (active === 'true') w.push('AND v.is_active = true')
+      if (withLocation) w.push('AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL')
+      if (cityId) w.push(`AND v.city_id = ${p(cityId)}`)
+      if (vehicleType) w.push(`AND v.vehicle_type = ${p(vehicleType)}`)
+      if (bbox) {
+        const parts = bbox.split(',').map(Number)
+        if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+          const [minLat, minLng, maxLat, maxLng] = parts
+          a.push(minLat, maxLat, minLng, maxLng)
+          const base = a.length - 3
+          w.push(`AND v.latitude BETWEEN $${base} AND $${base + 1}`)
+          w.push(`AND v.longitude BETWEEN $${base + 2} AND $${base + 3}`)
+        }
+      }
+      return { where: w.join(' '), args: a }
+    }
+    const { where: countWhere, args: countArgs } = buildWhere((n) => `$${n}`)
+    const totalCountResult = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM vendors_with_sponsorship v ${countWhere}`,
+      countArgs
+    )
+
     const adsResult = await pool.query(adsQuery, adsParams)
     const ads = adsResult.rows.map((a) => ({
       id: a.id,
@@ -129,12 +163,21 @@ export async function GET(req: NextRequest) {
 
     const sponsoredCount = vendors.filter((v) => v.isSponsored).length
 
-    return NextResponse.json({
-      vendors,
-      ads,
-      sponsoredCount,
-      totalCount: vendors.length,
-    })
+    return NextResponse.json(
+      {
+        vendors,
+        ads,
+        sponsoredCount,
+        totalCount: totalCountResult.rows[0]?.n ?? vendors.length,
+        limit,
+        offset,
+      },
+      {
+        // Public listing is cheap to cache; CDNs/edge can serve 60s + SWR 5min.
+        // Phone leak was fixed by the per-field check in the GET above.
+        headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=300' },
+      }
+    )
   } catch (err) {
     console.error('Vendors GET error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

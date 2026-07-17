@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * GET /api/health — cheap liveness probe.
@@ -15,17 +15,20 @@ export const runtime = 'nodejs'
 
 interface HealthResponse {
   status: 'ok'
-  uptime: number
-  uptimeHuman: string
   timestamp: string
-  version: string
-  memory: {
+  // Optional deep fields — only included when caller passes ?deep=1.
+  // Avoids leaking pid/heap/version to anonymous probers; rich payload still
+  // available for monitoring dashboards that opt in.
+  uptime?: number
+  uptimeHuman?: string
+  version?: string
+  memory?: {
     heapUsedMB: number
     heapTotalMB: number
     rssMB: number
   }
-  pid: number
-  nodeVersion: string
+  pid?: number
+  nodeVersion?: string
 }
 
 function humanizeUptime(seconds: number): string {
@@ -35,16 +38,25 @@ function humanizeUptime(seconds: number): string {
   return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`
 }
 
-export async function GET(): Promise<NextResponse<HealthResponse>> {
+export async function GET(req: NextRequest): Promise<NextResponse<HealthResponse>> {
+  const { searchParams } = new URL(req.url)
+  const deep = searchParams.get('deep') === '1'
+
+  const base: HealthResponse = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  }
+
+  if (!deep) return NextResponse.json(base)
+
   const mem = process.memoryUsage()
   const version =
     process.env.npm_package_version || process.env.APP_VERSION || '0.1.0'
 
   return NextResponse.json({
-    status: 'ok',
+    ...base,
     uptime: process.uptime(),
     uptimeHuman: humanizeUptime(process.uptime()),
-    timestamp: new Date().toISOString(),
     version,
     memory: {
       heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),

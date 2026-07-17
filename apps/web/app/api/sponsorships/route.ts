@@ -47,30 +47,35 @@ async function getMyVendorId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await getMyVendorId(req)
-  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  try {
+    const auth = await getMyVendorId(req)
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-  const result = await pool.query(
-    `SELECT id, plan, amount_cents, starts_at, ends_at, status, created_at
-     FROM sponsorships
-     WHERE vendor_id = $1
-     ORDER BY created_at DESC
-     LIMIT 20`,
-    [auth.vendorId]
-  )
+    const result = await pool.query(
+      `SELECT id, plan, amount_cents, starts_at, ends_at, status, created_at
+       FROM sponsorships
+       WHERE vendor_id = $1
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [auth.vendorId]
+    )
 
-  const sponsorships = result.rows.map((s) => ({
-    id: s.id,
-    plan: s.plan,
-    amountCents: Number(s.amount_cents),
-    startsAt: s.starts_at,
-    endsAt: s.ends_at,
-    status: s.status,
-    active: s.status === 'active' && new Date(s.ends_at) > new Date(),
-    createdAt: s.created_at,
-  }))
+    const sponsorships = result.rows.map((s) => ({
+      id: s.id,
+      plan: s.plan,
+      amountCents: Number(s.amount_cents),
+      startsAt: s.starts_at,
+      endsAt: s.ends_at,
+      status: s.status,
+      active: s.status === 'active' && new Date(s.ends_at) > new Date(),
+      createdAt: s.created_at,
+    }))
 
-  return NextResponse.json({ sponsorships })
+    return NextResponse.json({ sponsorships })
+  } catch (err) {
+    console.error('Sponsorships GET error:', err)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {

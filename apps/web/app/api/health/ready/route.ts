@@ -41,7 +41,7 @@ async function checkDatabase(): Promise<CheckResult> {
     // Run with a timeout — pg has its own statement_timeout but we add a
     // race-level guard so a hung connection doesn't hang the health check.
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`DB query timed out after ${DB_TIMEOUT_MS}ms`)), DB_TIMEOUT_MS)
+      setTimeout(() => reject(new Error('timeout')), DB_TIMEOUT_MS)
     )
     const query = pool.query('SELECT 1 AS ok')
     const result = await Promise.race([query, timeout])
@@ -51,10 +51,17 @@ async function checkDatabase(): Promise<CheckResult> {
     }
     return { status: 'ok', latencyMs: latency }
   } catch (err) {
+    // Do NOT leak driver / connection / host details to public callers.
+    // Logs (server-side) capture the full error so operators can debug.
+    const msg = err instanceof Error ? err.message : ''
+    const safeError = msg === 'timeout' ? 'timeout' : 'check_failed'
+    if (msg) {
+      console.error('[health/ready] database check error:', msg)
+    }
     return {
       status: 'fail',
       latencyMs: Date.now() - start,
-      error: err instanceof Error ? err.message : 'Unknown error',
+      error: safeError,
     }
   }
 }

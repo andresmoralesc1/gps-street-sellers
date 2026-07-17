@@ -1,5 +1,10 @@
 import { NextRequest } from 'next/server'
 import pool from '@/lib/db'
+import {
+  acquireStreamSlot,
+  streamHeaders,
+  STREAM_LIMITS,
+} from '@/lib/streaming-limits'
 
 /**
  * GET /api/vendors/stream?cityId=bog — Server-Sent Events stream.
@@ -20,6 +25,11 @@ import pool from '@/lib/db'
  *   { vendorId, latitude, longitude, isActive, locationUpdatedAt }
  *
  * The client (MapView) just moves the marker — no full refetch.
+ *
+ * Connection limits (see lib/streaming-limits.ts):
+ *   - MAX_CONCURRENT_PER_IP   hard cap to prevent per-IP connection storms.
+ *   - MAX_TOTAL_CONCURRENT    process-wide DB-pool headroom.
+ *   - MAX_DURATION_MS         clients auto-reconnect; zombies die on the timer.
  */
 
 export const dynamic = 'force-dynamic'
@@ -28,10 +38,19 @@ export const runtime = 'nodejs'
 const POLL_INTERVAL_MS = 5_000
 
 export async function GET(req: NextRequest) {
+  const ticket = acquireStreamSlot(req)
+  if (!ticket) {
+    return new Response('Too many concurrent streams', {
+      status: 429,
+      headers: { 'Retry-After': '30' },
+    })
+  }
+
   const { searchParams } = new URL(req.url)
   const cityId = searchParams.get('cityId')
 
   if (!cityId) {
+    ticket.release()
     return new Response('cityId required', { status: 400 })
   }
 
@@ -112,6 +131,8 @@ export async function GET(req: NextRequest) {
         if (closed) return
         closed = true
         clearInterval(interval)
+        clearTimeout(maxDurationTimer)
+        ticket.release()
         try {
           controller.close()
         } catch {
@@ -119,17 +140,11 @@ export async function GET(req: NextRequest) {
         }
       }
       req.signal.addEventListener('abort', cleanup)
+
+      // Hard kill after the duration budget — auto-reconnect via EventSource.
+      const maxDurationTimer = setTimeout(cleanup, STREAM_LIMITS.MAX_DURATION_MS)
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      // Disable Nginx/Caddy proxy buffering — otherwise events queue up
-      // until the buffer fills or the connection closes.
-      'X-Accel-Buffering': 'no',
-    },
-  })
+  return new Response(stream, { headers: streamHeaders() })
 }

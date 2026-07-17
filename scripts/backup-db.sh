@@ -6,6 +6,7 @@
 #   - Timestamped dump files (gps_street_sellers_YYYY-MM-DD_HHMMSS.sql.gz)
 #   - Configurable retention (default: keep 7 daily + 4 weekly)
 #   - Optional S3 upload (set BACKUP_S3_BUCKET)
+#   - Optional secondary destination via rsync/scp (set BACKUP_OFFSITE_DEST)
 #   - Logs size + duration, exits non-zero on failure
 #
 # Usage:
@@ -48,6 +49,13 @@ BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
 BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
 BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
 BACKUP_S3_BUCKET="${BACKUP_S3_BUCKET:-}" # empty = skip upload
+# Off-site destination — any rsync/scp target path.
+# Examples:
+#   BACKUP_OFFSITE_DEST=/mnt/nas/gps-backups       # local mount
+#   BACKUP_OFFSITE_DEST=user@backup.example:/srv/gps-backups   # ssh
+BACKUP_OFFSITE_DEST="${BACKUP_OFFSITE_DEST:-}" # empty = skip
+# Optional rsync extra args (e.g. --bwlimit). Empty = use defaults.
+BACKUP_OFFSITE_RSYNC_ARGS="${BACKUP_OFFSITE_RSYNC_ARGS:-}"
 
 mkdir -p "$BACKUP_DIR"
 
@@ -94,6 +102,18 @@ if [[ -n "$BACKUP_S3_BUCKET" ]] && command -v aws >/dev/null 2>&1; then
     echo "[backup] uploaded to s3://$BACKUP_S3_BUCKET/$S3_KEY"
   else
     echo "[backup] WARN — S3 upload failed (local copy is still safe)" >&2
+  fi
+fi
+
+# ---- Optional secondary (off-site) upload via rsync -------------------------
+# Intended for NAS / remote ssh / second disk — fire-and-forget; we never
+# fail the backup if the secondary push fails, just log it.
+if [[ -n "$BACKUP_OFFSITE_DEST" ]] && command -v rsync >/dev/null 2>&1; then
+  # shellcheck disable=SC2086
+  if rsync $BACKUP_OFFSITE_RSYNC_ARGS -a "$TARGET" "$BACKUP_OFFSITE_DEST/"; then
+    echo "[backup] synced to $BACKUP_OFFSITE_DEST/$FILENAME"
+  else
+    echo "[backup] WARN — rsync to $BACKUP_OFFSITE_DEST failed (local copy is still safe)" >&2
   fi
 fi
 

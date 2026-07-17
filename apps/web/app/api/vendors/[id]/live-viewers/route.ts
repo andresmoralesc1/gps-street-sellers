@@ -1,6 +1,11 @@
 import { NextRequest } from 'next/server'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
+import {
+  acquireStreamSlot,
+  streamHeaders,
+  STREAM_LIMITS,
+} from '@/lib/streaming-limits'
 
 /**
  * GET /api/vendors/[id]/live-viewers — Server-Sent Events stream.
@@ -9,22 +14,35 @@ import pool from '@/lib/db'
  *
  * Tracking method: count vendor_views rows for this vendor in the last 60s.
  * Approximation; matches what DoorDash/Wolt do for "live" indicators.
+ *
+ * Connection limits: see lib/streaming-limits.ts.
  */
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  // Acquire a stream slot — protect DB from owner opening many tabs.
+  const ticket = acquireStreamSlot(req)
+  if (!ticket) {
+    return new Response('Too many concurrent streams', {
+      status: 429,
+      headers: { 'Retry-After': '30' },
+    })
+  }
+
   const params = await paramsPromise
   const vendorId = params.id
 
   // Auth: must be the owner of this vendor.
   const token = getTokenFromRequest(req)
   if (!token) {
+    ticket.release()
     return new Response('Unauthorized', { status: 401 })
   }
   const decoded = await verifyToken(token)
   if (!decoded) {
+    ticket.release()
     return new Response('Invalid token', { status: 401 })
   }
 
@@ -34,7 +52,17 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
     [vendorId, decoded.userId]
   )
   if (ownerCheck.rows.length === 0) {
+    ticket.release()
     return new Response('Forbidden', { status: 403 })
+  }
+
+  // Release on abort AND after the max duration; otherwise the in-memory
+  // counter would be permanently incremented on every owner tab.
+  let released = false
+  const releaseOnce = () => {
+    if (released) return
+    released = true
+    ticket.release()
   }
 
   const encoder = new TextEncoder()
@@ -84,21 +112,18 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       req.signal.addEventListener('abort', () => {
         clearInterval(interval)
         clearInterval(heartbeat)
+        releaseOnce()
         try {
           controller.close()
         } catch {
           // Already closed
         }
       })
+
+      // Hard kill after the duration budget — auto-reconnect via EventSource.
+      setTimeout(() => releaseOnce(), STREAM_LIMITS.MAX_DURATION_MS)
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'X-Accel-Buffering': 'no', // disable nginx buffering
-    },
-  })
+  return new Response(stream, { headers: streamHeaders() })
 }

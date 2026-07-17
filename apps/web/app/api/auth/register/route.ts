@@ -28,8 +28,8 @@ const COMMON_PASSWORDS = new Set([
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
-    || 'unknown'
-  const { allowed, retryAfter } = await checkRateLimit(ip, 'register', 20, 15 * 60 * 1000)
+    || null
+  const { allowed, retryAfter } = await checkRateLimit(ip ?? 'unknown', 'register', 20, 15 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(
       { error: 'Demasiados intentos. Intenta de nuevo más tarde.', retryAfter },

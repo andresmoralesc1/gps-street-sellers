@@ -15,8 +15,7 @@ async function run() {
     const sql = `
       WITH now_local AS (
         SELECT
-          (NOW() AT TIME ZONE 'America/Bogota') AS ts,
-          EXTRACT(DOW FROM (NOW() AT TIME ZONE 'America/Bogota'))::int AS dow,
+          TRIM(LOWER(TO_CHAR((NOW() AT TIME ZONE 'America/Bogota'), 'dy'))) AS dow_name,
           TO_CHAR((NOW() AT TIME ZONE 'America/Bogota'), 'HH24:MI') AS hm
       )
       UPDATE vendors v
@@ -24,7 +23,7 @@ async function run() {
         v.business_hours_enabled = TRUE
         AND EXISTS (
           SELECT 1 FROM now_local n
-          WHERE n.dow::text = ANY(v.business_days)
+          WHERE n.dow_name = ANY(v.business_days)
             AND v.business_hours_start::time <= n.hm::time
             AND (v.business_hours_end::time IS NULL OR v.business_hours_end::time > n.hm::time)
         )

@@ -77,9 +77,26 @@ function dayOfWeekUTC(d: Date): StationDay {
   return map[d.getUTCDay()]
 }
 
+/**
+ * Map a Date to a StationDay based on America/Bogota local time.
+ * Colombia is UTC-5 year-round (no DST), so we subtract 5h from the UTC
+ * instant. Day boundaries in Bogota can shift the result by ±1 day vs UTC.
+ */
+function dayOfWeekBogota(d: Date): StationDay {
+  const bogota = new Date(d.getTime() - 5 * 60 * 60 * 1000)
+  return dayOfWeekUTC(bogota)
+}
+
+/** Minutes-of-day (0..1439) in America/Bogota for a given Date. */
+function bogotaMinutesOfDay(d: Date): number {
+  const bogota = new Date(d.getTime() - 5 * 60 * 60 * 1000)
+  return bogota.getUTCHours() * 60 + bogota.getUTCMinutes()
+}
+
 function parseHHMM(s: string | null | undefined): number | null {
   if (!s || typeof s !== 'string') return null
-  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim())
+  // Accept "HH:MM" and "HH:MM:SS" (Postgres TIME comes back with seconds).
+  const m = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(s.trim())
   if (!m) return null
   const total = Number(m[1]) * 60 + Number(m[2])
   if (total < 0 || total > 24 * 60) return null
@@ -119,10 +136,10 @@ export function isOpenNow(
   )
   if (normalizedDays.size === 0) return true
 
-  const today = dayOfWeekUTC(now)
+  const today = dayOfWeekBogota(now)
   if (!normalizedDays.has(today)) return false
 
-  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes()
+  const nowMin = bogotaMinutesOfDay(now)
   return nowMin >= startMin && nowMin < endMin
 }
 

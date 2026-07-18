@@ -107,7 +107,11 @@ export function MapView() {
   const fetchActiveVendors = useCallback(async () => {
     try {
       const cityId = selectedCity.id
-      const res = await fetch(`/api/vendors?active=true&withLocation=true&cityId=${encodeURIComponent(cityId)}`)
+      // We fetch ALL vendors with location (active or not) and let the map
+      // render a "Cerrado" badge for those whose business hours say we're
+      // closed right now. Filtering `is_active=true` server-side would leave
+      // the map empty outside business hours.
+      const res = await fetch(`/api/vendors?withLocation=true&cityId=${encodeURIComponent(cityId)}`)
       const data = await res.json()
       if (data.vendors) {
         setActiveVendors(data.vendors)
@@ -278,8 +282,9 @@ export function MapView() {
             // from organic placement. Same icon, different border treatment.
             const sponsored = vendor.isSponsored
             // Show a small "Cerrado" overlay when business hours say we're closed.
-            // Server already filtered `is_active=true` vendors, so this only hides
-            // ones whose auto schedule turned them off right now.
+            // The map intentionally shows all vendors with location; this badge
+            // distinguishes open ones from ones whose auto schedule turned them
+            // off right now.
             const showClosedBadge = vendor.isOpen === false
             const ringColor = sponsored ? '#F59E0B' : 'white'
             const ringWidth = sponsored ? 4 : 3

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
-import { isTokenRevoked } from '@/lib/auth-db'
+import { requireAuth } from '@/lib/auth'
 async function getUserFromDb(userId: string) {
   const result = await pool.query(
     'SELECT id, email, name, role, phone, city_id, is_active FROM users WHERE id = $1',
@@ -24,17 +23,10 @@ async function getUserFromDb(userId: string) {
 // GET /api/auth/me — reads cookie OR Authorization header
 export async function GET(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
 
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
-    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
-      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
-    }
-
-    const user = await getUserFromDb(decoded.userId)
+    const user = await getUserFromDb(auth.userId)
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
     return NextResponse.json(user)
@@ -47,15 +39,8 @@ export async function GET(req: NextRequest) {
 // PATCH /api/auth/me — update user profile (name, phone, cityId)
 export async function PATCH(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
-    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
-      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
-    }
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
 
     const { name, phone, cityId } = await req.json()
 
@@ -86,7 +71,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 })
     }
 
-    values.push(decoded.userId)
+    values.push(auth.userId)
     const result = await pool.query(
       `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, name, role, phone, city_id`,
       values

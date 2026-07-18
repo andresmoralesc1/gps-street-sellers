@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 /**
@@ -26,15 +26,11 @@ export const runtime = 'nodejs'
 
 export async function DELETE(request: NextRequest) {
   // 1. Authenticate
-  const token = getTokenFromRequest(request)
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const payload = await verifyToken(token)
-  if (!payload) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-  }
-  const userId = payload.userId
+  const auth = await requireAuth(request)
+
+  if (auth instanceof NextResponse) return auth
+
+  const userId = auth.userId
 
   // 2. Optional confirmation header to prevent accidental deletions.
   // Browsers SHOULD call confirm() before hitting this, but defense in

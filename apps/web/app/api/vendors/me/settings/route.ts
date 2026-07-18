@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 /**
@@ -41,15 +41,11 @@ function parseHHMM(s: unknown): { h: number; m: number } | null {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-    const decoded = await verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
-    if (decoded.role !== 'seller') {
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
+
+    if (auth.role !== 'seller') {
       return NextResponse.json({ error: 'Solo vendedores pueden editar su perfil' }, { status: 403 })
     }
 
@@ -70,7 +66,7 @@ export async function PATCH(req: NextRequest) {
     if (requestedVendorId) {
       const own = await pool.query(
         'SELECT id FROM vendors WHERE id = $1 AND profile_id = (SELECT id FROM profiles WHERE user_id = $2)',
-        [requestedVendorId, decoded.userId]
+        [requestedVendorId, auth.userId]
       )
       if (own.rows.length === 0) {
         return NextResponse.json({ error: 'Vendedor no encontrado o no te pertenece' }, { status: 404 })
@@ -79,7 +75,7 @@ export async function PATCH(req: NextRequest) {
     } else {
       const first = await pool.query(
         'SELECT id FROM vendors WHERE profile_id = (SELECT id FROM profiles WHERE user_id = $1) ORDER BY created_at ASC LIMIT 1',
-        [decoded.userId]
+        [auth.userId]
       )
       if (first.rows.length === 0) {
         return NextResponse.json({ error: 'No tienes un vendedor asociado' }, { status: 404 })

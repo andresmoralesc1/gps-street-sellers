@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { notify } from '@/lib/push'
 
 /**
@@ -27,14 +27,11 @@ interface SendBody {
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate
-  const token = getTokenFromRequest(request)
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const payload = await verifyToken(token)
-  if (!payload) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-  }
+  const auth = await requireAuth(request)
+
+  if (auth instanceof NextResponse) return auth
+
+  const userId = auth.userId
 
   // 2. Validate body
   let body: SendBody
@@ -54,8 +51,8 @@ export async function POST(request: NextRequest) {
 
   // 3. Scope to caller — prevent cross-user push.
   // If the caller specifies a userId, it MUST equal their own JWT userId.
-  const targetUserId = body.userId ?? payload.userId
-  if (targetUserId !== payload.userId) {
+  const targetUserId = body.userId ?? auth.userId
+  if (targetUserId !== auth.userId) {
     return NextResponse.json(
       { error: 'Forbidden — cannot send push to another user' },
       { status: 403 }
@@ -69,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Deliver
-  const result = await notify(payload.userId, message)
+  const result = await notify(auth.userId, message)
   return NextResponse.json({
     ok: true,
     delivered: result.sent,

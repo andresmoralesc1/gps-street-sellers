@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -7,25 +7,9 @@ import { checkRateLimit } from '@/lib/rate-limit'
 // PATCH /api/vendors/me/location — update vendor GPS coordinates
 export async function PATCH(req: NextRequest) {
   try {
-    // Accept Authorization header OR cookie token
-    let token: string | null = null
-    const authHeader = req.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.slice(7)
-    } else {
-      token = req.cookies.get('token')?.value || null
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    let userId: string
-    const decoded = await verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
-    userId = decoded.userId
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
 
     // Rate limit: 30 updates/min per user (post-auth). Limits are per-account,
     // not per-IP, so attackers behind NAT don't punish legitimate sellers

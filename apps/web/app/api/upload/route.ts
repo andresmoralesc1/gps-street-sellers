@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
@@ -26,13 +26,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
 
     const formData = await req.formData()
     const file = formData.get('file') as File | null

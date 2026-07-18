@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 /**
@@ -13,19 +13,8 @@ import pool from '@/lib/db'
  * Auth: required.
  */
 export async function POST(req: NextRequest) {
-  let token: string | null = null
-  const authHeader = req.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    token = authHeader.slice(7)
-  } else {
-    token = req.cookies.get('token')?.value || null
-  }
-  if (!token) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
-
-  const decoded = await verifyToken(token)
-  if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
 
   try {
     // user_id on notifications is the profile id, not users.id. The owner
@@ -36,7 +25,7 @@ export async function POST(req: NextRequest) {
        WHERE read = FALSE
          AND user_id IN (SELECT id FROM profiles WHERE user_id = $1)
        RETURNING id`,
-      [decoded.userId]
+      [auth.userId]
     )
 
     return NextResponse.json({ updated: result.rowCount ?? result.rows.length })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 /**
@@ -12,14 +12,12 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
   const vendorId = params.id
 
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
+    const auth = await requireAuth(req)
+if (auth instanceof NextResponse) return auth
+const userId = auth.userId
     const ownerCheck = await pool.query(
       'SELECT id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
-      [vendorId, decoded.userId]
+      [vendorId, auth.userId]
     )
     if (ownerCheck.rows.length === 0) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })

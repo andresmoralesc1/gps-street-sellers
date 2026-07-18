@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import {
   acquireStreamSlot,
@@ -35,21 +35,16 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
   const vendorId = params.id
 
   // Auth: must be the owner of this vendor.
-  const token = getTokenFromRequest(req)
-  if (!token) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) {
     ticket.release()
-    return new Response('Unauthorized', { status: 401 })
-  }
-  const decoded = await verifyToken(token)
-  if (!decoded) {
-    ticket.release()
-    return new Response('Invalid token', { status: 401 })
+    return new Response(auth.statusText || 'Unauthorized', { status: auth.status })
   }
 
   // Verify ownership.
   const ownerCheck = await pool.query(
     'SELECT id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
-    [vendorId, decoded.userId]
+    [vendorId, auth.userId]
   )
   if (ownerCheck.rows.length === 0) {
     ticket.release()

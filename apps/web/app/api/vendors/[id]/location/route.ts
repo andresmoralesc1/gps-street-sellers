@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
 import { notify } from '@/lib/push'
@@ -10,20 +10,9 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
   const params = await paramsPromise
 
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    let userId: string
-    const decoded = await verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-    }
-    if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
-      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
-    }
-    userId = decoded.userId
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
 
     const vendorId = params.id
 

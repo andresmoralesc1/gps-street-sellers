@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 
@@ -8,26 +8,20 @@ import pool from '@/lib/db'
 // POST /api/favorites — add a vendor to favorites
 export async function POST(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    const auth = await requireAuth(req)
 
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    if (auth instanceof NextResponse) return auth
 
     const profileResult = await pool.query(
       'SELECT token_version FROM profiles WHERE user_id = $1',
-      [decoded.userId]
+      [auth.userId]
     )
-    if (profileResult.rows.length > 0 && decoded.tokenVersion !== profileResult.rows[0].token_version) {
-      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
-    }
-
     const { vendorId } = await req.json()
     if (!vendorId) {
       return NextResponse.json({ error: 'vendorId requerido' }, { status: 400 })
     }
 
-    const profileIdRes = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [decoded.userId])
+    const profileIdRes = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [auth.userId])
     if (profileIdRes.rows.length === 0) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
@@ -51,21 +45,12 @@ export async function POST(req: NextRequest) {
 // GET /api/favorites — returns user's favorite vendors
 export async function GET(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
-    // Verify token hasn't been revoked
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
     const profileResult = await pool.query(
       'SELECT token_version FROM profiles WHERE user_id = $1',
-      [decoded.userId]
+      [auth.userId]
     )
-    if (profileResult.rows.length > 0 && decoded.tokenVersion !== profileResult.rows[0].token_version) {
-      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
-    }
-
     const result = await pool.query(
       `SELECT f.id, f.vendor_id, v.slug as vendor_slug, v.name as vendor_name, v.category, v.photo_url as image_url,
               v.rating, v.review_count
@@ -74,7 +59,7 @@ export async function GET(req: NextRequest) {
        JOIN profiles pr ON f.buyer_id = pr.id
        WHERE pr.user_id = $1
        ORDER BY f.created_at DESC`,
-      [decoded.userId]
+      [auth.userId]
     )
 
     const favorites = result.rows.map((row) => ({
@@ -98,21 +83,12 @@ export async function GET(req: NextRequest) {
 // DELETE /api/favorites?productId=X — removes a favorite
 export async function DELETE(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
-    // Verify token hasn't been revoked
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
     const profileResult = await pool.query(
       'SELECT token_version FROM profiles WHERE user_id = $1',
-      [decoded.userId]
+      [auth.userId]
     )
-    if (profileResult.rows.length > 0 && decoded.tokenVersion !== profileResult.rows[0].token_version) {
-      return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(req.url)
     const vendorId = searchParams.get('vendorId')
 
@@ -120,7 +96,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'vendorId requerido' }, { status: 400 })
     }
 
-    const profileIdRes = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [decoded.userId])
+    const profileIdRes = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [auth.userId])
     if (profileIdRes.rows.length === 0) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }

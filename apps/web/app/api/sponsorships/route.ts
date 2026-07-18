@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
-import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
 
 /**
  * GET  /api/sponsorships          — list current user's sponsorships
@@ -31,31 +30,21 @@ const PRICING = {
 }
 
 async function getMyVendorId(req: NextRequest) {
-  let token: string | null = null
-  const authHeader = req.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) token = authHeader.slice(7)
-  else token = req.cookies.get('token')?.value || null
-
-  if (!token) return { error: 'No autorizado', status: 401 } as const
-
-  const decoded = await verifyToken(token)
-  if (!decoded) return { error: 'Token inválido', status: 401 } as const
-  if (await isTokenRevoked(decoded.userId, decoded.tokenVersion)) {
-    return { error: 'Sesión revocada', status: 401 } as const
-  }
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
 
   const r = await pool.query(
     'SELECT v.id FROM vendors v JOIN profiles p ON p.id = v.profile_id WHERE p.user_id = $1',
-    [decoded.userId]
+    [auth.userId]
   )
-  if (r.rows.length === 0) return { error: 'No tienes un perfil de vendedor', status: 403 } as const
+  if (r.rows.length === 0) return NextResponse.json({ error: 'No tienes un perfil de vendedor' }, { status: 403 })
   return { vendorId: r.rows[0].id as string }
 }
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await getMyVendorId(req)
-    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+    if (auth instanceof NextResponse) return auth
 
     const result = await pool.query(
       `SELECT id, plan, amount_cents, starts_at, ends_at, status, created_at
@@ -86,7 +75,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const auth = await getMyVendorId(req)
-  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth instanceof NextResponse) return auth
 
   const body = await req.json().catch(() => ({}))
   const plan = body.plan as 'semanal' | 'mensual' | undefined

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -19,34 +19,22 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // Accept Authorization header OR cookie token
-    let token: string | null = null
-    const authHeader = req.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.slice(7)
-    } else {
-      token = req.cookies.get('token')?.value || null
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
 
     const result = await pool.query(
       `SELECT * FROM notifications
        WHERE user_id IN (SELECT id FROM profiles WHERE user_id = $1)
        ORDER BY created_at DESC
        LIMIT 50`,
-      [decoded.userId]
+      [auth.userId]
     )
 
     const unreadResult = await pool.query(
       `SELECT COUNT(*) as count FROM notifications
        WHERE user_id IN (SELECT id FROM profiles WHERE user_id = $1) AND read = false`,
-      [decoded.userId]
+      [auth.userId]
     )
 
     return NextResponse.json({

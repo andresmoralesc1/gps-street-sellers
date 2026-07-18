@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 /**
@@ -25,17 +25,15 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
 export async function POST(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
+    const auth = await requireAuth(req)
+if (auth instanceof NextResponse) return auth
+const userId = auth.userId
     // Verify ownership: product must belong to a vendor owned by this user.
     const ownerCheck = await pool.query(
       `SELECT p.id FROM products p
        JOIN vendors v ON v.id = p.vendor_id
        WHERE p.id = $1 AND v.profile_id IN (SELECT id FROM profiles WHERE user_id = $2)`,
-      [params.id, decoded.userId]
+      [params.id, auth.userId]
     )
     if (ownerCheck.rows.length === 0) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
@@ -82,16 +80,13 @@ export async function POST(req: NextRequest, { params: paramsPromise }: { params
 export async function DELETE(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
     const ownerCheck = await pool.query(
       `SELECT p.id FROM products p
        JOIN vendors v ON v.id = p.vendor_id
        WHERE p.id = $1 AND v.profile_id IN (SELECT id FROM profiles WHERE user_id = $2)`,
-      [params.id, decoded.userId]
+      [params.id, auth.userId]
     )
     if (ownerCheck.rows.length === 0) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })

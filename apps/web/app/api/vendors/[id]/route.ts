@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { verifyToken, getTokenFromRequest, requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
 import { isOpenNow } from '@/lib/business-hours'
@@ -167,24 +167,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { id: vendorId } = await context.params
 
-    let token: string | null = null
-    const authHeader = req.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.slice(7)
-    } else {
-      token = req.cookies.get('token')?.value || null
-    }
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
 
     // Verify ownership
     const ownerCheck = await pool.query(
       'SELECT id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
-      [vendorId, decoded.userId]
+      [vendorId, auth.userId]
     )
 
     if (ownerCheck.rows.length === 0) {

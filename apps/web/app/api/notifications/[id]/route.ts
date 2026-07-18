@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
 
@@ -9,21 +9,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { id: notifId } = await context.params
 
-    // Accept Authorization header OR cookie token
-    let token: string | null = null
-    const authHeader = req.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.slice(7)
-    } else {
-      token = req.cookies.get('token')?.value || null
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
 
     if (!notifId) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
@@ -33,7 +21,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const check = await pool.query(
       `SELECT id FROM notifications
        WHERE id = $1 AND user_id IN (SELECT id FROM profiles WHERE user_id = $2)`,
-      [notifId, decoded.userId]
+      [notifId, auth.userId]
     )
 
     if (check.rows.length === 0) {

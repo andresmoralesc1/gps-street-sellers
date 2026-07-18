@@ -9,6 +9,7 @@ import { jwtVerify } from 'jose'
 import jwt from 'jsonwebtoken'
 import type { NextRequest } from 'next/server'
 import type { TokenPayload } from './auth-edge'
+import { isTokenRevoked } from './auth-db'
 
 export type { TokenPayload } from './auth-edge'
 
@@ -28,6 +29,9 @@ const previousKey = JWT_SECRET_PREVIOUS ? new TextEncoder().encode(JWT_SECRET_PR
 /**
  * Node-runtime token verification. Returns null on failure.
  * Wraps jose's jwtVerify (async) but exposes sync-style via result.
+ *
+ * NOTE: This is a pure cryptographic check — it does NOT verify revocation.
+ * For revocation-aware checks use requireAuth() below.
  */
 export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
@@ -62,13 +66,41 @@ export function signTokenSync(
 }
 
 /**
- * Higher-level: extract token from request, verify, return user or null.
- * Returns a NextResponse on failure so callers can do:
+ * Single source of truth for authenticated API routes.
+ *
+ * Returns the verified, non-revoked TokenPayload on success.
+ * Returns a NextResponse (401) on any failure so callers can:
  *   const auth = await requireAuth(req)
  *   if (auth instanceof NextResponse) return auth
+ *   // auth.userId / auth.role are available here
+ *
+ * Performs ALL of the following in order:
+ *   1. Extract token from Authorization header or 'token' cookie
+ *   2. Cryptographically verify signature (HS256, current or previous secret)
+ *   3. Check that the token has not been revoked by logout/admin action
+ *      (compares token_version against profiles.token_version)
+ *
+ * Pass `{ skipRevocationCheck: true }` for routes that must run BEFORE the
+ * user is authenticated (e.g. login, refresh, register) or for routes whose
+ * DB call is already an implicit auth check (e.g. /api/account with the
+ * correct user_id in the body). Default is to check revocation.
  */
 import { NextResponse } from 'next/server'
-export async function requireAuth(req: NextRequest): Promise<TokenPayload | NextResponse> {
+export interface RequireAuthOptions {
+  /**
+   * Skip the profiles.token_version check. Use only for:
+   *   - Login / register / refresh (user isn't authenticated yet)
+   *   - Webhooks that arrive with their own signature
+   *   - Routes where the next line is `WHERE user_id = $1` and the DB
+   *     acts as the access control (any mismatch returns empty row).
+   */
+  skipRevocationCheck?: boolean
+}
+
+export async function requireAuth(
+  req: NextRequest,
+  options: RequireAuthOptions = {}
+): Promise<TokenPayload | NextResponse> {
   const { getTokenFromRequest } = await import('./auth-edge')
   const token = getTokenFromRequest(req)
   if (!token) {
@@ -77,6 +109,15 @@ export async function requireAuth(req: NextRequest): Promise<TokenPayload | Next
   const decoded = await verifyToken(token)
   if (!decoded) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+  }
+  if (!options.skipRevocationCheck) {
+    const tokenVersion = (decoded as any).tokenVersion ?? (decoded as any).token_version
+    if (typeof tokenVersion === 'number') {
+      const revoked = await isTokenRevoked(decoded.userId, tokenVersion)
+      if (revoked) {
+        return NextResponse.json({ error: 'Sesión revocada' }, { status: 401 })
+      }
+    }
   }
   return decoded
 }

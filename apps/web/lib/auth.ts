@@ -26,21 +26,35 @@ const JWT_SECRET_PREVIOUS: string = process.env.JWT_SECRET_PREVIOUS || ''
 const secretKey = new TextEncoder().encode(JWT_SECRET)
 const previousKey = JWT_SECRET_PREVIOUS ? new TextEncoder().encode(JWT_SECRET_PREVIOUS) : null
 
+// CRIT-14: pin issuer + audience so tokens minted by another app using the same
+// secret (or a stolen token replayed across environments) can't pass verification.
+const JWT_ISSUER = 'barriotech.gps'
+const JWT_AUDIENCE = 'barriotech.gps.api'
+
 /**
  * Node-runtime token verification. Returns null on failure.
  * Wraps jose's jwtVerify (async) but exposes sync-style via result.
+ *
+ * CRIT-14: also enforces issuer + audience match so tokens minted with the
+ * same secret but for a different app/environment are rejected.
  *
  * NOTE: This is a pure cryptographic check — it does NOT verify revocation.
  * For revocation-aware checks use requireAuth() below.
  */
 export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secretKey)
+    const { payload } = await jwtVerify(token, secretKey, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    })
     return payload as unknown as TokenPayload
   } catch {
     if (previousKey) {
       try {
-        const { payload } = await jwtVerify(token, previousKey)
+        const { payload } = await jwtVerify(token, previousKey, {
+          issuer: JWT_ISSUER,
+          audience: JWT_AUDIENCE,
+        })
         return payload as unknown as TokenPayload
       } catch {
         return null
@@ -54,15 +68,18 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
  * Synchronous HS256 signer (jsonwebtoken). Issues a token compatible with the
  * existing fleet of tokens already in cookies — same algorithm, same secret.
  *
- * SECURITY: default expiry is 15 minutes (access token). For longer-lived
- * tokens (e.g. refresh tokens), pass a longer `expiresIn` explicitly.
- * Use in login/register routes to mint new tokens.
+ * CRIT-14: stamps issuer + audience so verification on the receiving side can
+ * confirm the token was minted by this app.
  */
 export function signTokenSync(
   payload: Omit<TokenPayload, 'iat' | 'exp'>,
   expiresIn: string | number = '15m'
 ): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions)
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn,
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+  } as jwt.SignOptions)
 }
 
 /**

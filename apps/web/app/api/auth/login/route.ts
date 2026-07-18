@@ -63,13 +63,28 @@ export async function POST(req: NextRequest) {
       lookupValue = normalized
     }
 
-    // Lookup by either email or phone. We use a parameter binding to avoid SQLi.
-    const result = await pool.query(
-      `SELECT u.*, p.token_version FROM users u
-       LEFT JOIN profiles p ON p.user_id = u.id
-       WHERE u.${lookupColumn} = $1`,
-      [lookupValue]
-    )
+    // Lookup by either email or phone.
+    // CRIT-13: branch on the column NAME explicitly instead of interpolating
+    // `u.${lookupColumn}` into the SQL. The whitelist type guard makes the
+    // current code safe, but a single mis-edit to widen the union type would
+    // silently become a SQL injection vector. The explicit branches below are
+    // static SQL — pg-parameterized only on the value side.
+    let result
+    if (lookupColumn === 'email') {
+      result = await pool.query(
+        `SELECT u.*, p.token_version FROM users u
+         LEFT JOIN profiles p ON p.user_id = u.id
+         WHERE u.email = $1`,
+        [lookupValue]
+      )
+    } else {
+      result = await pool.query(
+        `SELECT u.*, p.token_version FROM users u
+         LEFT JOIN profiles p ON p.user_id = u.id
+         WHERE u.phone = $1`,
+        [lookupValue]
+      )
+    }
 
     // Defense against user-enumeration via response timing:
     // if no row, still hash a dummy password so the request takes ~as long as a

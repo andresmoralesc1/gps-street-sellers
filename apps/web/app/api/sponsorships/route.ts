@@ -74,6 +74,22 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // CRIT-23: prod guard. Sponsorships are a paid flow that should NOT be
+  // callable from preview/staging deployments where the same Stripe / payment
+  // gateway credentials would otherwise create real charges. The check uses
+  // VERCEL_ENV (set on Vercel previews) plus an explicit ALLOW_TEST_Sponsorships
+  // override for the local dev environment.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.ALLOW_TEST_SPONSORSHIPS !== 'true' &&
+    process.env.VERCEL_ENV === 'preview'
+  ) {
+    return NextResponse.json(
+      { error: 'Sponsorships no disponibles en este entorno' },
+      { status: 404 }
+    )
+  }
+
   const auth = await getMyVendorId(req)
   if (auth instanceof NextResponse) return auth
 

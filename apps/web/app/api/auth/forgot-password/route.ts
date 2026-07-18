@@ -39,6 +39,22 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // CRIT-6: per-email rate limit prevents targeting a single victim with a
+    // burst of resets (e.g. bombarding one address from rotating IPs).
+    // Normalize to lowercase so case variation doesn't bypass.
+    const normalizedEmail = email.toLowerCase()
+    const emailLimit = await checkRateLimit(
+      normalizedEmail,
+      'forgot_password_email',
+      3,
+      60 * 60 * 1000,
+    )
+    if (!emailLimit.allowed) {
+      return NextResponse.json({
+        message: 'Si el email existe, recibirás un enlace para restablecer tu contraseña.',
+      }, { status: 429, headers: { 'Retry-After': String(emailLimit.retryAfter) } })
+    }
+
     const JWT_SECRET = process.env.JWT_SECRET
     if (!JWT_SECRET) {
       console.error('[forgot-password] JWT_SECRET missing')

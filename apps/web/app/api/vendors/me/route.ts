@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
-import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
+import { COLOMBIA_CITIES } from '@/lib/core/constants/cities'
+
+const VALID_CITY_IDS = new Set(COLOMBIA_CITIES.map((c) => c.id))
 
 
 export async function GET(req: NextRequest) {
@@ -67,6 +69,17 @@ export async function GET(req: NextRequest) {
 
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No se proporcionaron campos para actualizar' }, { status: 400 })
+    }
+
+    // CRIT-18: validate city_id against the canonical list. Previously a
+    // missing/invalid value was silently accepted by Postgres (NULL or empty
+    // string), so vendors could end up with no city or a typo'd city id and
+    // never appear in any city's stream.
+    if (body.cityId !== undefined && !VALID_CITY_IDS.has(body.cityId)) {
+      return NextResponse.json(
+        { error: 'cityId no válido. Debe ser uno de los códigos de ciudad soportados.' },
+        { status: 400 }
+      )
     }
 
     values.push(vendorId)

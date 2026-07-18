@@ -24,6 +24,11 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const since = new Date(Date.now() - windowMs)
 
+  // CRIT-9: set a short statement timeout so a stuck rate-limit query can't
+  // hold a connection from the pool. 1.5s is generous for COUNT + a single
+  // index lookup, but short enough to fail fast if the table grows or DB stalls.
+  await pool.query("SET LOCAL statement_timeout = '1500ms'")
+
   // Count existing attempts in window
   const countResult = await pool.query(
     `SELECT COUNT(*)::int AS count

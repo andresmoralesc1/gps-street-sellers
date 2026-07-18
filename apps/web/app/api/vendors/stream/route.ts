@@ -93,9 +93,14 @@ export async function GET(req: NextRequest) {
       }
 
       // Periodic poll — emit vendors whose location_updated_at > lastSeen.
+      // CRIT-17: .unref() so the interval doesn't keep the Node process alive
+      // if everything else exits (e.g. PM2 graceful shutdown).
       const interval = setInterval(async () => {
         if (closed) return
         try {
+          // CRIT-9: 3s ceiling so a slow SELECT never holds a pool connection
+          // beyond the 5s poll interval. SSE clients auto-reconnect on errors.
+          await pool.query("SET LOCAL statement_timeout = '3000ms'")
           const result = await pool.query(
             `SELECT id, latitude, longitude, is_active, location_updated_at
              FROM vendors_with_sponsorship

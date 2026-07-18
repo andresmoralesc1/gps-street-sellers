@@ -27,12 +27,15 @@ export function registerShutdownHandlers(): void {
     console.log(`[shutdown] received ${signal}, running ${hooks.length} hooks`)
 
     // Run hooks sequentially — order matters (cron-stop before pg-pool-end).
+    // CRIT-19: per-hook 3000ms timeout. PM2's kill_timeout is 8s for the
+    // whole process — give each hook a fair share so we always reach the
+    // critical DB-pool-end step even with several cron-style hooks ahead of it.
     for (const hook of hooks) {
       try {
         await Promise.race([
           Promise.resolve(hook.fn()),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('hook timeout')), 5000)
+            setTimeout(() => reject(new Error('hook timeout')), 3000)
           ),
         ])
         console.log(`[shutdown] ${hook.name} OK`)

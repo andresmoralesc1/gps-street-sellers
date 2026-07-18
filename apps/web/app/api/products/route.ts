@@ -1,16 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
 
 // GET /api/products?vendorId=xxx
+//
+// CRIT-5 fix note: this endpoint was incorrectly migrated to requireAuth()
+// by the bulk script, but the original design has GET with *optional* auth
+// (browsers can browse products without being logged in). POST below stays
+// behind requireAuth().
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req)
-    if (auth instanceof NextResponse) return auth
-    const userId = auth.userId
+    // Optional auth — read token if present but don't 401 on its absence.
+    // (We don't use the decoded payload here; we just need to know the user
+    // is allowed to browse the catalogue, which is always true.)
+    const token = getTokenFromRequest(req)
+    if (token) {
+      // Verify silently — invalid tokens just become anonymous viewers.
+      await verifyToken(token)
+    }
 
-    if (auth.role !== 'seller') {
+    const { searchParams } = new URL(req.url)
+    const vendorId = searchParams.get('vendorId')
+
+    let query = 'SELECT * FROM products WHERE 1=1'
+    const params: any[] = []
+
+    if (vendorId) {
+      params.push(vendorId)
+      query += ` AND vendor_id = $${params.length}`
+    }
+
+    query += ' ORDER BY created_at DESC'
+
+    const result = await pool.query(query, params)
+    return NextResponse.json({ products: result.rows })
+  } catch (err) {
+    console.error('Products GET error:', err)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+// POST /api/products — create product (seller only)
+export async function POST(req: NextRequest) {
+  try {
+    const token = getTokenFromRequest(req)
+    if (!token) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const decoded = await verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+
+    if (decoded.role !== 'seller') {
       return NextResponse.json({ error: 'Solo vendedores pueden crear productos' }, { status: 403 })
     }
 
@@ -26,7 +68,7 @@ export async function GET(req: NextRequest) {
     if (!vendorId) {
       const vendorResult = await pool.query(
         'SELECT id FROM vendors WHERE profile_id IN (SELECT id FROM profiles WHERE user_id = $1)',
-        [auth.userId]
+        [decoded.userId]
       )
       if (vendorResult.rows.length === 0) {
         return NextResponse.json({ error: 'Primero crea tu perfil de vendedor en el dashboard' }, { status: 400 })
@@ -37,7 +79,7 @@ export async function GET(req: NextRequest) {
     // Verify the vendor belongs to this user
     const vendorCheck = await pool.query(
       'SELECT id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
-      [vendorId, auth.userId]
+      [vendorId, decoded.userId]
     )
 
     if (vendorCheck.rows.length === 0) {

@@ -47,6 +47,13 @@ export async function register() {
       Sentry.init({
         dsn,
         environment: process.env.NODE_ENV,
+        // CRIT-21: pin release so issues in Sentry can be cross-referenced
+        // with the git SHA that shipped. Falls back to APP_VERSION (also
+        // reported by /api/health) when the CI didn't inject a sha.
+        release: process.env.SENTRY_RELEASE
+          || process.env.npm_package_version
+          || process.env.APP_VERSION
+          || undefined,
         tracesSampleRate: 0.1,
         sendDefaultPii: false,
       })
@@ -60,6 +67,10 @@ export async function register() {
       Sentry.init({
         dsn,
         environment: process.env.NODE_ENV,
+        release: process.env.SENTRY_RELEASE
+          || process.env.npm_package_version
+          || process.env.APP_VERSION
+          || undefined,
         tracesSampleRate: 0.1,
         sendDefaultPii: false,
       })

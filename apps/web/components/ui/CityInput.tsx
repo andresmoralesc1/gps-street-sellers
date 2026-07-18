@@ -151,7 +151,7 @@ export function CityInput({
       {/* Current selection badge — shown below input when not searching */}
       {selectedCity && !query && !open && (
         <div className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-600">
-          <MapPin size={12} className="text-primary" />
+          <MapPin size={12} className="text-primary-700" />
           <span className="font-medium">{selectedCity.name}</span>
           <span className="text-gray-400">— {selectedCity.department}</span>
         </div>
@@ -171,7 +171,7 @@ export function CityInput({
               onClick={() => pick('')}
               className={clsx(
                 'w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 transition-colors',
-                !value && 'bg-primary/5 text-primary font-medium'
+                !value && 'bg-primary/5 text-primary-700 font-medium'
               )}
             >
               {emptyLabel}
@@ -191,7 +191,7 @@ export function CityInput({
                 className={clsx(
                   'w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between',
                   highlight === i && 'bg-primary/5',
-                  value === city.id && 'text-primary font-medium'
+                  value === city.id && 'text-primary-700 font-medium'
                 )}
               >
                 <span>{city.name}</span>

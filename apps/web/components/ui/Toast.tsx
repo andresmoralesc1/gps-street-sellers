@@ -36,7 +36,7 @@ const ICONS: Record<ToastKind, typeof CheckCircle2> = {
 }
 
 const COLORS: Record<ToastKind, string> = {
-  success: 'border-primary bg-primary/5 text-primary',
+  success: 'border-primary bg-primary/5 text-primary-700',
   error: 'border-accent bg-accent/5 text-accent',
   info: 'border-stone-300 bg-white text-stone-700',
   warning: 'border-amber-400 bg-amber-50 text-amber-800',

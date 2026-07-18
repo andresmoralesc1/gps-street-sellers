@@ -425,15 +425,15 @@ function DashboardContent() {
         {/* Bottom Nav */}
         {/* B10 fix: aria-current on active link */}
         <nav className="bg-white border-t flex justify-around py-3 fixed bottom-0 left-0 right-0 z-10" aria-label="Navegación principal">
-          <Link href="/dashboard" aria-current="page" className="flex flex-col items-center text-primary">
+          <Link href="/dashboard" aria-current="page" className="flex flex-col items-center text-primary-700">
             <BarChart3 size={24} />
             <span className="text-xs mt-1">Dashboard</span>
           </Link>
-          <Link href="/products" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+          <Link href="/products" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
             <Package size={24} />
             <span className="text-xs mt-1">Productos</span>
           </Link>
-          <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+          <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
             <Settings size={24} />
             <span className="text-xs mt-1">Ajustes</span>
           </Link>

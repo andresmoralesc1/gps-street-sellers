@@ -151,7 +151,7 @@ export function NosotrosView() {
             {PILLARS.map((p) => (
               <div key={p.title} className="bg-white rounded-xl p-4 shadow-card text-center">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <p.icon size={20} className="text-primary" />
+                  <p.icon size={20} className="text-primary-700" />
                 </div>
                 <h3 className="font-bold text-gray-800 text-sm mb-1">{p.title}</h3>
                 <p className="text-gray-500 text-xs leading-tight">{p.desc}</p>
@@ -169,7 +169,7 @@ export function NosotrosView() {
             {VALUES.map((v) => (
               <div key={v.title} className="bg-background-cream rounded-xl p-4 shadow-card text-center">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <v.icon size={20} className="text-primary" />
+                  <v.icon size={20} className="text-primary-700" />
                 </div>
                 <h3 className="font-bold text-gray-800 text-sm mb-1">{v.title}</h3>
                 <p className="text-gray-500 text-xs leading-tight">{v.desc}</p>
@@ -214,12 +214,12 @@ export function NosotrosView() {
                     <div className="pl-12 sm:pl-0 sm:contents">
                       <div className={`${isLeft ? 'sm:col-start-1 sm:text-right sm:pr-10' : 'sm:col-start-2 sm:pl-10'}`}>
                         <div className={`inline-block text-xs font-semibold uppercase tracking-wider mb-1 ${
-                          item.highlight ? 'text-primary' : 'text-gray-400'
+                          item.highlight ? 'text-primary-700' : 'text-gray-400'
                         }`}>
                           {item.period}
                         </div>
                         <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-1.5 sm:inline-flex">
-                          {item.phase === 'past' && <CheckCircle2 size={18} className="text-primary" />}
+                          {item.phase === 'past' && <CheckCircle2 size={18} className="text-primary-700" />}
                           {item.title}
                         </h3>
                         <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
@@ -254,19 +254,19 @@ export function NosotrosView() {
                     <Image src={member.photo} alt={member.name} fill className="object-cover" sizes="128px" unoptimized />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                      <Users size={40} className="text-primary" />
+                      <Users size={40} className="text-primary-700" />
                     </div>
                   )}
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-1">{member.name}</h3>
-                <p className={`font-medium text-sm mb-3 ${member.isPlaceholder ? 'text-primary' : 'text-primary'}`}>{member.role}</p>
+                <p className={`font-medium text-sm mb-3 ${member.isPlaceholder ? 'text-primary-700' : 'text-primary-700'}`}>{member.role}</p>
                 <p className="text-gray-600 text-sm leading-relaxed mb-4">{member.bio}</p>
                 <div className="flex justify-center gap-4 text-sm">
                   <a
                     href={member.web}
                     target={member.web.startsWith('http') ? '_blank' : undefined}
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 text-gray-600 hover:text-primary-700 transition-colors"
                   >
                     <Globe size={14} />
                     {member.isPlaceholder ? 'Escríbenos' : 'Web'}
@@ -275,7 +275,7 @@ export function NosotrosView() {
                     href={member.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-gray-600 hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 text-gray-600 hover:text-primary-700 transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
                       <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>

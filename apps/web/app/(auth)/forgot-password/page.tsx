@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
       <Card variant="elevated" className="w-full max-w-md p-8">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-100 rounded-2xl mb-4">
-            <Mail size={28} className="text-primary" />
+            <Mail size={28} className="text-primary-700" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">¿Olvidaste tu contraseña?</h1>
           <p className="text-gray-500 text-sm">
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
           />
 
           {error && (
-            <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
           )}
 
           <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
 
           <Link
             href="/login"
-            className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-primary"
+            className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-primary-700"
           >
             <ArrowLeft size={14} />
             Volver a iniciar sesión

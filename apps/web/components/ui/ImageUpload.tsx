@@ -121,12 +121,12 @@ export function ImageUpload({
             w-24 h-24 rounded-xl border-2 border-dashed cursor-pointer
             flex flex-col items-center justify-center gap-1
             transition-colors text-xs text-center p-2
-            ${dragging ? 'border-primary bg-orange-50 text-primary' : 'border-gray-300 text-gray-400 hover:border-primary hover:text-primary'}
+            ${dragging ? 'border-primary bg-orange-50 text-primary-700' : 'border-gray-300 text-gray-400 hover:border-primary hover:text-primary-700'}
           `}
         >
           {uploading ? (
             <>
-              <Loader2 size={20} className="animate-spin text-primary" />
+              <Loader2 size={20} className="animate-spin text-primary-700" />
               <span>Subiendo...</span>
             </>
           ) : (

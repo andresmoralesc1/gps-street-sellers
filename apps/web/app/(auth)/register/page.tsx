@@ -145,7 +145,7 @@ export default function RegisterPage() {
                 <ShoppingCart
                   className={clsx(
                     'w-8 h-8',
-                    accountType === 'buyer' ? 'text-primary' : 'text-gray-400'
+                    accountType === 'buyer' ? 'text-primary-700' : 'text-gray-400'
                   )}
                 />
                 <span className="text-sm font-semibold">Comprar</span>
@@ -167,7 +167,7 @@ export default function RegisterPage() {
                 <Store
                   className={clsx(
                     'w-8 h-8',
-                    accountType === 'seller' ? 'text-primary' : 'text-gray-400'
+                    accountType === 'seller' ? 'text-primary-700' : 'text-gray-400'
                   )}
                 />
                 <span className="text-sm font-semibold">Vender</span>
@@ -242,12 +242,12 @@ export default function RegisterPage() {
                 checked={acceptedTerms}
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 disabled={isLoading}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                 required
               />
               <span>
                 Acepto los{' '}
-                <Link href="/terminos" className="text-primary underline" target="_blank">
+                <Link href="/terminos" className="text-primary-700 underline" target="_blank">
                   Términos y Condiciones
                 </Link>
                 .
@@ -259,12 +259,12 @@ export default function RegisterPage() {
                 checked={acceptedPrivacy}
                 onChange={(e) => setAcceptedPrivacy(e.target.checked)}
                 disabled={isLoading}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                 required
               />
               <span>
                 Acepto la{' '}
-                <Link href="/privacidad" className="text-primary underline" target="_blank">
+                <Link href="/privacidad" className="text-primary-700 underline" target="_blank">
                   Política de Tratamiento de Datos Personales
                 </Link>{' '}
                 (Ley 1581/2012) y autorizo el tratamiento de mis datos para las
@@ -289,7 +289,7 @@ export default function RegisterPage() {
 
         <p className="text-center mt-6 text-gray-600">
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="text-primary font-semibold">
+          <Link href="/login" className="text-primary-700 font-semibold">
             Inicia sesión
           </Link>
         </p>

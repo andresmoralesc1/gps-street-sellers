@@ -77,7 +77,7 @@ export function SiteHeader() {
             </div>
             <div className="flex flex-col leading-tight">
               <span className="font-bold text-gray-900 text-base tracking-tight">Barrio</span>
-              <span className="text-xs text-primary font-bold -mt-0.5">Tech</span>
+              <span className="text-xs text-primary-700 font-bold -mt-0.5">Tech</span>
             </div>
           </Link>
 

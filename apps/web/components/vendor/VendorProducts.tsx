@@ -105,7 +105,7 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold leading-tight">{product.name}</h4>
             <p className="text-sm text-gray-500 line-clamp-2 mt-1">{product.description}</p>
-            <p className="text-primary font-bold mt-1">
+            <p className="text-primary-700 font-bold mt-1">
               ${product.price.toLocaleString('es-CO')}
             </p>
           </div>

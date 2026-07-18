@@ -80,7 +80,7 @@ export function CitySelector() {
         aria-label={`Ciudad seleccionada: ${selectedCity.name}. Click para cambiar.`}
         className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium"
       >
-        <MapPin size={16} className="text-primary" aria-hidden="true" />
+        <MapPin size={16} className="text-primary-700" aria-hidden="true" />
         <span>{selectedCity.name}</span>
         <ChevronDown size={14} className={clsx('text-gray-400 transition-transform', open && 'rotate-180')} />
       </button>
@@ -130,7 +130,7 @@ export function CitySelector() {
                   className={clsx(
                     'w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between',
                     highlight === i && 'bg-gray-50',
-                    selectedCity.id === city.id && 'bg-primary/5 text-primary font-medium'
+                    selectedCity.id === city.id && 'bg-primary/5 text-primary-700 font-medium'
                   )}
                 >
                   <span>{city.name}</span>

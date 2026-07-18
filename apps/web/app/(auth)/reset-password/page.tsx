@@ -99,7 +99,7 @@ function ResetPasswordContent() {
       <Card variant="elevated" className="w-full max-w-md p-8">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-100 rounded-2xl mb-4">
-            <Lock size={28} className="text-primary" />
+            <Lock size={28} className="text-primary-700" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Crea una nueva contraseña</h1>
           <p className="text-gray-500 text-sm">Mínimo 8 caracteres. No uses contraseñas comunes.</p>
@@ -122,7 +122,8 @@ function ResetPasswordContent() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -141,7 +142,7 @@ function ResetPasswordContent() {
           />
 
           {error && (
-            <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
           )}
 
           <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
@@ -150,7 +151,7 @@ function ResetPasswordContent() {
 
           <Link
             href="/login"
-            className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-primary"
+            className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-primary-700"
           >
             <ArrowLeft size={14} />
             Volver a iniciar sesión

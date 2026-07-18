@@ -6,6 +6,8 @@ import 'leaflet/dist/leaflet.css'
 import { Frown, LogIn, X } from 'lucide-react'
 import Link from 'next/link'
 import { VendorCard } from './VendorCard'
+import { LocationAdjustControl } from './LocationAdjustControl'
+import { DraggableUserMarker } from './DraggableUserMarker'
 import { useStore } from '@/store/useStore'
 import { calculateDistance } from '@/lib/core/utils/geo'
 import { getCategoryInfo, COLOMBIA_CITIES } from '@/lib/core/constants'
@@ -55,6 +57,18 @@ function MapPanToVendor({
   return null
 }
 
+// Smoothly recenters the map on a given lat/lng. Used when the user
+// finishes dragging the location pin or re-locates via GPS — we want
+// the map to follow so the new origin is visible.
+function MapRecenter({ center, trigger }: { center: LatLng; trigger: number }) {
+  const map = useMap()
+  useEffect(() => {
+    if (trigger === 0) return // skip initial mount
+    map.panTo(center, { animate: true, duration: 0.5 })
+  }, [map, center.lat, center.lng, trigger])
+  return null
+}
+
 export function MapView() {
   const selectedCity = useStore((s) => s.selectedCity)
   const setSelectedCity = useStore((s) => s.setSelectedCity)
@@ -69,6 +83,21 @@ export function MapView() {
   const _hasHydrated = useStore((s) => s._hasHydrated)
   const isLoggedIn = _hasHydrated && !!user
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(false)
+
+  // ─── Location-adjust mode ──────────────────────────────────────────
+  // `isAdjusting`: when true, the user-location marker becomes draggable
+  // and clicking the map moves the pin to that point. Exits when the
+  // user taps "Listo" or after they drag.
+  // `isRelocating`: true while waiting for navigator.geolocation to
+  // resolve after the user taps "Usar GPS".
+  // `recenterTick`: increments every time we want MapRecenter to pan
+  // the map (dragend, gps-fix, city-change-via-Adjust). The MapRecenter
+  // effect watches this counter instead of the raw location to avoid
+  // fighting with the user's own pan/zoom.
+  const [isAdjusting, setIsAdjusting] = useState(false)
+  const [isRelocating, setIsRelocating] = useState(false)
+  const [recenterTick, setRecenterTick] = useState(0)
+  const [locationManuallySet, setLocationManuallySet] = useState(false)
 
   // Restore the "guest banner dismissed" flag from localStorage on mount so
   // the auth prompt stays hidden across reloads, not just in-session.
@@ -148,14 +177,24 @@ export function MapView() {
     return () => clearInterval(interval)
   }, [fetchActiveVendors])
 
+  // Initial center: userLocation if available, else city center.
+  // We don't auto-recenter on userLocation changes anymore — the user
+  // can pan/zoom freely, and we only pan explicitly via MapRecenter
+  // (triggered by dragend, GPS re-locate, or city change while in
+  // adjust mode). This keeps manual panning from fighting the marker.
   useEffect(() => {
-    if (userLocation) {
-      setCenter([userLocation.lat, userLocation.lng])
-    }
-  }, [userLocation])
+    if (!userLocation) return
+    // Only run once on initial mount or when userLocation was previously null.
+    setCenter([userLocation.lat, userLocation.lng])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  // City change always resets the center (user explicitly chose a new city).
   useEffect(() => {
     setCenter(selectedCity.center)
+    // Clear any manually-set location so the city center wins.
+    setLocationManuallySet(false)
+    setIsAdjusting(false)
   }, [selectedCity])
 
   // Measure the floating card so MapPanToVendor can offset the marker.
@@ -210,6 +249,66 @@ export function MapView() {
     [userLocation]
   )
 
+  // ── Location-adjust handlers ──────────────────────────────────────
+
+  // "Usar GPS" — re-trigger navigator.geolocation. If the user already
+  // gave permission this is instant; if they previously denied, the
+  // browser may silently fail and we fall back to the city center.
+  const handleRelocate = useCallback(() => {
+    if (!navigator.geolocation) {
+      // No geolocation API at all — at least snap to city center.
+      useStore.getState().setUserLocation({
+        lat: selectedCity.center[0],
+        lng: selectedCity.center[1],
+      })
+      setLocationManuallySet(false)
+      setRecenterTick((n) => n + 1)
+      return
+    }
+    setIsRelocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        useStore.getState().setUserLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        })
+        setLocationManuallySet(false)
+        setRecenterTick((n) => n + 1)
+        setIsRelocating(false)
+      },
+      () => {
+        // Permission denied or fix unavailable — fall back to city center.
+        useStore.getState().setUserLocation({
+          lat: selectedCity.center[0],
+          lng: selectedCity.center[1],
+        })
+        setLocationManuallySet(false)
+        setRecenterTick((n) => n + 1)
+        setIsRelocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
+  }, [selectedCity])
+
+  // While the user drags the pin, update the store on every move so
+  // distance filters and the vendor list stay live.
+  const handleLocationDrag = useCallback((lat: number, lng: number) => {
+    useStore.getState().setUserLocation({ lat, lng })
+  }, [])
+
+  // When the user releases the pin (or taps the map in adjust mode),
+  // recenter the map on the new location and exit adjust mode. We
+  // exit so the marker becomes a passive pin again — the user has
+  // committed to their chosen location.
+  const handleLocationDragEnd = useCallback((lat: number, lng: number) => {
+    useStore.getState().setUserLocation({ lat, lng })
+    setLocationManuallySet(true)
+    setRecenterTick((n) => n + 1)
+    // Auto-exit adjust mode after they let go. They can re-enter if they
+    // want to fine-tune.
+    setIsAdjusting(false)
+  }, [])
+
 
   return (
     <div className="relative w-full h-full">
@@ -224,7 +323,7 @@ export function MapView() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {userLocation && (
+        {userLocation && !isAdjusting && (
           <CircleMarker
             center={[userLocation.lat, userLocation.lng]}
             radius={10}
@@ -239,8 +338,29 @@ export function MapView() {
           </CircleMarker>
         )}
 
+        {userLocation && isAdjusting && (
+          <DraggableUserMarker
+            location={userLocation}
+            onDrag={handleLocationDrag}
+            onDragEnd={handleLocationDragEnd}
+          />
+        )}
+
         <MapUpdater center={{ lat: center[0], lng: center[1] } as LatLng} />
-        <MapClickCloser onMapClick={() => setSelectedVendor(null)} />
+        <MapClickCloser
+          onMapClick={() => {
+            // In adjust mode the click is consumed by DraggableUserMarker
+            // to set the pin — don't close the vendor card too, the user
+            // is doing two different things at once.
+            if (!isAdjusting) setSelectedVendor(null)
+          }}
+        />
+        {recenterTick > 0 && userLocation && (
+          <MapRecenter
+            center={{ lat: userLocation.lat, lng: userLocation.lng } as LatLng}
+            trigger={recenterTick}
+          />
+        )}
         <MapPanToVendor vendor={selectedVendor} bottomOffsetPx={cardHeightPx + 16} />
 
         {filteredVendors.length === 0 ? (
@@ -386,12 +506,26 @@ export function MapView() {
         </div>
       )}
 
+      {/* Location-adjust control — floating action buttons to manually
+          drag the user-location pin or snap back to GPS. Sits in the
+          bottom-right corner, above the bottom nav on mobile. */}
+      {userLocation && (
+        <LocationAdjustControl
+          isAdjusting={isAdjusting}
+          setIsAdjusting={setIsAdjusting}
+          onRelocate={handleRelocate}
+          isRelocating={isRelocating}
+          selectedVendor={!!selectedVendor}
+          cardHeightPx={cardHeightPx}
+        />
+      )}
+
       {/* Guest banner — only visible to non-logged-in users */}
       {!isLoggedIn && !guestBannerDismissed && (
         <div className="absolute top-4 left-4 right-4 sm:right-auto z-[1000] pointer-events-auto">
           <div className="bg-white rounded-2xl shadow-card border border-stone-200 px-4 py-3 max-w-md flex items-start gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <LogIn size={18} className="text-primary" aria-hidden="true" />
+              <LogIn size={18} className="text-primary-700" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-stone-900">Explora el mapa</p>
@@ -401,14 +535,14 @@ export function MapView() {
               <div className="mt-2 flex gap-2">
                 <Link
                   href="/login"
-                  className="text-xs font-semibold text-primary hover:text-primary-600 transition-colors"
+                  className="text-xs font-semibold text-primary-700 hover:text-primary-600 transition-colors"
                 >
                   Ingresar
                 </Link>
                 <span className="text-xs text-stone-300" aria-hidden="true">·</span>
                 <Link
                   href="/register"
-                  className="text-xs font-semibold text-primary hover:text-primary-600 transition-colors"
+                  className="text-xs font-semibold text-primary-700 hover:text-primary-600 transition-colors"
                 >
                   Registrarme
                 </Link>

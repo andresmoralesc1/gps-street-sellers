@@ -325,7 +325,7 @@ export default function ProductsPage() {
                     <p className="text-gray-500 text-sm line-clamp-1">
                       {product.description || 'Sin descripción'}
                     </p>
-                    <p className="text-primary font-bold mt-1">
+                    <p className="text-primary-700 font-bold mt-1">
                       ${product.price.toLocaleString('es-CO')}
                     </p>
                   </div>
@@ -363,15 +363,15 @@ export default function ProductsPage() {
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3">
-        <Link href="/dashboard" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+        <Link href="/dashboard" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <BarChart3 size={24} />
           <span className="text-xs mt-1">Dashboard</span>
         </Link>
-        <Link href="/products" className="flex flex-col items-center text-primary">
+        <Link href="/products" className="flex flex-col items-center text-primary-700">
           <Package size={24} />
           <span className="text-xs mt-1">Productos</span>
         </Link>
-        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <Settings size={24} />
           <span className="text-xs mt-1">Ajustes</span>
         </Link>

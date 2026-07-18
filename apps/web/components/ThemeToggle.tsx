@@ -30,8 +30,10 @@ export function ThemeToggle() {
   }
 
   // Avoid hydration mismatch — render placeholder until mounted.
+  // aria-hidden + role="presentation" so screen readers don't announce an
+  // unlabeled button (caught by axe-core color-contrast & button-name rules).
   if (!mounted) {
-    return <div className="w-9 h-9" />
+    return <div role="presentation" aria-hidden="true" className="w-9 h-9" />
   }
 
   return (

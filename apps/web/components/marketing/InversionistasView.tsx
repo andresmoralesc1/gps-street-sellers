@@ -91,7 +91,7 @@ export function InversionistasView() {
             href="/pitch-deck.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-white text-primary font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            className="inline-flex items-center gap-2 bg-white text-primary-700 font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
           >
             <FileText size={18} />
             Descargar Pitch Deck (PDF)
@@ -103,28 +103,28 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">El problema</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">El problema</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
               Una economía entera, invisible para el mercado digital.
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-orange-50 border-l-4 border-primary rounded-r-2xl p-6">
-              <Eye className="text-primary mb-3" size={28} />
+              <Eye className="text-primary-700 mb-3" size={28} />
               <h3 className="font-bold text-gray-800 mb-2">Invisibilidad económica</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
                 El 55,1% de la fuerza laboral en Colombia opera en la informalidad — sin presencia digital, sin métricas, sin acceso a crédito.
               </p>
             </div>
             <div className="bg-orange-50 border-l-4 border-primary rounded-r-2xl p-6">
-              <Users className="text-primary mb-3" size={28} />
+              <Users className="text-primary-700 mb-3" size={28} />
               <h3 className="font-bold text-gray-800 mb-2">Brecha de mercado</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
                 Millones de micro-vendedores carecen de presencia digital, lo que limita su alcance, su clientela y su rentabilidad diaria.
               </p>
             </div>
             <div className="bg-orange-50 border-l-4 border-primary rounded-r-2xl p-6">
-              <Building2 className="text-primary mb-3" size={28} />
+              <Building2 className="text-primary-700 mb-3" size={28} />
               <h3 className="font-bold text-gray-800 mb-2">Desperdicio publicitario</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
                 Las grandes marcas pierden acceso a un canal masivo de comunicación que ocurre diariamente, calle por calle, en toda Colombia.
@@ -138,7 +138,7 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-background-cream">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">La solución</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">La solución</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
               Infraestructura tecnológica para el último kilómetro informal.
             </h2>
@@ -147,7 +147,7 @@ export function InversionistasView() {
             {PILLARS.map((p) => (
               <div key={p.title} className="bg-white rounded-2xl p-6 shadow-card">
                 <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
-                  <p.icon className="text-primary" size={24} />
+                  <p.icon className="text-primary-700" size={24} />
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2">{p.title}</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{p.desc}</p>
@@ -161,7 +161,7 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-gray-900 text-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">Market opportunity</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Market opportunity</span>
             <h2 className="text-2xl md:text-3xl font-bold text-white mt-2">
               Un mercado subestimado que está migrando a lo digital.
             </h2>
@@ -169,7 +169,7 @@ export function InversionistasView() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {METRICS.map((m) => (
               <div key={m.label} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-                <p className="text-3xl md:text-4xl font-bold text-primary mb-2">{m.value}</p>
+                <p className="text-3xl md:text-4xl font-bold text-primary-700 mb-2">{m.value}</p>
                 <p className="text-sm text-white/90 leading-tight mb-1">{m.label}</p>
                 <p className="text-xs text-white/50">{m.source}</p>
               </div>
@@ -188,7 +188,7 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">Traction · Status</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Traction · Status</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
               Dónde estamos hoy.
             </h2>
@@ -197,7 +197,7 @@ export function InversionistasView() {
             {TRACTION.map((t) => (
               <div key={t.title} className="bg-background-cream rounded-2xl p-6">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-                  <t.icon className="text-primary" size={20} />
+                  <t.icon className="text-primary-700" size={20} />
                 </div>
                 <h3 className="font-bold text-gray-800 mb-2">{t.title}</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{t.desc}</p>
@@ -211,7 +211,7 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-background-cream">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">Equipo</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Equipo</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">Quién está detrás</h2>
           </div>
           <div className="bg-white rounded-2xl p-8 shadow-card text-center">
@@ -219,7 +219,7 @@ export function InversionistasView() {
               <Image src="/andres.png" alt="Andrés Morales" fill className="object-cover" sizes="128px" unoptimized />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-1">Andrés Morales</h3>
-            <p className="text-primary font-medium text-sm mb-4">Fundador y CEO</p>
+            <p className="text-primary-700 font-medium text-sm mb-4">Fundador y CEO</p>
             <p className="text-gray-600 text-sm leading-relaxed max-w-md mx-auto">
               Arquitecto de soluciones tecnológicas enfocado en automatización y escalabilidad. Conecto tecnología real con necesidades reales para transformar la base de la pirámide.
             </p>
@@ -231,7 +231,7 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary text-xs font-bold uppercase tracking-wider">Conversemos</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Conversemos</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
               ¿Interesado en invertir o aliarte?
             </h2>
@@ -324,7 +324,7 @@ export function InversionistasView() {
 
               <p className="text-xs text-gray-500 text-center pt-2">
                 También puedes escribirnos directamente a{' '}
-                <a href="mailto:hola@gpsstreetsellers.com" className="text-primary font-medium hover:underline inline-flex items-center gap-1">
+                <a href="mailto:hola@gpsstreetsellers.com" className="text-primary-700 font-medium hover:underline inline-flex items-center gap-1">
                   <Mail size={12} />
                   hola@gpsstreetsellers.com
                 </a>

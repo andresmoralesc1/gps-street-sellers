@@ -228,7 +228,7 @@ function AuthPageContent() {
                 <label className="text-sm font-medium text-gray-700">Contraseña</label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-primary-700 hover:text-primary-800 hover:underline font-medium"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -245,7 +245,8 @@ function AuthPageContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -253,7 +254,7 @@ function AuthPageContent() {
             </div>
 
             {error && (
-              <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
             <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
@@ -360,7 +361,8 @@ function AuthPageContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -368,7 +370,7 @@ function AuthPageContent() {
             </div>
 
             {error && (
-              <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
             <div className="space-y-2 pt-2">
@@ -377,12 +379,12 @@ function AuthPageContent() {
                   type="checkbox"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                  className="mt-0.5 rounded border-gray-300 text-primary-700 focus:ring-primary"
                   required
                 />
                 <span>
                   Acepto los{' '}
-                  <Link href="/terminos" className="text-primary hover:underline" target="_blank">
+                  <Link href="/terminos" className="text-primary-700 hover:underline" target="_blank">
                     Términos de Servicio
                   </Link>
                 </span>
@@ -392,12 +394,12 @@ function AuthPageContent() {
                   type="checkbox"
                   checked={acceptedPrivacy}
                   onChange={(e) => setAcceptedPrivacy(e.target.checked)}
-                  className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                  className="mt-0.5 rounded border-gray-300 text-primary-700 focus:ring-primary"
                   required
                 />
                 <span>
                   Acepto la{' '}
-                  <Link href="/privacidad" className="text-primary hover:underline" target="_blank">
+                  <Link href="/privacidad" className="text-primary-700 hover:underline" target="_blank">
                     Política de Tratamiento de Datos Personales
                   </Link>{' '}
                   (Ley 1581/2012)
@@ -419,7 +421,7 @@ function AuthPageContent() {
               <button
                 type="button"
                 onClick={() => { setStep('register'); setError('') }}
-                className="text-primary font-semibold hover:underline"
+                className="text-primary-700 font-semibold hover:underline"
               >
                 Regístrate gratis
               </button>
@@ -430,7 +432,7 @@ function AuthPageContent() {
               <button
                 type="button"
                 onClick={() => { setStep('login'); setError('') }}
-                className="text-primary font-semibold hover:underline"
+                className="text-primary-700 font-semibold hover:underline"
               >
                 Inicia sesión
               </button>

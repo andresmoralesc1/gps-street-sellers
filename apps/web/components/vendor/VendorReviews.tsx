@@ -28,7 +28,7 @@ export function VendorReviews({ reviews }: VendorReviewsProps) {
           <Card key={review.id} variant="outlined" className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <User size={16} className="text-primary" />
+                <User size={16} className="text-primary-700" />
               </div>
               <div>
                 <div className="flex items-center gap-1">

@@ -83,15 +83,15 @@ export default function MapPage() {
 
       {/* Bottom Nav */}
       <nav className="bg-white border-t flex justify-around py-3">
-        <Link href="/map" className="flex flex-col items-center text-primary">
+        <Link href="/map" className="flex flex-col items-center text-primary-700">
           <MapPin size={24} />
           <span className="text-xs mt-1">Mapa</span>
         </Link>
-        <Link href="/favorites" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+        <Link href="/favorites" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <Heart size={24} />
           <span className="text-xs mt-1">Favoritos</span>
         </Link>
-        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <Settings size={24} />
           <span className="text-xs mt-1">Ajustes</span>
         </Link>

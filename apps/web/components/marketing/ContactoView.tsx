@@ -85,7 +85,7 @@ export function ContactoView() {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">¡Mensaje enviado!</h1>
           <p className="text-gray-600 mb-6">
             Te respondemos en menos de 24 horas hábiles. También puedes revisar nuestras{' '}
-            <Link href="/preguntas-frecuentes" className="text-primary underline">
+            <Link href="/preguntas-frecuentes" className="text-primary-700 underline">
               preguntas frecuentes
             </Link>
             .
@@ -108,7 +108,7 @@ export function ContactoView() {
           <h1 className="text-3xl font-bold text-gray-800 mb-3">Contáctanos</h1>
           <p className="text-gray-500">
             ¿Tienes preguntas o sugerencias? Estamos aquí para ayudarte.{' '}
-            <Link href="/preguntas-frecuentes" className="text-primary underline">
+            <Link href="/preguntas-frecuentes" className="text-primary-700 underline">
               Revisa primero las FAQ
             </Link>
             .
@@ -121,13 +121,13 @@ export function ContactoView() {
             <Card variant="outlined" className="p-5">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Mail size={20} className="text-primary" />
+                  <Mail size={20} className="text-primary-700" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-800 mb-1">Email</h3>
                   <a
                     href={`mailto:${EMAIL_INFO}`}
-                    className="block text-gray-500 text-sm hover:text-primary truncate"
+                    className="block text-gray-500 text-sm hover:text-primary-700 truncate"
                   >
                     {EMAIL_INFO}
                   </a>
@@ -143,7 +143,7 @@ export function ContactoView() {
                   <h3 className="font-semibold text-gray-800 mb-1">Teléfono / WhatsApp</h3>
                   <a
                     href={`https://wa.me/${PHONE_RAW}`}
-                    className="block text-gray-500 text-sm hover:text-primary"
+                    className="block text-gray-500 text-sm hover:text-primary-700"
                   >
                     {PHONE_DISPLAY}
                   </a>

@@ -20,7 +20,7 @@ export function NotificationBell() {
 
   return (
     <Link href="/notifications" className="relative">
-      <Bell size={22} className="text-gray-600 hover:text-primary transition-colors" />
+      <Bell size={22} className="text-gray-600 hover:text-primary-700 transition-colors" />
       <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
         {unread > 9 ? '9+' : unread}
       </span>

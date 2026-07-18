@@ -144,4 +144,21 @@
   .animate-slide-up {
     animation: slide-up 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  /* Location-adjust marker pulse — rings emanate from the user's pin
+     while in "adjust" mode so they can spot it quickly. */
+  @keyframes locationPulse {
+    0%   { transform: scale(0.6); opacity: 0.7; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+
+  /* When the user-location marker is draggable, the leaflet container
+     needs an explicit grab cursor (Leaflet only sets it on the marker
+     itself, not the surrounding map). */
+  .leaflet-container:has(.user-location-draggable-marker) {
+    cursor: grab;
+  }
+  .leaflet-container:has(.user-location-draggable-marker:active) {
+    cursor: grabbing;
+  }
 }

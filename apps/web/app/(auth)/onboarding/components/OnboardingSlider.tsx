@@ -51,7 +51,7 @@ export function OnboardingSlider({ onComplete }: OnboardingSliderProps) {
       </button>
 
       <div className="mb-8">
-        <IconComponent size={80} className="text-primary" strokeWidth={1.5} />
+        <IconComponent size={80} className="text-primary-700" strokeWidth={1.5} />
       </div>
       <h1 className="text-3xl font-bold text-center mb-4 text-gray-800">
         {slide.title}

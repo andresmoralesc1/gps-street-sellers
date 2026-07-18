@@ -114,7 +114,7 @@ export function CookieBanner() {
           estrictamente necesarias para mantener tu sesión iniciada y recordar
           tus preferencias. No usamos cookies de seguimiento, publicidad ni
           analítica de terceros. Más información en nuestra{' '}
-          <Link href="/privacidad" className="text-primary underline">
+          <Link href="/privacidad" className="text-primary-700 underline">
             Política de Tratamiento de Datos Personales
           </Link>
           .

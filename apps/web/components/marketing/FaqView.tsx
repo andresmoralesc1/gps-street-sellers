@@ -233,7 +233,7 @@ export function FaqView() {
           {searchActive && globalMatches && globalMatches.length === 0 && (
             <div className="bg-white rounded-xl p-8 text-center text-gray-500 text-sm shadow-card">
               No encontramos resultados para <strong>"{query}"</strong>. Prueba con otra palabra o escríbenos a{' '}
-              <a href="mailto:hola@barriotech.com" className="text-primary hover:underline">
+              <a href="mailto:hola@barriotech.com" className="text-primary-700 hover:underline">
                 hola@barriotech.com
               </a>
               .
@@ -250,7 +250,7 @@ export function FaqView() {
                 const isOpen = openQuestion === id
                 return (
                   <div key={id} className="bg-white rounded-xl overflow-hidden shadow-card">
-                    <div className="bg-primary/5 px-4 py-1.5 text-[11px] font-semibold text-primary uppercase tracking-wider">
+                    <div className="bg-primary/5 px-4 py-1.5 text-[11px] font-semibold text-primary-700 uppercase tracking-wider">
                       <span aria-hidden>{entry.catEmoji}</span> {entry.catLabel}
                     </div>
                     <button

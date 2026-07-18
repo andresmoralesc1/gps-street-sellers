@@ -13,7 +13,7 @@ export default function NotFound() {
     <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-16 bg-background-cream">
       <div className="max-w-md w-full text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
-          <MapPin className="w-8 h-8 text-primary" />
+          <MapPin className="w-8 h-8 text-primary-700" />
         </div>
         <h1 className="text-6xl font-bold text-gray-900 mb-3">404</h1>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">

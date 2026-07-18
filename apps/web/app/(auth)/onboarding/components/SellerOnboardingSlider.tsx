@@ -103,7 +103,7 @@ export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingS
       <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto py-12">
         {/* Icon */}
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-8">
-          <IconComponent size={40} className="text-primary" strokeWidth={1.5} />
+          <IconComponent size={40} className="text-primary-700" strokeWidth={1.5} />
         </div>
 
         {/* Content */}
@@ -116,7 +116,7 @@ export function SellerOnboardingSlider({ onComplete, onSkip }: SellerOnboardingS
 
         {/* Tip */}
         <div className="bg-primary/5 rounded-xl px-4 py-3 mb-8">
-          <p className="text-sm text-primary font-medium text-center">
+          <p className="text-sm text-primary-700 font-medium text-center">
             💡 {slide.tip}
           </p>
         </div>

@@ -4,7 +4,7 @@ import { MapPin, Mail, ArrowRight } from 'lucide-react'
 
 export function SiteFooter() {
   return (
-    <footer className="bg-gray-900 text-gray-400">
+    <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
 
@@ -20,7 +20,7 @@ export function SiteFooter() {
               />
               <div className="flex flex-col leading-tight">
                 <span className="font-bold text-white text-base">Barrio</span>
-                <span className="text-xs text-primary font-semibold -mt-0.5">Tech</span>
+                <span className="text-xs text-primary-400 font-semibold -mt-0.5">Tech</span>
               </div>
             </Link>
             <p className="text-sm leading-relaxed">
@@ -32,9 +32,9 @@ export function SiteFooter() {
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Explorar</h4>
             <ul className="space-y-1">
-              <li><Link href="/map" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Mapa de vendedores</Link></li>
-              <li><Link href="/register" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Ser vendedor</Link></li>
-              <li><Link href="/login" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Iniciar sesión</Link></li>
+              <li><Link href="/map" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Mapa de vendedores</Link></li>
+              <li><Link href="/register" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Ser vendedor</Link></li>
+              <li><Link href="/login" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Iniciar sesión</Link></li>
             </ul>
           </div>
 
@@ -42,10 +42,10 @@ export function SiteFooter() {
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Compañía</h4>
             <ul className="space-y-1">
-              <li><Link href="/nosotros" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Sobre nosotros</Link></li>
-              <li><Link href="/inversionistas" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Inversionistas</Link></li>
-              <li><Link href="/contacto" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Contacto</Link></li>
-              <li><Link href="/preguntas-frecuentes" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Preguntas frecuentes</Link></li>
+              <li><Link href="/nosotros" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Sobre nosotros</Link></li>
+              <li><Link href="/inversionistas" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Inversionistas</Link></li>
+              <li><Link href="/contacto" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Contacto</Link></li>
+              <li><Link href="/preguntas-frecuentes" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Preguntas frecuentes</Link></li>
             </ul>
           </div>
 
@@ -53,19 +53,19 @@ export function SiteFooter() {
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Legal</h4>
             <ul className="space-y-1">
-              <li><Link href="/privacidad" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Política de privacidad</Link></li>
-              <li><Link href="/terminos" className="text-sm hover:text-primary transition-colors inline-block py-2 min-h-[36px]">Términos y condiciones</Link></li>
+              <li><Link href="/privacidad" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Política de privacidad</Link></li>
+              <li><Link href="/terminos" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Términos y condiciones</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-400">
             © 2026 BarrioTech. Todos los derechos reservados.
           </p>
           <a
             href="mailto:hola@barriotech.com"
-            className="flex items-center gap-2 text-xs text-gray-500 hover:text-primary transition-colors py-2 min-h-[36px]"
+            className="flex items-center gap-2 text-xs text-gray-400 hover:text-primary-400 transition-colors py-2 min-h-[36px]"
           >
             <Mail size={12} />
             hola@barriotech.com

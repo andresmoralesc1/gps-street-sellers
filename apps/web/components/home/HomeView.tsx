@@ -226,7 +226,7 @@ export function HomeView() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider text-primary mb-3">Lo que hemos logrado</span>
+            <span className="inline-block text-xs font-bold uppercase tracking-wider text-primary-700 mb-3">Lo que hemos logrado</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">BarrioTech en cifras</h2>
             <p className="text-gray-500 text-sm max-w-md mx-auto">
               Números reales, actualizados en vivo desde la plataforma. No prometemos cifras que aún no tenemos.

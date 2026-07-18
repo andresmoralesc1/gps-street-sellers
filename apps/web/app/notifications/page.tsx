@@ -84,11 +84,11 @@ export default function NotificationsPage() {
           </Button>
         </Link>
         <h1 className="text-lg font-bold flex items-center gap-2">
-          <Bell size={20} className="text-primary" />
+          <Bell size={20} className="text-primary-700" />
           Notificaciones
         </h1>
         {unreadCount > 0 && (
-          <button onClick={markAllRead} className="ml-auto text-sm text-primary font-medium">
+          <button onClick={markAllRead} className="ml-auto text-sm text-primary-700 font-medium">
             Marcar todas leídas
           </button>
         )}
@@ -125,7 +125,7 @@ export default function NotificationsPage() {
                   {!notif.read && (
                     <button
                       onClick={() => markRead(notif.id)}
-                      className="text-primary hover:bg-primary/5 p-1 rounded"
+                      className="text-primary-700 hover:bg-primary/5 p-1 rounded"
                       title="Marcar como leída"
                     >
                       <Check size={16} />

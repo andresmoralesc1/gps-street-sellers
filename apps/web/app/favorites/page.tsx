@@ -163,7 +163,7 @@ export default function FavoritesPage() {
                   {/* Info */}
                   <div className="p-4">
                     <Link href={`/vendor/${fav.vendorSlug || fav.vendorId}`} className="block">
-                      <h3 className="font-bold text-lg mb-1 hover:text-primary transition-colors line-clamp-1">
+                      <h3 className="font-bold text-lg mb-1 hover:text-primary-700 transition-colors line-clamp-1">
                         {fav.vendorName}
                       </h3>
                     </Link>
@@ -209,15 +209,15 @@ export default function FavoritesPage() {
 
       {/* Bottom Nav (mobile) */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3 md:hidden">
-        <Link href="/map" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+        <Link href="/map" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <MapPin size={24} />
           <span className="text-xs mt-1">Mapa</span>
         </Link>
-        <Link href="/favorites" className="flex flex-col items-center text-primary">
+        <Link href="/favorites" className="flex flex-col items-center text-primary-700">
           <Heart size={24} fill="currentColor" />
           <span className="text-xs mt-1">Favoritos</span>
         </Link>
-        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+        <Link href="/settings" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span className="text-xs mt-1">Ajustes</span>
         </Link>

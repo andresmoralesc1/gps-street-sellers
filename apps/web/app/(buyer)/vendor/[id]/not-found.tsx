@@ -6,7 +6,7 @@ export default function VendorNotFound() {
   return (
     <div className="min-h-screen bg-background-cream flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 text-primary rounded-full mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 text-primary-700 rounded-full mb-4">
           <Store size={32} />
         </div>
         <h1 className="text-2xl font-bold text-stone-800 mb-2">

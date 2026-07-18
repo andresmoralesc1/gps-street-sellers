@@ -59,7 +59,7 @@ export function CartDrawer({ vendorPhone, vendorName = 'Vendedor', onCheckout, i
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
-            <ShoppingBag size={24} className="text-primary" />
+            <ShoppingBag size={24} className="text-primary-700" />
             <h2 className="text-lg font-bold">Tu pedido</h2>
           </div>
           <button onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" className="p-2 hover:bg-gray-100 rounded-full">
@@ -114,7 +114,7 @@ export function CartDrawer({ vendorPhone, vendorName = 'Vendedor', onCheckout, i
           <div className="p-4 border-t space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-lg font-bold">Total</span>
-              <span className="text-xl font-bold text-primary">{formatCOP(total)}</span>
+              <span className="text-xl font-bold text-primary-700">{formatCOP(total)}</span>
             </div>
 
             {hasWhatsApp ? (

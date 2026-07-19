@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Package, BarChart3, Settings, Edit3, ChevronLeft, Trash2, Plus, X } from 'lucide-react'
@@ -10,6 +10,17 @@ import { Input } from '@/components/ui/Input'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { MultiPhotoUploader } from '@/components/seller/MultiPhotoUploader'
 import { useStore } from '@/store/useStore'
+import {
+  validateProduct,
+  hasErrors,
+} from '@/lib/products/validation'
+
+interface ProductValidationErrors {
+  name?: string
+  description?: string
+  price?: string
+  photoUrl?: string
+}
 
 interface Product {
   id: string
@@ -37,6 +48,21 @@ export default function ProductsPage() {
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
+  // Per-field validation errors. Re-validated on every keystroke after the
+  // first onBlur so the user gets a hint as soon as they leave a field, but
+  // doesn't see a red field while they haven't finished typing.
+  const [fieldErrors, setFieldErrors] = useState<ProductValidationErrors>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  // G: snapshot of the form values when the user opened it (only meaningful
+  // in edit mode — in add mode the form starts blank and any non-empty field
+  // is by definition "dirty"). Used to compare current values against the
+  // snapshot so we can warn before discarding unsaved changes.
+  const [initialFormSnapshot, setInitialFormSnapshot] = useState<{
+    name: string
+    description: string
+    price: string
+    photoUrl: string
+  } | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState('')
 
@@ -88,25 +114,79 @@ export default function ProductsPage() {
     setFormPhotoUrl('')
     setShowForm(false)
     setEditingId(null)
+    setFieldErrors({})
+    setTouched({})
+  }
+
+  // G: returns true if the user has typed something that hasn't been saved.
+  // In add mode: any non-empty field. In edit mode: anything that diverges
+  // from the snapshot we captured when startEdit ran.
+  const isFormDirty = useMemo(() => {
+    if (!showForm) return false
+    if (initialFormSnapshot) {
+      return (
+        formName !== initialFormSnapshot.name ||
+        formDescription !== initialFormSnapshot.description ||
+        formPrice !== initialFormSnapshot.price ||
+        formPhotoUrl !== initialFormSnapshot.photoUrl
+      )
+    }
+    // Add mode — any non-blank field means the user has started typing.
+    return Boolean(
+      formName.trim() || formDescription.trim() || formPrice.trim() || formPhotoUrl.trim()
+    )
+  }, [
+    showForm,
+    initialFormSnapshot,
+    formName,
+    formDescription,
+    formPrice,
+    formPhotoUrl,
+  ])
+
+  // G: confirmation modal when the user tries to discard unsaved changes
+  // (closes the form, navigates back, etc.).
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false)
+
+  // G: warn before tab close / refresh if there are unsaved changes.
+  useEffect(() => {
+    if (!isFormDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isFormDirty])
+
+  // Re-validate the form against the live state and store the result in
+  // `fieldErrors`. Called on blur and on submit. Returns the error map so the
+  // caller can act on it (e.g. block submit).
+  const revalidate = () => {
+    const errs = validateProduct({
+      name: formName,
+      description: formDescription,
+      price: formPrice,
+      photoUrl: formPhotoUrl,
+    })
+    setFieldErrors(errs)
+    return errs
   }
 
   const handleAdd = async () => {
-    if (!formName || !formPrice || !vendorId) return
+    if (!vendorId) return
 
-    // CRIT fix: surface invalid price (NaN, <= 0, overflow) BEFORE hitting the
-    // server. parseFloat('') === NaN; parseFloat('1e9') === 1e9 which overflows
-    // numeric(10,2). Show a useful inline message instead of letting the
-    // backend return 500.
+    // Inline validation: block submit and surface field-level errors when
+    // something's off. Re-runs the same checks as the backend so the user
+    // sees the same messages in both places.
+    const errs = revalidate()
+    setTouched({ name: true, description: true, price: true, photoUrl: true })
+    if (hasErrors(errs)) {
+      setFormError('Revisa los campos marcados')
+      return
+    }
+
     const priceNum = parseFloat(formPrice)
-    if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      setFormError('Precio inválido (debe ser un número mayor a 0)')
-      return
-    }
-    if (priceNum > 99999999.99) {
-      setFormError('Precio demasiado grande (máx 99,999,999.99 COP)')
-      return
-    }
-
     setFormSaving(true)
     setFormError('')
     setFormSuccess('')
@@ -142,19 +222,15 @@ export default function ProductsPage() {
   }
 
   const handleEdit = async (productId: string) => {
-    if (!formName || !formPrice) return
+    // Same inline validation flow as handleAdd — see comment there.
+    const errs = revalidate()
+    setTouched({ name: true, description: true, price: true, photoUrl: true })
+    if (hasErrors(errs)) {
+      setFormError('Revisa los campos marcados')
+      return
+    }
 
-    // Same validation as handleAdd — see comment there.
     const priceNum = parseFloat(formPrice)
-    if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      setFormError('Precio inválido (debe ser un número mayor a 0)')
-      return
-    }
-    if (priceNum > 99999999.99) {
-      setFormError('Precio demasiado grande (máx 99,999,999.99 COP)')
-      return
-    }
-
     setFormSaving(true)
     setFormError('')
     setFormSuccess('')
@@ -209,12 +285,42 @@ export default function ProductsPage() {
   }
 
   const startEdit = (product: Product) => {
-    setFormName(product.name)
-    setFormDescription(product.description || '')
-    setFormPrice(product.price.toString())
-    setFormPhotoUrl(product.photo_url || '')
+    const snap = {
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      photoUrl: product.photo_url || '',
+    }
+    setFormName(snap.name)
+    setFormDescription(snap.description)
+    setFormPrice(snap.price)
+    setFormPhotoUrl(snap.photoUrl)
     setEditingId(product.id)
+    setInitialFormSnapshot(snap)
     setShowForm(true)
+  }
+
+  // G: when the user clicks the X on the form or tries to navigate away with
+  // unsaved changes, open the confirm-discard modal instead of dropping the
+  // data silently. `resetForm` and the back-button guard both funnel through
+  // here.
+  const tryCloseForm = () => {
+    if (isFormDirty) {
+      setConfirmDiscardOpen(true)
+      return
+    }
+    resetForm()
+  }
+  const discardChanges = () => {
+    setConfirmDiscardOpen(false)
+    resetForm()
+  }
+  const tryGoBack = () => {
+    if (isFormDirty) {
+      setConfirmDiscardOpen(true)
+      return
+    }
+    router.push('/dashboard')
   }
 
   if (loading) {
@@ -256,9 +362,9 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-background-cream pb-20">
       {/* Header */}
       <header className="bg-white shadow-sm p-4 flex items-center gap-4">
-        <Link href="/dashboard">
-          <Button variant="ghost"><ChevronLeft size={20} /></Button>
-        </Link>
+        <Button variant="ghost" onClick={tryGoBack} aria-label="Volver al dashboard">
+          <ChevronLeft size={20} />
+        </Button>
         <div>
           <h1 className="text-xl font-bold">Mis Productos</h1>
           <p className="text-sm text-gray-500">{products.length} productos</p>
@@ -273,37 +379,91 @@ export default function ProductsPage() {
               <h3 className="font-semibold">
                 {editingId ? 'Editar producto' : 'Agregar producto'}
               </h3>
-              <Button variant="ghost" size="sm" onClick={resetForm}>
+              <Button variant="ghost" size="sm" onClick={tryCloseForm}>
                 <X size={18} />
               </Button>
             </div>
             <div className="space-y-3">
-              <Input
-                label="Nombre"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ej: Empanada de pollo"
-              />
-              <Input
-                label="Descripción"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Ej: Rellena con pollo y papa"
-              />
-              <Input
-                label="Precio (COP)"
-                type="number"
-                value={formPrice}
-                onChange={(e) => setFormPrice(e.target.value)}
-                placeholder="2500"
-              />
+              <div>
+                <Input
+                  label="Nombre"
+                  value={formName}
+                  onChange={(e) => {
+                    setFormName(e.target.value)
+                    if (touched.name) revalidate()
+                  }}
+                  onBlur={() => {
+                    setTouched((t) => ({ ...t, name: true }))
+                    revalidate()
+                  }}
+                  placeholder="Ej: Empanada de pollo"
+                  aria-invalid={Boolean(touched.name && fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? 'name-error' : undefined}
+                />
+                {touched.name && fieldErrors.name && (
+                  <p id="name-error" role="alert" className="text-xs text-red-700 mt-1">
+                    {fieldErrors.name}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Input
+                  label="Descripción"
+                  value={formDescription}
+                  onChange={(e) => {
+                    setFormDescription(e.target.value)
+                    if (touched.description) revalidate()
+                  }}
+                  onBlur={() => {
+                    setTouched((t) => ({ ...t, description: true }))
+                    revalidate()
+                  }}
+                  placeholder="Ej: Rellena con pollo y papa"
+                  aria-invalid={Boolean(touched.description && fieldErrors.description)}
+                />
+                {touched.description && fieldErrors.description && (
+                  <p role="alert" className="text-xs text-red-700 mt-1">
+                    {fieldErrors.description}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Input
+                  label="Precio (COP)"
+                  type="number"
+                  value={formPrice}
+                  onChange={(e) => {
+                    setFormPrice(e.target.value)
+                    if (touched.price) revalidate()
+                  }}
+                  onBlur={() => {
+                    setTouched((t) => ({ ...t, price: true }))
+                    revalidate()
+                  }}
+                  placeholder="2500"
+                  aria-invalid={Boolean(touched.price && fieldErrors.price)}
+                />
+                {touched.price && fieldErrors.price && (
+                  <p role="alert" className="text-xs text-red-700 mt-1">
+                    {fieldErrors.price}
+                  </p>
+                )}
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Foto (opcional)</label>
                 <ImageUpload
                   value={formPhotoUrl}
-                  onChange={setFormPhotoUrl}
+                  onChange={(v) => {
+                    setFormPhotoUrl(v)
+                    if (touched.photoUrl) revalidate()
+                  }}
                   folder="products"
                 />
+                {touched.photoUrl && fieldErrors.photoUrl && (
+                  <p role="alert" className="text-xs text-red-700 mt-1">
+                    {fieldErrors.photoUrl}
+                  </p>
+                )}
               </div>
               {formError && (
                 <div
@@ -323,7 +483,7 @@ export default function ProductsPage() {
               )}
               <Button
                 onClick={() => editingId ? handleEdit(editingId) : handleAdd()}
-                disabled={formSaving || !formName || !formPrice}
+                disabled={formSaving || hasErrors(fieldErrors)}
                 className="w-full"
               >
                 {formSaving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar'}
@@ -474,6 +634,47 @@ export default function ProductsPage() {
           <span className="text-xs mt-1">Ajustes</span>
         </Link>
       </nav>
+
+      {/* G: discard-changes confirmation modal. Shown when the user tries to
+          close the form or go back while there are unsaved edits. */}
+      {confirmDiscardOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="discard-title"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setConfirmDiscardOpen(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-sm w-full p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="discard-title" className="text-lg font-semibold mb-2">
+              ¿Descartar cambios?
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Tienes cambios sin guardar en este producto. Si cierras ahora se van a perder.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDiscardOpen(false)}
+              >
+                Seguir editando
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={discardChanges}
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                Descartar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

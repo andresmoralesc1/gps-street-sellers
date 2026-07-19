@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const vendorId = searchParams.get('vendorId')
+    const q = searchParams.get('q')
 
     let query = 'SELECT id, vendor_id, name, description, price, photo_url, created_at FROM products WHERE 1=1'
     const params: any[] = []
@@ -33,6 +34,17 @@ export async function GET(req: NextRequest) {
       }
       params.push(vendorId)
       query += ` AND vendor_id = $${params.length}`
+    }
+
+    // Full-text search across name + description. Uses the GIN index on
+    // to_tsvector('spanish', ...) created in migration 018. The query goes
+    // through plainto_tsquery so the caller can pass any free text without
+    // worrying about operators being misinterpreted as tsquery syntax.
+    // Empty / whitespace-only inputs are ignored so a stray `?q=` doesn't
+    // accidentally drop every row.
+    if (q && q.trim()) {
+      params.push(q.trim())
+      query += ` AND to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '')) @@ plainto_tsquery('spanish', $${params.length})`
     }
 
     query += ' ORDER BY created_at DESC LIMIT 200'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { Plus, X, Image as ImageIcon } from 'lucide-react'
 import { useToast } from './Toast'
 
@@ -8,19 +8,76 @@ import { useToast } from './Toast'
  * N12 — Multi-photo uploader (URL-based, max 6 photos).
  * Lets the seller paste image URLs (or upload via storage in future).
  * For MVP: URL paste; storage upload will be a follow-up.
+ *
+ * Audit-2026-07-19 follow-ups:
+ *   - A: confirmation modal before deleting a photo (was instant, risked
+ *        accidental clicks deleting a seller's gallery).
+ *   - B: drag-and-drop reordering (HTML5 DnD, no extra dep). Persisted
+ *        with PATCH /api/products/[id]/photos (new endpoint).
  */
 interface MultiPhotoUploaderProps {
   productId: string
   initialPhotos?: { id: string; url: string; position: number }[]
   onChange?: (photos: { id: string; url: string; position: number }[]) => void
+  // G: optional callback fired whenever the photo set diverges from the
+  // initial set (add, delete, reorder). Lets the parent show its own modal
+  // before navigation since the in-page beforeunload handler only covers
+  // tab close / refresh.
+  onDirtyChange?: (isDirty: boolean) => void
 }
 
-export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: MultiPhotoUploaderProps) {
-  const [photos, setPhotos] = useState(initialPhotos)
+interface Photo {
+  id: string
+  url: string
+  position: number
+}
+
+export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, onDirtyChange }: MultiPhotoUploaderProps) {
+  const [photos, setPhotos] = useState<Photo[]>(initialPhotos)
   const [newUrl, setNewUrl] = useState('')
   const [adding, setAdding] = useState(false)
+  const [reordering, setReordering] = useState(false)
+  // A: confirmation modal state. null = no dialog.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [confirmDeleting, setConfirmDeleting] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
   const { showToast } = useToast()
   const fetchedRef = useRef(false)
+
+  // Drag-and-drop state (B).
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  // G: dirty tracking. A photo set is "dirty" whenever the current array
+  // differs from the initial set the component mounted with. We compare by id
+  // + order since position is what we persist on the server.
+  const isDirty = useMemo(() => {
+    if (photos.length !== initialPhotos.length) return true
+    for (let i = 0; i < photos.length; i++) {
+      if (photos[i].id !== initialPhotos[i]?.id) return true
+    }
+    return false
+  }, [photos, initialPhotos])
+
+  // G: notify parent (e.g. /products page) so it can show its own modal when
+  // the user tries to navigate away via an internal link.
+  useEffect(() => {
+    onChange?.(photos)
+    onDirtyChange?.(isDirty)
+  }, [photos, isDirty, onChange, onDirtyChange])
+
+  // G: warn before tab close / refresh if there are unsaved changes. The
+  // browser shows its own native modal; we just set the flag.
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Chrome requires returnValue to be set.
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
 
   useEffect(() => {
     if (fetchedRef.current || initialPhotos.length > 0) return
@@ -28,8 +85,9 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
     fetch(`/api/products/${productId}/photos`, { credentials: 'include' })
       .then((r) => r.ok ? r.json() : { photos: [] })
       .then((data) => {
-        setPhotos(data.photos || [])
-        onChange?.(data.photos || [])
+        const list = (data.photos || []) as Photo[]
+        setPhotos(list)
+        onChange?.(list)
       })
       .catch(() => {})
   }, [productId, initialPhotos.length, onChange])
@@ -61,7 +119,11 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
     }
   }
 
+  // A: confirmation flow. Called only after the user clicks "Eliminar" in
+  // the modal — `removePhoto` is now the actual delete handler.
   const removePhoto = async (photoId: string) => {
+    setConfirmDeleting(true)
+    setConfirmError(null)
     try {
       const res = await fetch(`/api/products/${productId}/photos`, {
         method: 'DELETE',
@@ -74,12 +136,69 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
         setPhotos(next)
         onChange?.(next)
         showToast('Foto eliminada', 'info')
+        setConfirmDeleteId(null)
       } else {
         const data = await res.json().catch(() => ({}))
-        showToast(data.error || 'Error al eliminar', 'error')
+        setConfirmError(data.error || 'Error al eliminar')
       }
     } catch {
+      setConfirmError('Error de conexión')
+    } finally {
+      setConfirmDeleting(false)
+    }
+  }
+
+  // B: re-ordering. After drop we send the new order to the server.
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggingId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+  }
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverId(id)
+  }
+  const handleDragLeave = () => setDragOverId(null)
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const sourceId = e.dataTransfer.getData('text/plain') || draggingId
+    setDraggingId(null)
+    setDragOverId(null)
+    if (!sourceId || sourceId === targetId) return
+    const sourceIdx = photos.findIndex((p) => p.id === sourceId)
+    const targetIdx = photos.findIndex((p) => p.id === targetId)
+    if (sourceIdx === -1 || targetIdx === -1) return
+    const next = [...photos]
+    const [moved] = next.splice(sourceIdx, 1)
+    next.splice(targetIdx, 0, moved)
+    // Optimistic update.
+    setPhotos(next)
+    onChange?.(next)
+    // Persist new order on the server.
+    setReordering(true)
+    try {
+      const res = await fetch(`/api/products/${productId}/photos`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ order: next.map((p) => p.id) }),
+      })
+      if (!res.ok) {
+        // Roll back on failure.
+        setPhotos(photos)
+        onChange?.(photos)
+        const data = await res.json().catch(() => ({}))
+        showToast(data.error || 'No se pudo reordenar', 'error')
+      } else {
+        showToast('Orden actualizado ✓', 'success')
+      }
+    } catch {
+      setPhotos(photos)
+      onChange?.(photos)
       showToast('Error de conexión', 'error')
+    } finally {
+      setReordering(false)
     }
   }
 
@@ -87,14 +206,29 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {photos.map((photo) => (
-          <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+          <div
+            key={photo.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, photo.id)}
+            onDragOver={(e) => handleDragOver(e, photo.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, photo.id)}
+            className={`relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-move transition-all ${
+              dragOverId === photo.id ? 'ring-2 ring-primary scale-105' : ''
+            } ${draggingId === photo.id ? 'opacity-40' : ''}`}
+            aria-label={`Foto ${photo.position + 1}: arrastrable para reordenar`}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.url} alt="" className="w-full h-full object-cover" />
+            <img src={photo.url} alt="" className="w-full h-full object-cover pointer-events-none" />
             <button
               type="button"
-              onClick={() => removePhoto(photo.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setConfirmDeleteId(photo.id)
+                setConfirmError(null)
+              }}
               aria-label="Eliminar foto"
-              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 z-10"
             >
               <X size={12} />
             </button>
@@ -103,6 +237,9 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
                 Principal
               </span>
             )}
+            <span className="absolute bottom-1 right-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded">
+              #{photo.position + 1}
+            </span>
           </div>
         ))}
         {photos.length < 6 && (
@@ -118,7 +255,7 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
             type="url"
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
-            placeholder="https://..."
+            placeholder="https://... o /products/cali/imagen.jpg"
             aria-label="URL de nueva foto"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
           />
@@ -134,8 +271,59 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange }: 
         </div>
       )}
       <p className="text-xs text-gray-500">
-        {photos.length}/6 fotos. La primera es la principal.
+        {photos.length}/6 fotos. Arrastra para reordenar. La primera es la principal.
+        {reordering && ' · Guardando orden…'}
       </p>
+
+      {/* A: confirmation modal — prevents accidental deletion. */}
+      {confirmDeleteId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="photo-delete-title"
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => !confirmDeleting && setConfirmDeleteId(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="photo-delete-title" className="text-lg font-bold mb-2">
+              ¿Eliminar esta foto?
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Esta acción no se puede deshacer. Si era la foto principal,
+              la siguiente foto de la galería pasará a ser la principal.
+            </p>
+            {confirmError && (
+              <div
+                role="alert"
+                className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2 mb-3"
+              >
+                {confirmError}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={confirmDeleting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => removePhoto(confirmDeleteId)}
+                disabled={confirmDeleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
+              >
+                {confirmDeleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

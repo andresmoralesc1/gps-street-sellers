@@ -175,3 +175,110 @@ export async function DELETE(req: NextRequest, { params: paramsPromise }: { para
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
+
+/**
+ * PATCH /api/products/[id]/photos — bulk reorder photos.
+ * Body: { order: string[] } — UUIDs of all photos for this product,
+ * in the desired display order. Validation:
+ *   - order is an array of strings (UUIDs)
+ *   - every UUID in order must belong to this product (no orphans)
+ *   - the array must contain exactly the photos that exist (no extra,
+ *     no missing)
+ *
+ * On success: rewrites position 0..N-1 and, if the position-0 photo
+ * changed, syncs products.photo_url so the card thumbnail matches.
+ */
+export async function PATCH(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  try {
+    if (!params.id || !UUID_RE.test(params.id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+
+    const ownerCheck = await pool.query(
+      `SELECT p.id FROM products p
+       JOIN vendors v ON v.id = p.vendor_id
+       WHERE p.id = $1 AND v.profile_id IN (SELECT id FROM profiles WHERE user_id = $2)`,
+      [params.id, auth.userId]
+    )
+    if (ownerCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
+    let body: { order?: unknown } | null = null
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido en body' }, { status: 400 })
+    }
+
+    const order = body?.order
+    if (!Array.isArray(order) || order.length === 0 || order.length > MAX_PHOTOS_PER_PRODUCT) {
+      return NextResponse.json(
+        { error: `order debe ser un array de 1-${MAX_PHOTOS_PER_PRODUCT} UUIDs` },
+        { status: 400 }
+      )
+    }
+    if (!order.every((id) => typeof id === 'string' && UUID_RE.test(id))) {
+      return NextResponse.json({ error: 'Todos los IDs deben ser UUIDs válidos' }, { status: 400 })
+    }
+
+    // Verify every supplied UUID belongs to this product (no orphans) AND
+    // that we got all of them (no missing photos).
+    const existing = await pool.query(
+      'SELECT id FROM product_photos WHERE product_id = $1 ORDER BY position ASC',
+      [params.id]
+    )
+    const existingIds: Set<string> = new Set<string>(
+      (existing.rows as Array<{ id: string }>).map((r) => r.id)
+    )
+    const suppliedIds: Set<string> = new Set<string>(order as string[])
+    let allInSupplied = true
+    existingIds.forEach((id: string) => {
+      if (!suppliedIds.has(id)) allInSupplied = false
+    })
+    if (!allInSupplied) {
+      return NextResponse.json(
+        { error: 'La lista debe incluir exactamente todas las fotos existentes del producto' },
+        { status: 400 }
+      )
+    }
+
+    // Capture the URL of the new position-0 photo so we can sync
+    // products.photo_url after the reorder.
+    const newFirstRes = await pool.query(
+      'SELECT url FROM product_photos WHERE id = $1 AND product_id = $2',
+      [order[0], params.id]
+    )
+    const newFirstUrl = newFirstRes.rows[0]?.url ?? null
+
+    // Reorder. CASE expression sets position = its index in `order`.
+    // Each photo id is unique within a product so this is safe.
+    const ids = order as string[]
+    const caseExpr = ids
+      .map((id, idx) => `WHEN id = $${idx + 1}::uuid THEN ${idx}`)
+      .join(' ')
+    const paramsForCase = [...ids, params.id]
+    await pool.query(
+      `UPDATE product_photos SET position = CASE ${caseExpr} END
+       WHERE product_id = $${paramsForCase.length}`,
+      paramsForCase
+    )
+
+    // Sync products.photo_url so the card thumbnail matches the new
+    // primary photo. If the URL didn't change we still issue the UPDATE
+    // (cheap) to keep the two in lock-step.
+    await pool.query(
+      'UPDATE products SET photo_url = $1 WHERE id = $2',
+      [newFirstUrl, params.id]
+    )
+
+    return NextResponse.json({ ok: true, order: ids })
+  } catch (err) {
+    logger.error(serializeErr(err), 'PATCH photos error:')
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}

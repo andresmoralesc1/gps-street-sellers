@@ -221,3 +221,103 @@ test('DELETE /api/products/{uuid}/photos without auth returns 401', async () => 
   })
   assert.equal(res.status, 401)
 })
+
+// --- Audit 2026-07-20: PATCH photos + FTS endpoint -----------------------
+
+test('PATCH /api/products/{bad-uuid}/photos returns 400', async () => {
+  const res = await fetchJSON('/api/products/not-a-uuid/photos', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: [] }),
+  })
+  assert.equal(res.status, 400)
+})
+
+test('PATCH /api/products/{uuid}/photos without auth returns 401', async () => {
+  const res = await fetchJSON('/api/products/00000000-0000-0000-0000-000000000000/photos', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: ['00000000-0000-0000-0000-000000000000'] }),
+  })
+  assert.equal(res.status, 401)
+})
+
+test('GET /api/products?q=… accepts free-text search and does not 500', async () => {
+  // Anonymous endpoint; we don't assert a particular shape beyond "no 500"
+  // because the seed data changes per environment. We just confirm the
+  // endpoint tolerates the ?q= param with empty / whitespace / normal input.
+  for (const q of ['', '   ', 'empanada', 'arepas con queso', "L'Orange"]) {
+    const url = `/api/products?q=${encodeURIComponent(q)}`
+    const res = await fetchJSON(url)
+    assert.notEqual(res.status, 500, `?q=${q} should not 500`)
+    assert.equal(res.status, 200)
+    assert.ok(Array.isArray(res.body.products), 'response has products array')
+  }
+})
+
+test('GET /api/products?q=bad-chars does not crash (plainto_tsquery sanitizes)', async () => {
+  const res = await fetchJSON('/api/products?q=' + encodeURIComponent('!!!()&&||'))
+  assert.notEqual(res.status, 500)
+  assert.equal(res.status, 200)
+})
+// --- Audit 2026-07-20: backfill + slug resolve ---------------------------
+
+test('migration 017 left no products without a product_photos row', async () => {
+  // Run a direct DB query. We import pg only when needed so the file is still
+  // safe to import in environments without DB access.
+  const pg = require('pg')
+  const envPath = path.join(__dirname, '../../apps/web/.env')
+  const txt = fs.readFileSync(envPath, 'utf8')
+  let dbUrl = ''
+  for (const line of txt.split('\n')) {
+    const m = line.match(/^(DATABASE_URL)\s*=\s*(.*)$/)
+    if (m) { dbUrl = m[2].trim().replace(/^["']|["']$/g, ''); break }
+  }
+  if (!dbUrl) {
+    // No DB URL — skip rather than fail.
+    return
+  }
+  const client = new pg.Client({ connectionString: dbUrl })
+  await client.connect()
+  try {
+    const { rows } = await client.query(
+      `SELECT COUNT(*)::int AS n
+         FROM products p
+         LEFT JOIN product_photos ph ON ph.product_id = p.id
+        WHERE ph.id IS NULL`
+    )
+    assert.equal(rows[0].n, 0, 'no orphan products without a product_photos row')
+  } finally {
+    await client.end()
+  }
+})
+
+test('GET /api/vendors/{slug}/catalog returns products for a public slug', async () => {
+  // Pick the first vendor with a non-empty slug from the seed data.
+  const pg = require('pg')
+  const envPath = path.join(__dirname, '../../apps/web/.env')
+  const txt = fs.readFileSync(envPath, 'utf8')
+  let dbUrl = ''
+  for (const line of txt.split('\n')) {
+    const m = line.match(/^(DATABASE_URL)\s*=\s*(.*)$/)
+    if (m) { dbUrl = m[2].trim().replace(/^["']|["']$/g, ''); break }
+  }
+  if (!dbUrl) return
+  const client = new pg.Client({ connectionString: dbUrl })
+  await client.connect()
+  let slug
+  try {
+    const { rows } = await client.query(
+      `SELECT slug FROM vendors WHERE slug IS NOT NULL AND slug <> '' LIMIT 1`
+    )
+    if (!rows[0]) return // no slug data, skip
+    slug = rows[0].slug
+  } finally {
+    await client.end()
+  }
+
+  const res = await fetchJSON(`/api/vendors/${slug}/catalog`)
+  assert.equal(res.status, 200)
+  assert.ok(res.body.vendor, 'response has vendor object')
+  assert.ok(Array.isArray(res.body.products), 'response has products array')
+})

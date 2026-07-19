@@ -305,6 +305,22 @@ export default function ProductsPage() {
                   folder="products"
                 />
               </div>
+              {formError && (
+                <div
+                  role="alert"
+                  className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3"
+                >
+                  {formError}
+                </div>
+              )}
+              {formSuccess && (
+                <div
+                  role="status"
+                  className="text-sm text-green-700 bg-green-50 border border-green-200 rounded p-3"
+                >
+                  {formSuccess}
+                </div>
+              )}
               <Button
                 onClick={() => editingId ? handleEdit(editingId) : handleAdd()}
                 disabled={formSaving || !formName || !formPrice}
@@ -390,6 +406,57 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation modal — CRIT audit fix: previously the trash
+          button only set deleteId state but no UI rendered a confirmation
+          nor invoked handleDelete(), so the action was a silent no-op. */}
+      {deleteId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setDeleteId(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-modal-title" className="text-lg font-bold mb-2">
+              ¿Eliminar producto?
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Esta acción no se puede deshacer. El producto y todas sus fotos
+              adicionales se eliminarán.
+            </p>
+            {deleteError && (
+              <div
+                role="alert"
+                className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-3"
+              >
+                {deleteError}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setDeleteId(null)
+                  setDeleteError('')
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => handleDelete()}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Nav — aria-label avoids landmark-unique violation when
           SiteHeader ("Navegación principal del sitio") is also a <nav>. */}

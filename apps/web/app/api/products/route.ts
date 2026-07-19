@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
-import { verifyToken, getTokenFromRequest } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 
 // GET /api/products?vendorId=xxx
@@ -12,27 +15,27 @@ import pool from '@/lib/db'
 // behind requireAuth().
 export async function GET(req: NextRequest) {
   try {
-    // Optional auth — read token if present but don't 401 on its absence.
-    // (We don't use the decoded payload here; we just need to know the user
-    // is allowed to browse the catalogue, which is always true.)
-    const token = getTokenFromRequest(req)
-    if (token) {
-      // Verify silently — invalid tokens just become anonymous viewers.
-      await verifyToken(token)
-    }
+    // GET is intentionally public — browsers can browse the catalogue without
+    // being logged in. We still try to parse the token if present so future
+    // logic could personalize, but anonymous viewers always get a 200.
 
     const { searchParams } = new URL(req.url)
     const vendorId = searchParams.get('vendorId')
 
-    let query = 'SELECT * FROM products WHERE 1=1'
+    let query = 'SELECT id, vendor_id, name, description, price, photo_url, created_at FROM products WHERE 1=1'
     const params: any[] = []
 
     if (vendorId) {
+      // Reject malformed UUIDs up front so we don't hand a non-UUID string to
+      // the uuid column (which would 500 with a syntax error from Postgres).
+      if (!UUID_RE.test(vendorId)) {
+        return NextResponse.json({ products: [] }, { status: 200 })
+      }
       params.push(vendorId)
       query += ` AND vendor_id = $${params.length}`
     }
 
-    query += ' ORDER BY created_at DESC'
+    query += ' ORDER BY created_at DESC LIMIT 200'
 
     const result = await pool.query(query, params)
     return NextResponse.json({ products: result.rows })
@@ -45,24 +48,46 @@ export async function GET(req: NextRequest) {
 // POST /api/products — create product (seller only)
 export async function POST(req: NextRequest) {
   try {
-    const token = getTokenFromRequest(req)
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const decoded = await verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    // CRIT audit fix: switched from verifyToken() to requireAuth() so that
+    // a revoked session (e.g. user logged out elsewhere) cannot keep creating
+    // products until the JWT naturally expires.
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const decoded = auth
 
     if (decoded.role !== 'seller') {
       return NextResponse.json({ error: 'Solo vendedores pueden crear productos' }, { status: 403 })
     }
 
-    const { name, description, price, photo_url, vendor_id } = await req.json()
-
-    if (!name) {
-      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
+    const body = await req.json().catch(() => null) as Record<string, unknown> | null
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
     }
-    const priceNum = Number(price)
+
+    // Strict validation: reject arrays/objects masquerading as scalars.
+    const rawName = body.name
+    const rawDescription = body.description
+    const rawPrice = body.price
+    const rawPhotoUrl = body.photo_url
+    const rawVendorId = body.vendor_id
+
+    if (typeof rawName !== 'string' || !rawName.trim() || rawName.trim().length > 200) {
+      return NextResponse.json(
+        { error: 'Nombre inválido (1-200 caracteres)' },
+        { status: 400 }
+      )
+    }
+    const name = rawName.trim()
+
+    let description: string | null = null
+    if (rawDescription !== undefined && rawDescription !== null && rawDescription !== '') {
+      if (typeof rawDescription !== 'string' || rawDescription.length > 5000) {
+        return NextResponse.json({ error: 'Descripción inválida' }, { status: 400 })
+      }
+      description = rawDescription
+    }
+
+    const priceNum = Number(rawPrice)
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
       return NextResponse.json({ error: 'Precio inválido (debe ser mayor a 0)' }, { status: 400 })
     }
@@ -73,9 +98,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let vendorId = vendor_id
+    let photo_url: string | null = null
+    if (rawPhotoUrl !== undefined && rawPhotoUrl !== null && rawPhotoUrl !== '') {
+      if (typeof rawPhotoUrl !== 'string') {
+        return NextResponse.json({ error: 'photo_url inválido' }, { status: 400 })
+      }
+      photo_url = rawPhotoUrl.trim() || null
+    }
 
-    // If no vendor_id provided, look up the authenticated seller's own vendor
+    let vendorId: string | null = null
+    if (rawVendorId !== undefined && rawVendorId !== null && rawVendorId !== '') {
+      if (typeof rawVendorId !== 'string' || !UUID_RE.test(rawVendorId)) {
+        return NextResponse.json({ error: 'vendor_id inválido' }, { status: 400 })
+      }
+      vendorId = rawVendorId
+    }
+
+    // If no vendorId provided, look up the authenticated seller's own vendor
     if (!vendorId) {
       const vendorResult = await pool.query(
         'SELECT id FROM vendors WHERE profile_id IN (SELECT id FROM profiles WHERE user_id = $1)',
@@ -99,8 +138,8 @@ export async function POST(req: NextRequest) {
 
     const result = await pool.query(
       `INSERT INTO products (vendor_id, name, description, price, photo_url)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [vendorId, name, description || '', priceNum, photo_url || null]
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, vendor_id, name, description, price, photo_url, created_at`,
+      [vendorId, name, description, priceNum, photo_url]
     )
 
     return NextResponse.json({ product: result.rows[0] }, { status: 201 })

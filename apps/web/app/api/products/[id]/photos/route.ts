@@ -3,6 +3,14 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Accept absolute http(s) URLs OR relative paths starting with `/`.
+const URL_RE = /^https?:\/\/[^\s]{1,2048}$|^\/[^\s\\]{0,2047}$/
+
+const MAX_PHOTOS_PER_PRODUCT = 6
+
 /**
  * GET /api/products/[id]/photos — list all photos for a product.
  * POST /api/products/[id]/photos — add a photo (owner-only).
@@ -12,6 +20,10 @@ import pool from '@/lib/db'
 export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   try {
+    if (!params.id || !UUID_RE.test(params.id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const result = await pool.query(
       'SELECT id, url, position, created_at FROM product_photos WHERE product_id = $1 ORDER BY position ASC, created_at ASC',
       [params.id]
@@ -26,9 +38,13 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
 export async function POST(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   try {
+    if (!params.id || !UUID_RE.test(params.id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const auth = await requireAuth(req)
-if (auth instanceof NextResponse) return auth
-const userId = auth.userId
+    if (auth instanceof NextResponse) return auth
+
     // Verify ownership: product must belong to a vendor owned by this user.
     const ownerCheck = await pool.query(
       `SELECT p.id FROM products p
@@ -40,38 +56,56 @@ const userId = auth.userId
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const url = (body.url || '').trim()
-    if (!url || !/^https?:\/\//.test(url)) {
-      return NextResponse.json({ error: 'URL inválida' }, { status: 400 })
+    const body = await req.json().catch(() => null) as { url?: unknown } | null
+    if (!body || typeof body.url !== 'string') {
+      return NextResponse.json({ error: 'Falta campo url' }, { status: 400 })
+    }
+    const url = body.url.trim()
+    if (!url || !URL_RE.test(url)) {
+      return NextResponse.json(
+        { error: 'URL inválida (debe empezar con http(s):// o /)' },
+        { status: 400 }
+      )
     }
 
-    // Cap at 6 photos per product.
-    const countResult = await pool.query(
-      'SELECT COUNT(*) as c FROM product_photos WHERE product_id = $1',
-      [params.id]
-    )
-    if (Number(countResult.rows[0].c) >= 6) {
-      return NextResponse.json({ error: 'Máximo 6 fotos por producto' }, { status: 400 })
-    }
-
-    const maxPos = await pool.query(
-      'SELECT COALESCE(MAX(position), -1) as m FROM product_photos WHERE product_id = $1',
-      [params.id]
-    )
-    const nextPos = Number(maxPos.rows[0].m) + 1
-
+    // Atomic insert with photo-cap guard: a single statement that returns the
+    // photo only if the product has < 6 photos at insert time. Eliminates the
+    // race window where two concurrent POSTs both read count=5 and both
+    // succeed, leaving the product with 7 photos.
     const inserted = await pool.query(
-      'INSERT INTO product_photos (product_id, url, position) VALUES ($1, $2, $3) RETURNING *',
-      [params.id, url, nextPos]
+      `INSERT INTO product_photos (product_id, url, position)
+       SELECT $1, $2, COALESCE(MAX(position) + 1, 0)
+       FROM product_photos
+       WHERE product_id = $1
+       HAVING COUNT(*) < $3
+       RETURNING *`,
+      [params.id, url, MAX_PHOTOS_PER_PRODUCT]
     )
 
-    // If this is the first photo, also set products.photo_url for legacy readers.
-    if (nextPos === 0) {
-      await pool.query('UPDATE products SET photo_url = $1 WHERE id = $2', [url, params.id])
+    if (inserted.rows.length === 0) {
+      return NextResponse.json(
+        { error: `Máximo ${MAX_PHOTOS_PER_PRODUCT} fotos por producto` },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ photo: inserted.rows[0] }, { status: 201 })
+    const newPhoto = inserted.rows[0]
+    const isFirstPhoto = newPhoto.position === 0
+
+    // If this is the first photo, also set products.photo_url for legacy
+    // readers. Best-effort: if it fails, the new photo is still saved.
+    if (isFirstPhoto) {
+      try {
+        await pool.query(
+          'UPDATE products SET photo_url = $1 WHERE id = $2 AND photo_url IS NULL',
+          [url, params.id]
+        )
+      } catch (updateErr) {
+        logger.warn(serializeErr(updateErr), 'Non-fatal: failed to sync products.photo_url')
+      }
+    }
+
+    return NextResponse.json({ photo: newPhoto }, { status: 201 })
   } catch (err) {
     logger.error(serializeErr(err), 'POST photos error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
@@ -81,8 +115,13 @@ const userId = auth.userId
 export async function DELETE(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   try {
+    if (!params.id || !UUID_RE.test(params.id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth
+
     const ownerCheck = await pool.query(
       `SELECT p.id FROM products p
        JOIN vendors v ON v.id = p.vendor_id
@@ -93,17 +132,43 @@ export async function DELETE(req: NextRequest, { params: paramsPromise }: { para
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    const body = await req.json().catch(() => ({}))
-    const photoId = body.photo_id
-    if (!photoId) return NextResponse.json({ error: 'Falta photo_id' }, { status: 400 })
+    let body: { photo_id?: unknown } | null = null
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido en body' }, { status: 400 })
+    }
+    const photoId = body?.photo_id
+    if (typeof photoId !== 'string' || !UUID_RE.test(photoId)) {
+      return NextResponse.json({ error: 'photo_id inválido' }, { status: 400 })
+    }
 
     const del = await pool.query(
-      'DELETE FROM product_photos WHERE id = $1 AND product_id = $2 RETURNING id',
+      'DELETE FROM product_photos WHERE id = $1 AND product_id = $2 RETURNING id, position',
       [photoId, params.id]
     )
     if (del.rows.length === 0) {
       return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
     }
+
+    // If we just removed position 0 (the legacy "main" photo), promote the
+    // next-lowest position photo to photo_url so the card thumbnail keeps
+    // working. Best-effort.
+    if (del.rows[0].position === 0) {
+      try {
+        await pool.query(
+          `UPDATE products SET photo_url = (
+             SELECT url FROM product_photos
+             WHERE product_id = $1
+             ORDER BY position ASC LIMIT 1
+           ) WHERE id = $1`,
+          [params.id]
+        )
+      } catch (updateErr) {
+        logger.warn(serializeErr(updateErr), 'Non-fatal: failed to promote next photo_url')
+      }
+    }
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     logger.error(serializeErr(err), 'DELETE photos error:')

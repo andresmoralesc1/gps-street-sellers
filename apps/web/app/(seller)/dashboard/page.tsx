@@ -20,6 +20,7 @@ import { BusinessHours } from '@/components/seller/BusinessHours'
 import { VendorVisibility } from '@/components/seller/VendorVisibility'
 import { WhatsAppCatalog } from '@/components/seller/WhatsAppCatalog'
 import { LocationHistory } from '@/components/seller/LocationHistory'
+import { ManualLocationPicker } from '@/components/seller/ManualLocationPicker'
 import { useStore } from '@/store/useStore'
 
 interface Product {
@@ -326,9 +327,9 @@ function DashboardContent() {
                 initialStationType={vendorData?.stationType ?? 'mobile'}
               />
 
-              {/* Compartir ubicación GPS */}
+              {/* Tu ubicación en el mapa: GPS automático + ajuste manual */}
               <Card variant="outlined" className="p-4">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 mb-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${vendorData?.latitude ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-500'}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
@@ -342,22 +343,19 @@ function DashboardContent() {
                         ? `Activa — lat ${vendorData.latitude.toFixed(4)}, lng ${vendorData.longitude.toFixed(4)}`
                         : 'No has compartido tu ubicación todavía'}
                     </p>
-                    {locationError && (
-                      <p className="text-red-500 text-xs mt-1">{locationError}</p>
-                    )}
-                    {locationSuccess && !locationError && (
-                      <p className="text-green-600 text-xs mt-1">✓ Ubicación actualizada en tiempo real</p>
-                    )}
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={handleShareLocation}
-                    disabled={sharingLocation}
-                    className={vendorData?.latitude ? 'bg-green-600 hover:bg-green-700' : ''}
-                  >
-                    {sharingLocation ? 'Obteniendo...' : vendorData?.latitude ? 'Actualizar' : 'Compartir'}
-                  </Button>
                 </div>
+                <ManualLocationPicker
+                  initialLat={vendorData?.latitude ?? null}
+                  initialLng={vendorData?.longitude ?? null}
+                  initialCityId={vendorData?.cityId ?? null}
+                  onSaved={(lat, lng) => {
+                    setVendorData((v: any) => v ? { ...v, latitude: lat, longitude: lng } : v)
+                    setLocationSuccess(true)
+                    setLocationError('')
+                    showToast('Ubicación actualizada ✓', 'success')
+                  }}
+                />
               </Card>
 
               {/* N6: Copy public vendor link */}

@@ -118,6 +118,7 @@ export function ContactoView() {
         <div className="grid md:grid-cols-3 gap-8">
           {/* Info */}
           <aside className="space-y-6">
+            <h2 className="sr-only">Información de contacto</h2>
             <Card variant="outlined" className="p-5">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">

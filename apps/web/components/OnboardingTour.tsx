@@ -62,6 +62,17 @@ export function OnboardingTour() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Close on Escape (WCAG 2.1.1 — keyboard access)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') skip()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const finish = () => {
     localStorage.setItem(STORAGE_KEY, '1')
     setOpen(false)
@@ -101,7 +112,7 @@ export function OnboardingTour() {
         <button
           onClick={skip}
           aria-label="Cerrar tour"
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-1"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-1 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg"
         >
           <X size={20} />
         </button>
@@ -149,7 +160,7 @@ export function OnboardingTour() {
 
         <button
           onClick={skip}
-          className="block mx-auto mt-3 text-sm text-gray-400 hover:text-gray-600"
+          className="block mx-auto mt-3 px-3 py-2 text-sm text-gray-400 hover:text-gray-600 rounded min-h-[36px]"
         >
           Omitir tour
         </button>

@@ -180,9 +180,28 @@ export function SiteHeader() {
             ) : null}
           </div>
 
-          {/* Mobile hamburger */}
+          {/* Mobile hamburger + inline auth CTA (so sign-up is reachable in 1 tap on mobile, not 2) */}
           <div className="flex items-center gap-2 md:hidden">
             <NotificationBell />
+            {!isLoggedIn && !isAuthPage && !onRegister && (
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-b from-primary to-primary-600 text-white text-sm font-semibold shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.97] transition-all"
+                aria-label="Registrarme gratis"
+              >
+                <User size={15} aria-hidden="true" />
+                <span>Registrarme</span>
+              </Link>
+            )}
+            {!isLoggedIn && !isAuthPage && !onLogin && (
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-gray-100 text-gray-600 hover:bg-primary/10 hover:text-primary active:scale-[0.97] transition-all"
+                aria-label="Ingresar"
+              >
+                <LogIn size={18} aria-hidden="true" />
+              </Link>
+            )}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className={`p-2.5 rounded-xl transition-all duration-200 ${
@@ -190,7 +209,8 @@ export function SiteHeader() {
                   ? 'bg-primary text-white shadow-lg shadow-primary/30'
                   : 'bg-gray-100 text-gray-600 hover:bg-primary/10 hover:text-primary'
               }`}
-              aria-label="Menu"
+              aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuOpen}
             >
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>

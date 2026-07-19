@@ -6,6 +6,7 @@ export function SiteFooter() {
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+        <h2 className="sr-only">Enlaces del pie de página</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
 
           {/* Brand */}
@@ -30,7 +31,7 @@ export function SiteFooter() {
 
           {/* Explorar */}
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Explorar</h4>
+            <h3 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Explorar</h3>
             <ul className="space-y-1">
               <li><Link href="/map" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Mapa de vendedores</Link></li>
               <li><Link href="/register" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Ser vendedor</Link></li>
@@ -40,7 +41,7 @@ export function SiteFooter() {
 
           {/* Compañía */}
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Compañía</h4>
+            <h3 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Compañía</h3>
             <ul className="space-y-1">
               <li><Link href="/nosotros" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Sobre nosotros</Link></li>
               <li><Link href="/inversionistas" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Inversionistas</Link></li>
@@ -51,7 +52,7 @@ export function SiteFooter() {
 
           {/* Legal */}
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Legal</h4>
+            <h3 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Legal</h3>
             <ul className="space-y-1">
               <li><Link href="/privacidad" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Política de privacidad</Link></li>
               <li><Link href="/terminos" className="text-sm hover:text-primary-400 transition-colors inline-block py-2 min-h-[36px]">Términos y condiciones</Link></li>

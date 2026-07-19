@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, MapPin, Share2, Copy, ExternalLink, BarChart3 } from 'lucide-react'
+import { Plus, MapPin, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
 /**
@@ -48,11 +48,8 @@ export function FloatingActionButton({ vendorId, onShareLocation, sharingLocatio
       icon: ExternalLink,
       href: `/vendedor/${vendorId}`,
     },
-    {
-      label: 'Ver mapa de pedidos',
-      icon: BarChart3,
-      href: '/orders-map',
-    },
+    // "Ver mapa de pedidos" was removed — the /orders-map route was never
+    // implemented (always 404). Sellers get order info from /dashboard stats.
   ]
 
   return (

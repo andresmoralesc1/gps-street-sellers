@@ -49,18 +49,23 @@ export default function ProductsPage() {
       return
     }
 
-    // Get vendorId from /api/vendors/me
+    // Get vendorId from /api/vendors/me.
+    // As of commit c84a990 the GET handler returns { vendors: [...] }; pre-split
+    // shape was { vendor: {...} }. Defensive: accept both so an unfinished
+    // deploy of the API doesn't break the seller UI.
     fetch('/api/vendors/me', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
-        if (!data.vendor) {
+        const list = data.vendors ?? (data.vendor ? [data.vendor] : [])
+        const firstVendor = list[0]
+        if (!firstVendor) {
           setLoading(false)
           return
         }
-        setVendorId(data.vendor.id)
+        setVendorId(firstVendor.id)
 
         // Fetch products
-        return fetch(`/api/products?vendorId=${data.vendor.id}`, {
+        return fetch(`/api/products?vendorId=${firstVendor.id}`, {
           credentials: 'include',
         })
       })

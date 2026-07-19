@@ -48,18 +48,23 @@ export default function EditProfilePage() {
       return
     }
 
-    // First get vendorId from /api/vendors/me
+    // First get vendorId from /api/vendors/me.
+    // c84a990 split the endpoint: GET now returns { vendors: [...] }.
+    // Defensive: accept the legacy { vendor } shape so un-migrated callers
+    // still work.
     fetch('/api/vendors/me', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
-        if (!data.vendor) {
+        const list = data.vendors ?? (data.vendor ? [data.vendor] : [])
+        const firstVendor = list[0]
+        if (!firstVendor) {
           setLoading(false)
           return
         }
-        setVendorId(data.vendor.id)
+        setVendorId(firstVendor.id)
 
         // Then fetch full vendor data
-        return fetch(`/api/vendors/${data.vendor.id}`, {
+        return fetch(`/api/vendors/${firstVendor.id}`, {
           credentials: 'include',
         })
       })

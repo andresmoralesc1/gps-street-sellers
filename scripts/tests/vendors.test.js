@@ -150,3 +150,70 @@ test('PATCH /api/vendors/me with invalid cityId returns 400', async () => {
   assert.ok(res.status === 401 || res.status === 400,
     `expected 401 or 400, got ${res.status}: ${JSON.stringify(res.body)}`)
 })
+
+// Regression: After commit c84a990 split GET into { vendors: [...] } and PATCH
+// into { vendor: {...} }, three client pages (/products, /profile/edit,
+// /settings) were still reading data.vendor instead of data.vendors[0]. That
+// made /products always render the empty "Sin perfil de vendedor" state, even
+// for sellers with a real vendor. The fix on the client side uses:
+//   const list = data.vendors ?? (data.vendor ? [data.vendor] : [])
+// We can't directly unit-test client code here, but we CAN lock in the API
+// contract: a seller with a vendor must get `vendors.length >= 1`. If a
+// future refactor reverts the endpoint back to `{ vendor: {...} }`, these
+// tests will catch it.
+test('GET /api/vendors/me returns vendors[] shape (not legacy vendor shape)', async () => {
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return // skip if test user gone
+
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors/me', {
+    headers: { Cookie: cookieHeader },
+  })
+  assert.equal(res.status, 200)
+  // Contract: response MUST contain `vendors` array (the new shape from c84a990).
+  // Legacy single-vendor `vendor` shape is no longer supported by the backend;
+  // clients use a defensive fallback to stay compatible during partial deploys.
+  assert.ok(Array.isArray(res.body.vendors),
+    'API contract: { vendors: [...] } (post-c84a990), not { vendor: {...} }')
+  assert.equal(res.body.vendor, undefined,
+    'API must NOT also include legacy `vendor` field (would mask new shape)')
+})
+
+test('GET /api/vendors/me with logged-in seller returns at least one vendor for Test Seller 24', async () => {
+  // This user was seeded with a vendor row (scripts/seed-testseller24.sql).
+  // If their vendor got deleted during cleanup, skip — the contract test above
+  // still gates the response shape.
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return
+
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors/me', {
+    headers: { Cookie: cookieHeader },
+  })
+  assert.equal(res.status, 200)
+  assert.ok(Array.isArray(res.body.vendors))
+  assert.ok(res.body.vendors.length >= 1,
+    'seeded test seller must have at least one vendor row — otherwise /products and /profile/edit render the "Sin perfil de vendedor" empty state')
+  // The shape returned must have a top-level `id` so the client pages can
+  // call `list[0].id` without further unwrapping.
+  assert.ok(typeof res.body.vendors[0].id === 'string' && res.body.vendors[0].id.length > 0,
+    'first vendor must expose a non-empty id')
+})

@@ -62,7 +62,10 @@ export default function SettingsPage() {
       fetch('/api/vendors/me', { credentials: 'include' })
         .then((r) => r.json())
         .then((data) => {
-          if (data.vendor?.id) setVendorId(data.vendor.id)
+          // c84a990 split the endpoint: GET returns { vendors: [...] }.
+          // Defensive: accept legacy { vendor } too.
+          const list = data.vendors ?? (data.vendor ? [data.vendor] : [])
+          if (list[0]?.id) setVendorId(list[0].id)
         })
         .catch(() => {})
     }

@@ -66,7 +66,7 @@ const nextConfig = {
       `style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `img-src 'self' data: blob: https:`, // Supabase storage + user uploads + external product photos
       `font-src 'self' data: https://fonts.gstatic.com`, // Google Fonts files
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com`,
       `worker-src 'self'`, // service worker for push notifications
       `manifest-src 'self'`,
       `frame-ancestors 'none'`,

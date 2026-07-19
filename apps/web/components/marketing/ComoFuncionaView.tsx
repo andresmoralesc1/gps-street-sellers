@@ -123,7 +123,10 @@ export function ComoFuncionaView() {
           Solo compartes tu ubicación cuando estás activamente vendiendo.
           Cumplimos con la Ley 1581/2012 de Protección de Datos Personales de Colombia.
         </p>
-        <Link href="/privacidad" className="text-orange-600 hover:underline font-medium">
+        <Link
+          href="/privacidad"
+          className="inline-flex items-center min-h-[44px] text-orange-600 hover:underline font-medium px-2 py-2 rounded"
+        >
           Leer política de tratamiento de datos →
         </Link>
       </section>

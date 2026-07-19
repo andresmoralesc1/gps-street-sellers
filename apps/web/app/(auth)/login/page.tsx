@@ -228,7 +228,7 @@ function AuthPageContent() {
                 <label className="text-sm font-medium text-gray-700">Contraseña</label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-primary-700 hover:text-primary-800 hover:underline font-medium"
+                  className="text-sm text-primary-700 hover:text-primary-800 hover:underline font-medium px-2 py-1.5 -mx-2 rounded min-h-[36px] inline-flex items-center"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -246,9 +246,9 @@ function AuthPageContent() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
@@ -362,9 +362,9 @@ function AuthPageContent() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
@@ -373,13 +373,13 @@ function AuthPageContent() {
               <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
-            <div className="space-y-2 pt-2">
-              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+            <div className="space-y-1 pt-2">
+              <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">
                 <input
                   type="checkbox"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="mt-0.5 rounded border-gray-300 text-primary-700 focus:ring-primary"
+                  className="mt-0.5 w-5 h-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                   required
                 />
                 <span>
@@ -389,12 +389,12 @@ function AuthPageContent() {
                   </Link>
                 </span>
               </label>
-              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">
                 <input
                   type="checkbox"
                   checked={acceptedPrivacy}
                   onChange={(e) => setAcceptedPrivacy(e.target.checked)}
-                  className="mt-0.5 rounded border-gray-300 text-primary-700 focus:ring-primary"
+                  className="mt-0.5 w-5 h-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                   required
                 />
                 <span>
@@ -421,7 +421,7 @@ function AuthPageContent() {
               <button
                 type="button"
                 onClick={() => { setStep('register'); setError('') }}
-                className="text-primary-700 font-semibold hover:underline"
+                className="text-primary-700 font-semibold hover:underline px-2 py-1.5 -mx-2 rounded min-h-[36px] inline-flex items-center"
               >
                 Regístrate gratis
               </button>

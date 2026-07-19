@@ -161,4 +161,16 @@
   .leaflet-container:has(.user-location-draggable-marker:active) {
     cursor: grabbing;
   }
+
+  /* Mobile touch targets — Leaflet defaults to 30x30 zoom buttons which
+     fail WCAG 2.5.5 (target size 36x36 minimum) on mobile. Bumping them
+     to 40x40 keeps them tappable with a thumb without breaking desktop. */
+  @media (max-width: 768px) {
+    .leaflet-control-zoom a {
+      width: 40px !important;
+      height: 40px !important;
+      line-height: 40px !important;
+      font-size: 22px !important;
+    }
+  }
 }

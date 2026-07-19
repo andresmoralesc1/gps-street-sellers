@@ -235,14 +235,14 @@ export default function RegisterPage() {
           />
 
           {/* Ley 1581/2012 — explicit, informed consent. */}
-          <div className="space-y-2 pt-2 border-t border-gray-100">
-            <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+          <div className="space-y-1 pt-2 border-t border-gray-100">
+            <label className="flex items-start gap-3 text-xs text-gray-600 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">
               <input
                 type="checkbox"
                 checked={acceptedTerms}
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 disabled={isLoading}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
+                className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                 required
               />
               <span>
@@ -253,13 +253,13 @@ export default function RegisterPage() {
                 .
               </span>
             </label>
-            <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+            <label className="flex items-start gap-3 text-xs text-gray-600 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">
               <input
                 type="checkbox"
                 checked={acceptedPrivacy}
                 onChange={(e) => setAcceptedPrivacy(e.target.checked)}
                 disabled={isLoading}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
+                className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                 required
               />
               <span>
@@ -289,7 +289,10 @@ export default function RegisterPage() {
 
         <p className="text-center mt-6 text-gray-600">
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="text-primary-700 font-semibold">
+          <Link
+            href="/login"
+            className="text-primary-700 font-semibold px-2 py-1.5 -mx-2 rounded min-h-[36px] inline-flex items-center hover:underline"
+          >
             Inicia sesión
           </Link>
         </p>

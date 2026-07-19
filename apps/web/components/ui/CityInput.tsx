@@ -111,14 +111,14 @@ export function CityInput({
       {/* Input */}
       <div
         className={clsx(
-          'flex items-center gap-2 w-full px-3 py-2.5 border bg-white text-sm',
+          'flex items-center gap-2 w-full px-3 py-3 border bg-white text-sm min-h-[44px]',
           'focus-within:ring-2 focus-within:ring-primary/50',
           'disabled:opacity-50',
           radius,
           open ? 'border-primary' : 'border-gray-300'
         )}
       >
-        <Search size={16} className="text-gray-400 shrink-0" />
+        <Search size={18} className="text-gray-400 shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -140,10 +140,10 @@ export function CityInput({
           <button
             type="button"
             onClick={clear}
-            className="text-gray-400 hover:text-gray-600 shrink-0"
+            className="text-gray-400 hover:text-gray-600 shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center rounded"
             aria-label="Limpiar selección"
           >
-            <X size={14} />
+            <X size={18} />
           </button>
         )}
       </div>

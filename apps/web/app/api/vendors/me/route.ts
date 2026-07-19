@@ -6,44 +6,129 @@ import { COLOMBIA_CITIES } from '@/lib/core/constants/cities'
 
 const VALID_CITY_IDS = new Set(COLOMBIA_CITIES.map((c) => c.id))
 
-
+/**
+ * GET /api/vendors/me
+ *
+ * Returns the calling seller's vendor(s), if any. Used by the dashboard to
+ * pick the active vendor and populate the seller profile.
+ *
+ * Auth: required (seller). Non-sellers get 403; sellers with no vendor yet
+ * get an empty `vendors` array (the dashboard then redirects to /onboarding).
+ *
+ * Shape (camelCase, matches what the dashboard reads in
+ * apps/web/app/(seller)/dashboard/page.tsx):
+ *   { vendors: Array<{ id, name, slug, category, description, photoUrl, ... }> }
+ *
+ * Note: prior version of this file exported a single handler named `GET` that
+ * was actually a PATCH (it called req.json() and ran an UPDATE). Calling it as
+ * GET returned HTTP 500 because the body parse failed. This file now exports
+ * two distinct handlers: GET (read) and PATCH (update).
+ */
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth
-    const userId = auth.userId
 
-    const body = await req.json()
-
-    // Find vendor by user
-    const profileRes = await pool.query(
-      'SELECT id FROM profiles WHERE user_id = $1',
-      [userId]
-    )
-
-    if (profileRes.rows.length === 0) {
-      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    if (auth.role !== 'seller') {
+      return NextResponse.json({ error: 'Solo vendedores pueden acceder' }, { status: 403 })
     }
 
-    const profileId = profileRes.rows[0].id
-
-    const vendorRes = await pool.query(
-      'SELECT id FROM vendors WHERE profile_id = $1',
-      [profileId]
+    // Join through profiles to filter vendors owned by this user. Returned in
+    // created_at DESC so the dashboard's "pick first" logic surfaces the most
+    // recently created vendor by default.
+    const result = await pool.query(
+      `SELECT v.id, v.name, v.slug, v.description, v.category, v.phone,
+              v.photo_url, v.vehicle_type, v.vehicle_photo_url, v.station_type,
+              v.is_active, v.is_verified, v.business_hours_enabled,
+              v.business_hours_start, v.business_hours_end, v.business_days,
+              v.latitude, v.longitude, v.city_id,
+              v.created_at, v.location_updated_at
+       FROM vendors v
+       JOIN profiles p ON p.id = v.profile_id
+       WHERE p.user_id = $1
+       ORDER BY v.created_at DESC`,
+      [auth.userId]
     )
 
-    if (vendorRes.rows.length === 0) {
-      return NextResponse.json({ error: 'Vendedor no encontrado' }, { status: 404 })
+    // Map snake_case → camelCase for the client. Anything not listed here is
+    // intentionally omitted (e.g. internal flags, raw IDs).
+    const vendors = result.rows.map((v) => ({
+      id: v.id,
+      name: v.name,
+      slug: v.slug,
+      description: v.description,
+      category: v.category,
+      phone: v.phone,
+      photoUrl: v.photo_url,
+      vehicleType: v.vehicle_type,
+      vehiclePhotoUrl: v.vehicle_photo_url,
+      stationType: v.station_type,
+      isActive: v.is_active,
+      isVerified: v.is_verified || false,
+      businessHoursEnabled: v.business_hours_enabled || false,
+      businessHoursStart: v.business_hours_start,
+      businessHoursEnd: v.business_hours_end,
+      businessDays: v.business_days || [],
+      latitude: v.latitude,
+      longitude: v.longitude,
+      cityId: v.city_id,
+      createdAt: v.created_at,
+      locationUpdatedAt: v.location_updated_at,
+    }))
+
+    return NextResponse.json({ vendors })
+  } catch (err) {
+    logger.error(serializeErr(err), 'Vendors/me GET error:')
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+/**
+ * PATCH /api/vendors/me
+ *
+ * Update the calling seller's vendor profile. The currently selected vendor
+ * is used; multi-vendor users can pass ?vendorId=<uuid> but ownership is
+ * still verified against the calling user.
+ *
+ * Body (all fields optional — only what you send gets updated):
+ *   name, description, category, phone, cityId, isActive, photoUrl,
+ *   vehicleType, vehiclePhotoUrl, stationType
+ *
+ * 'is_verified' is intentionally NOT here — only admins can verify vendors.
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+
+    if (auth.role !== 'seller') {
+      return NextResponse.json({ error: 'Solo vendedores pueden editar su perfil' }, { status: 403 })
     }
 
-    const vendorId = vendorRes.rows[0].id
+    // Resolve which vendor to update: explicit ?vendorId= must belong to the
+    // caller; otherwise fall back to the first vendor they own.
+    const url = new URL(req.url)
+    const requestedVendorId = url.searchParams.get('vendorId')
 
-    // Build update query dynamically for allowed fields
-    // NOTE: 'is_verified' is intentionally NOT here — only admins can verify vendors.
-    // vehicle_type + vehicle_photo_url let vendors show what cart/vehicle they use
-    // (used for the "anunciate en el carrito" revenue stream and buyer trust).
-    // Map client camelCase keys to DB snake_case columns.
-    // Keys not in this map are ignored (intentional: prevents arbitrary column writes).
+    let body: Record<string, unknown>
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    }
+
+    // CRIT-18: validate city_id against the canonical list. Prevents typos or
+    // missing values that would silently leave a vendor out of every city's
+    // stream.
+    if (body.cityId !== undefined && body.cityId !== null &&
+        !VALID_CITY_IDS.has(body.cityId as string)) {
+      return NextResponse.json(
+        { error: 'cityId no válido. Debe ser uno de los códigos de ciudad soportados.' },
+        { status: 400 }
+      )
+    }
+
+    // Client camelCase → DB snake_case. Keys not in this map are ignored.
     const clientToDb: Record<string, string> = {
       name: 'name',
       description: 'description',
@@ -56,8 +141,9 @@ export async function GET(req: NextRequest) {
       vehiclePhotoUrl: 'vehicle_photo_url',
       stationType: 'station_type',
     }
+
     const updates: string[] = []
-    const values: any[] = []
+    const values: unknown[] = []
     let paramIndex = 1
 
     for (const [clientKey, dbField] of Object.entries(clientToDb)) {
@@ -72,22 +158,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No se proporcionaron campos para actualizar' }, { status: 400 })
     }
 
-    // CRIT-18: validate city_id against the canonical list. Previously a
-    // missing/invalid value was silently accepted by Postgres (NULL or empty
-    // string), so vendors could end up with no city or a typo'd city id and
-    // never appear in any city's stream.
-    if (body.cityId !== undefined && !VALID_CITY_IDS.has(body.cityId)) {
-      return NextResponse.json(
-        { error: 'cityId no válido. Debe ser uno de los códigos de ciudad soportados.' },
-        { status: 400 }
+    // Resolve vendor id with ownership check. We do it in SQL so a wrong
+    // ?vendorId= from a non-owner never reaches the UPDATE.
+    let vendorId: string | null = null
+    if (requestedVendorId) {
+      const ownerCheck = await pool.query(
+        `SELECT v.id FROM vendors v
+         JOIN profiles p ON p.id = v.profile_id
+         WHERE v.id = $1 AND p.user_id = $2`,
+        [requestedVendorId, auth.userId]
       )
+      if (ownerCheck.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'Vendedor no encontrado o no te pertenece' },
+          { status: 404 }
+        )
+      }
+      vendorId = ownerCheck.rows[0].id
+    } else {
+      const anyCheck = await pool.query(
+        `SELECT v.id FROM vendors v
+         JOIN profiles p ON p.id = v.profile_id
+         WHERE p.user_id = $1
+         ORDER BY v.created_at DESC
+         LIMIT 1`,
+        [auth.userId]
+      )
+      if (anyCheck.rows.length === 0) {
+        return NextResponse.json({ error: 'Vendedor no encontrado' }, { status: 404 })
+      }
+      vendorId = anyCheck.rows[0].id
     }
 
     values.push(vendorId)
     const query = `UPDATE vendors SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`
 
     const result = await pool.query(query, values)
-
     return NextResponse.json({ vendor: result.rows[0] })
   } catch (err) {
     logger.error(serializeErr(err), 'Vendors/me PATCH error:')

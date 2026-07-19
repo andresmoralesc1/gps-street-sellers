@@ -38,19 +38,14 @@ export default function NotificationsPage() {
       .finally(() => setLoading(false))
   }, [_hasHydrated, user, router])
 
+  // Use the dedicated bulk endpoint instead of patching each notification
+  // individually. One round-trip + one UPDATE in the DB, regardless of how
+  // many unread notifications the user has.
   const markAllRead = async () => {
-    await Promise.all(
-      notifications
-        .filter((n) => !n.read)
-        .map((n) =>
-          fetch(`/api/notifications/${n.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ read: true }),
-          })
-        )
-    )
+    await fetch('/api/notifications/mark-all-read', {
+      method: 'POST',
+      credentials: 'include',
+    })
     setNotifications(notifications.map((n) => ({ ...n, read: true })))
   }
 

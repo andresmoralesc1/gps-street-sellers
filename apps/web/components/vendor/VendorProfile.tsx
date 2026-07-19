@@ -79,8 +79,12 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
           {/* Rating */}
           <div className="flex items-center justify-center sm:justify-start gap-2 mt-3">
             <Star size={20} className="text-yellow-500 fill-yellow-500" />
-            <span className="text-xl font-bold">{vendor.ratingAvg.toFixed(1)}</span>
-            <span className="text-gray-500">({vendor.reviewCount} reseñas)</span>
+            {/* Same guard as VendorCard: ratingAvg can be null until the
+                vendor accumulates reviews. Server returns COALESCE. */}
+            <span className="text-xl font-bold">
+              {typeof vendor.ratingAvg === 'number' ? vendor.ratingAvg.toFixed(1) : '—'}
+            </span>
+            <span className="text-gray-500">({vendor.reviewCount ?? 0} reseñas)</span>
           </div>
 
           <p className="text-gray-600 mt-4">{vendor.description}</p>

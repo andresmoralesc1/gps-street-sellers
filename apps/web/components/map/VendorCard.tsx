@@ -162,7 +162,13 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, 
             </div>
             <div className="flex items-center gap-1">
               <Star size={16} className="text-yellow-500 fill-yellow-500" />
-              <span className="font-semibold">{vendor.ratingAvg.toFixed(1)}</span>
+              {/* ratingAvg can be null when the vendor has no reviews yet
+                  (server returns rating with COALESCE). Guard before .toFixed
+                  to avoid crash on click. Fallback shows em-dash (—) so the
+                  UI doesn't lie about a rating that doesn't exist. */}
+              <span className="font-semibold">
+                {typeof vendor.ratingAvg === 'number' ? vendor.ratingAvg.toFixed(1) : '—'}
+              </span>
             </div>
           </div>
 

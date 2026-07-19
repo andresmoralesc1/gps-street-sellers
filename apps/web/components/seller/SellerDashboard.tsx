@@ -229,7 +229,11 @@ export function SellerDashboard({
           <p className="text-sm text-gray-500">Pedidos</p>
         </Card>
         <Card variant="outlined" className="p-4 text-center">
-          <p className="text-3xl font-bold text-yellow-500">{stats.rating.toFixed(1)}</p>
+          <p className="text-3xl font-bold text-yellow-500">
+            {/* Guard: stats.rating can be null when the vendor has no reviews.
+                Matches the pattern in VendorCard / VendorProfile. */}
+            {typeof stats.rating === 'number' ? stats.rating.toFixed(1) : '—'}
+          </p>
           <p className="text-sm text-gray-500">Rating</p>
         </Card>
       </div>

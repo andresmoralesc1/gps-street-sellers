@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { BarChart3, Package, Settings, Edit3, ChevronRight, Camera, RefreshCw } from 'lucide-react'
@@ -11,17 +12,39 @@ import { ActiveToggle } from '@/components/seller/ActiveToggle'
 import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { ConnectivityIndicator } from '@/components/seller/ConnectivityIndicator'
 import { FloatingActionButton } from '@/components/seller/FloatingActionButton'
-import { PullToRefresh } from '@/components/seller/PullToRefresh'
 import { CopyPublicLink } from '@/components/seller/CopyPublicLink'
 import { ConfirmToast, useToast } from '@/components/seller/Toast'
-import { VendorSwitcher } from '@/components/seller/VendorSwitcher'
-import { LiveViewers } from '@/components/seller/LiveViewers'
-import { BusinessHours } from '@/components/seller/BusinessHours'
 import { VendorVisibility } from '@/components/seller/VendorVisibility'
 import { WhatsAppCatalog } from '@/components/seller/WhatsAppCatalog'
-import { LocationHistory } from '@/components/seller/LocationHistory'
-import { ManualLocationPicker } from '@/components/seller/ManualLocationPicker'
 import { useStore } from '@/store/useStore'
+
+// Heavy / map-bound / WS-bound components — dynamic-imported with ssr:false
+// so a failure inside any of them doesn't take down the whole dashboard.
+// Each one has a lightweight skeleton fallback so the layout stays stable.
+const PullToRefresh = dynamic(() => import('@/components/seller/PullToRefresh').then(m => m.PullToRefresh), {
+  ssr: false,
+  loading: () => <div className="min-h-screen bg-background-cream pb-24">{/* skeleton handled by child */}</div>,
+})
+const VendorSwitcher = dynamic(() => import('@/components/seller/VendorSwitcher').then(m => m.VendorSwitcher), {
+  ssr: false,
+  loading: () => <div className="h-12 rounded-lg bg-white animate-pulse" />,
+})
+const LiveViewers = dynamic(() => import('@/components/seller/LiveViewers').then(m => m.LiveViewers), {
+  ssr: false,
+  loading: () => <div className="h-8 w-32 rounded bg-gray-100 animate-pulse" />,
+})
+const BusinessHours = dynamic(() => import('@/components/seller/BusinessHours').then(m => m.BusinessHours), {
+  ssr: false,
+  loading: () => <div className="h-32 rounded-lg bg-white animate-pulse" />,
+})
+const LocationHistory = dynamic(() => import('@/components/seller/LocationHistory').then(m => m.LocationHistory), {
+  ssr: false,
+  loading: () => <div className="h-48 rounded-lg bg-white animate-pulse" />,
+})
+const ManualLocationPicker = dynamic(() => import('@/components/seller/ManualLocationPicker').then(m => m.ManualLocationPicker), {
+  ssr: false,
+  loading: () => <div className="h-56 rounded-lg bg-gray-100 animate-pulse" />,
+})
 
 interface Product {
   id: string

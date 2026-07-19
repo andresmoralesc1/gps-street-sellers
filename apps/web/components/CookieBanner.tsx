@@ -106,7 +106,7 @@ export function CookieBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Aviso de cookies"
-      className="fixed bottom-4 right-4 max-w-sm w-[calc(100vw-2rem)] md:w-96 z-50 p-4 bg-white border border-gray-200 rounded-xl shadow-2xl"
+      className="w-full z-30 p-3 md:p-4 bg-white border-t border-gray-200 shadow-2xl"
     >
       <div>
         <p className="text-sm text-gray-700 mb-3">

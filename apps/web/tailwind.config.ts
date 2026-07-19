@@ -23,7 +23,11 @@ const config: Config = {
           700: '#C2410C',
           800: '#9A3412',
           900: '#7C2D12',
-          DEFAULT: '#F97316',
+          // Bumped from #F97316 (orange-500, 2.8:1 vs white) to #C2410C
+          // (orange-700, 5.4:1 vs white) so bg-primary + text-white passes
+          // WCAG AA contrast (4.5:1). This affects every `bg-primary` and
+          // `text-primary` site-wide.
+          DEFAULT: '#C2410C',
         },
         secondary: {
           DEFAULT: '#FB923C',

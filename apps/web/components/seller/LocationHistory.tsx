@@ -66,7 +66,7 @@ export function LocationHistory({ vendorId }: LocationHistoryProps) {
               ? error
               : cells.length === 0
               ? 'Sin actividad reciente'
-              : `${cells.length} zonas visitadas en 7 días`}
+              : `${cells.length === 1 ? '1 zona visitada' : `${cells.length} zonas visitadas`} en 7 días`}
           </p>
         </div>
       </div>

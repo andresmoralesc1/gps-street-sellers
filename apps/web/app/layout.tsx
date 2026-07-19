@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Providers } from './providers'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteFooter } from '@/components/SiteFooter'
-import { CookieBanner } from '@/components/CookieBanner'
 import { OnboardingTour } from '@/components/OnboardingTour'
 import { ToastContainer } from '@/components/ui/Toast'
 import { UmamiAnalytics } from '@/components/UmamiAnalytics'
@@ -113,7 +112,6 @@ export default function RootLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
-          <CookieBanner />
           <OnboardingTour />
           <ToastContainer />
           <UmamiAnalytics />

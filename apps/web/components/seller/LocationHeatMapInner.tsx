@@ -30,7 +30,7 @@ export default function LocationHeatMapInner({ cells }: Props) {
   const maxCount = Math.max(...cells.map((c) => c.count))
 
   return (
-    <div className="h-48 rounded-lg overflow-hidden">
+    <div className="h-72 sm:h-80 md:h-96 rounded-lg overflow-hidden">
       <MapContainer
         center={center}
         zoom={13}

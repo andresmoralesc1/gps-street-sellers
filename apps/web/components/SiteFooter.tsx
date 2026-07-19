@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Mail, ArrowRight } from 'lucide-react'
+import { Mail } from 'lucide-react'
+import { CookieBanner } from './CookieBanner'
 
 export function SiteFooter() {
   return (
@@ -73,6 +74,13 @@ export function SiteFooter() {
             hola@barriotech.com
           </a>
         </div>
+      </div>
+      {/* CookieBanner lives INSIDE the footer (inline, sticky to viewport
+          bottom until the user scrolls past the copyright). This keeps it
+          from overlapping the "Legal" column when the user reaches the
+          bottom of any page. */}
+      <div className="sticky bottom-0 z-30">
+        <CookieBanner />
       </div>
     </footer>
   )

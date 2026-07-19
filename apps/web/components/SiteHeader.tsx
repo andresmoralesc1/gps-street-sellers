@@ -68,7 +68,8 @@ export function SiteHeader() {
             <div className="relative">
               <Image
                 src="/logo.png"
-                alt="BarrioTech"
+                alt=""
+                aria-hidden="true"
                 width={40}
                 height={40}
                 className="object-contain transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
@@ -82,7 +83,7 @@ export function SiteHeader() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav aria-label="Navegación principal" className="hidden md:flex items-center gap-1">
             {navLinks.map((l) => {
               const isActive = pathname === l.href || pathname.startsWith(l.href + '/')
               return (
@@ -93,7 +94,7 @@ export function SiteHeader() {
                   className={
                     'relative px-4 py-2 text-sm font-medium rounded-xl transition-colors ' +
                     (isActive
-                      ? 'text-primary bg-primary/5'
+                      ? 'text-primary-700 bg-primary/5'
                       : 'text-gray-600 hover:text-primary hover:bg-primary/5')
                   }
                 >

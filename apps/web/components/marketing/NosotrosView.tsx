@@ -214,7 +214,7 @@ export function NosotrosView() {
                     <div className="pl-12 sm:pl-0 sm:contents">
                       <div className={`${isLeft ? 'sm:col-start-1 sm:text-right sm:pr-10' : 'sm:col-start-2 sm:pl-10'}`}>
                         <div className={`inline-block text-xs font-semibold uppercase tracking-wider mb-1 ${
-                          item.highlight ? 'text-primary-700' : 'text-gray-400'
+                          item.highlight ? 'text-primary-700' : 'text-gray-500'
                         }`}>
                           {item.period}
                         </div>
@@ -224,7 +224,7 @@ export function NosotrosView() {
                         </h3>
                         <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
                         {item.phase === 'future' && (
-                          <span className="inline-block mt-2 text-xs text-primary/70 font-medium">Próximamente</span>
+                          <span className="inline-block mt-2 text-xs text-primary-700 font-medium">Próximamente</span>
                         )}
                       </div>
                     </div>

@@ -47,7 +47,7 @@ export function PrivacidadView() {
                 <strong>Correo de contacto para temas de datos personales:</strong>{' '}
                 <a
                   href="mailto:privacidad@barriotech.com"
-                  className="text-primary-600 underline"
+                  className="text-primary-700 underline"
                 >
                   privacidad@barriotech.com
                 </a>
@@ -259,7 +259,7 @@ export function PrivacidadView() {
               tratamiento enviando un correo a{' '}
               <a
                 href="mailto:privacidad@barriotech.com"
-                className="text-primary-600 underline"
+                className="text-primary-700 underline"
               >
                 privacidad@barriotech.com
               </a>
@@ -303,7 +303,7 @@ export function PrivacidadView() {
               <strong>Cómo ejercerlos:</strong> envía tu solicitud a{' '}
               <a
                 href="mailto:privacidad@barriotech.com"
-                className="text-primary-600 underline"
+                className="text-primary-700 underline"
               >
                 privacidad@barriotech.com
               </a>{' '}
@@ -365,7 +365,7 @@ export function PrivacidadView() {
                 Auditorías periódicas del código y dependencias (ver{' '}
                 <a
                   href="https://github.com/andresmoralesc1/gps-street-sellers"
-                  className="text-primary-600 underline"
+                  className="text-primary-700 underline"
                 >
                   repositorio público
                 </a>
@@ -416,7 +416,7 @@ export function PrivacidadView() {
               intentar resolver tu inquietud en{' '}
               <a
                 href="mailto:privacidad@barriotech.com"
-                className="text-primary-600 underline"
+                className="text-primary-700 underline"
               >
                 privacidad@barriotech.com
               </a>

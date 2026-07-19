@@ -108,8 +108,13 @@ export function CityInput({
 
   return (
     <div ref={ref} className={clsx('relative', className)}>
-      {/* Input */}
+      {/* <input> doesn't allow aria-expanded, so we wrap with role="combobox"
+          and put aria-expanded on the wrapper. Reference: WAI-ARIA combobox pattern. */}
       <div
+        role="combobox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-owns="city-input-listbox"
         className={clsx(
           'flex items-center gap-2 w-full px-3 py-3 border bg-white text-sm min-h-[44px]',
           'focus-within:ring-2 focus-within:ring-primary/50',
@@ -134,7 +139,7 @@ export function CityInput({
           className="flex-1 bg-transparent outline-none placeholder:text-gray-400"
           aria-label="Buscar ciudad"
           aria-autocomplete="list"
-          aria-expanded={open}
+          aria-controls="city-input-listbox"
         />
         {selectedCity && !disabled && (
           <button
@@ -160,6 +165,9 @@ export function CityInput({
       {/* Dropdown */}
       {open && (
         <div
+          id="city-input-listbox"
+          role="listbox"
+          aria-label="Ciudades disponibles"
           className={clsx(
             'absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-lg z-50 max-h-60 overflow-y-auto',
             radius
@@ -168,6 +176,8 @@ export function CityInput({
           {showEmptyOption && (
             <button
               type="button"
+              role="option"
+              aria-selected={!value}
               onClick={() => pick('')}
               className={clsx(
                 'w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 transition-colors',
@@ -186,6 +196,8 @@ export function CityInput({
               <button
                 key={city.id}
                 type="button"
+                role="option"
+                aria-selected={value === city.id}
                 onClick={() => pick(city.id)}
                 onMouseEnter={() => setHighlight(i)}
                 className={clsx(

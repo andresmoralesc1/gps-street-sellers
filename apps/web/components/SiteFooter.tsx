@@ -14,7 +14,8 @@ export function SiteFooter() {
             <Link href="/" className="flex items-center gap-3 mb-4 group">
               <Image
                 src="/logo.png"
-                alt="BarrioTech"
+                alt=""
+                aria-hidden="true"
                 width={36}
                 height={36}
                 className="object-contain"

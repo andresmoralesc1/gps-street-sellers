@@ -125,7 +125,7 @@ export function ComoFuncionaView() {
         </p>
         <Link
           href="/privacidad"
-          className="inline-flex items-center min-h-[44px] text-orange-600 hover:underline font-medium px-2 py-2 rounded"
+          className="inline-flex items-center min-h-[44px] text-primary-700 hover:underline font-medium px-2 py-2 rounded"
         >
           Leer política de tratamiento de datos →
         </Link>

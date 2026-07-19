@@ -246,7 +246,7 @@ export function ContactoView() {
                     id="contact-message-help"
                     className="flex justify-between text-xs mt-1.5"
                   >
-                    <span className={messageTooShort ? 'text-accent font-medium' : 'text-gray-400'}>
+                    <span className={messageTooShort ? 'text-accent font-medium' : 'text-gray-500'}>
                       {messageTooShort
                         ? `Mínimo ${MIN_MESSAGE_LENGTH} caracteres`
                         : 'Mínimo 10 caracteres'}
@@ -257,7 +257,7 @@ export function ContactoView() {
                           ? 'text-accent font-medium'
                           : form.message.length > MAX_MESSAGE_LENGTH * 0.9
                           ? 'text-amber-600'
-                          : 'text-gray-400'
+                          : 'text-gray-500'
                       }
                     >
                       {form.message.length} / {MAX_MESSAGE_LENGTH}

@@ -286,7 +286,7 @@ export function HomeView() {
               publicado — sí citamos los marcos normativos que respaldan
               la oportunidad de mercado. Solo items públicos. */}
           <div className="mt-12 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Fundamento normativo</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Fundamento normativo</p>
             <div className="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto">
               {[
                 { name: 'Ley 1581 / 2012', desc: 'Habeas Data · protección de datos personales' },
@@ -303,7 +303,7 @@ export function HomeView() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-4 italic">
+            <p className="text-xs text-gray-500 mt-4 italic">
               Las cifras y marcos en los que se sostiene BarrioTech son públicos y verificables.
             </p>
           </div>

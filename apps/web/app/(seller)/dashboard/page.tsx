@@ -281,7 +281,10 @@ function DashboardContent() {
 
   return (
     <PullToRefresh onRefresh={fetchDashboardData}>
-      <div className="min-h-screen bg-background-cream pb-24">
+      {/* max-w-2xl mx-auto: caps the width and centers the dashboard on
+          desktop so cards don't stretch full-bleed across 1920px monitors.
+          pb-24 keeps space for the fixed bottom nav. */}
+      <div className="min-h-screen bg-background-cream pb-24 md:max-w-2xl md:mx-auto">
         {/* Header */}
         <header className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-10">
           <div>

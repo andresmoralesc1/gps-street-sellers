@@ -143,9 +143,14 @@ export function SiteHeader() {
                         Dashboard
                       </Link>
                     )}
-                    <Link href="/orders" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
-                      Mis pedidos
-                    </Link>
+                    {/* Mis pedidos is buyer-only — sellers manage incoming orders
+                        from /dashboard. Showing it here routed sellers to a page
+                        that says "Esta sección es para compradores". */}
+                    {user.role === 'buyer' && (
+                      <Link href="/orders" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                        Mis pedidos
+                      </Link>
+                    )}
                     <Link href="/favorites" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                       Favoritos
                     </Link>
@@ -262,14 +267,17 @@ export function SiteHeader() {
                     Dashboard
                   </Link>
                 )}
-                <Link
-                  href="/orders"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:text-primary hover:bg-white rounded-xl transition-all"
-                >
-                  <MapPin size={16} className="text-primary/70" />
-                  Mis pedidos
-                </Link>
+                {/* Mis pedidos is buyer-only — see desktop comment above. */}
+                {user.role === 'buyer' && (
+                  <Link
+                    href="/orders"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:text-primary hover:bg-white rounded-xl transition-all"
+                  >
+                    <MapPin size={16} className="text-primary/70" />
+                    Mis pedidos
+                  </Link>
+                )}
                 <Link
                   href="/favorites"
                   onClick={() => setMenuOpen(false)}

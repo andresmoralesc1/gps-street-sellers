@@ -81,8 +81,8 @@ export default function MapPage() {
         <MapView />
       </div>
 
-      {/* Bottom Nav */}
-      <nav className="bg-white border-t flex justify-around py-3">
+      {/* Bottom Nav — aria-label avoids landmark-unique violation. */}
+      <nav className="bg-white border-t flex justify-around py-3" aria-label="Navegación de la cuenta">
         <Link href="/map" className="flex flex-col items-center text-primary-700">
           <MapPin size={24} />
           <span className="text-xs mt-1">Mapa</span>

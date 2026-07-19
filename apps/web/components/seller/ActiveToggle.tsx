@@ -76,7 +76,10 @@ export function ActiveToggle({ vendorId }: ActiveToggleProps) {
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm">
       <div>
-        <h3 className="font-semibold text-lg">Estado de visibilidad</h3>
+        {/* h2 (not h3): previously this jumped from <h1> on the dashboard
+            straight to <h3> here, which violated heading-order in axe. h2
+            nests correctly under the page's <h1>. */}
+        <h2 className="font-semibold text-lg">Estado de visibilidad</h2>
         <p className="text-gray-500 text-sm">
           {isActive
             ? 'Los compradores pueden verte en el mapa'

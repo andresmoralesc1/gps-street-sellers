@@ -366,8 +366,9 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3">
+      {/* Bottom Nav — aria-label avoids landmark-unique violation when
+          SiteHeader ("Navegación principal del sitio") is also a <nav>. */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3" aria-label="Navegación de la cuenta">
         <Link href="/dashboard" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
           <BarChart3 size={24} />
           <span className="text-xs mt-1">Dashboard</span>

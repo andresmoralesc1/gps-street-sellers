@@ -83,7 +83,11 @@ export function SiteHeader() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav aria-label="Navegación principal" className="hidden md:flex items-center gap-1">
+          {/* Specific label ("del sitio") so this nav doesn't collide with
+              the bottom-nav on /dashboard, which also calls itself
+              "Navegación principal". Axe flags two landmarks with the same
+              accessible name as redundant. */}
+          <nav aria-label="Navegación principal del sitio" className="hidden md:flex items-center gap-1">
             {navLinks.map((l) => {
               const isActive = pathname === l.href || pathname.startsWith(l.href + '/')
               return (

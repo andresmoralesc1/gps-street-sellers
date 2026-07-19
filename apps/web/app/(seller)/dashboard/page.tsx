@@ -8,7 +8,7 @@ import { BarChart3, Package, Settings, Edit3, ChevronRight, Camera, RefreshCw } 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { ActiveToggle } from '@/components/seller/ActiveToggle'
+import { ActiveToggle } from '@/components/seller/ActiveToggle' // legacy, kept for compat but unused on dashboard
 import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { ConnectivityIndicator } from '@/components/seller/ConnectivityIndicator'
 import { FloatingActionButton } from '@/components/seller/FloatingActionButton'
@@ -319,36 +319,48 @@ function DashboardContent() {
                 <LiveViewers vendorId={vendorId} />
               </div>
 
-              {/* Completar perfil banner */}
+              {/* Completar perfil banner — outline (no gradient fullbleed).
+                  El estilo anterior (bg-gradient-to-r from-orange-500 to-orange-600)
+                  peleaba visualmente con el botón "Guardar horario" del
+                  BusinessHours (también naranja) y violaba color-contrast con
+                  texto blanco sobre orange-500. Pasamos a outline que pide
+                  atención sin gritarle al "Guardar horario". */}
               {(!vendorData.name || !vendorData.category || !vendorData.photo_url) && (
                 <Link href="/profile/edit">
-                  <Card variant="elevated" className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-colors">
+                  <Card
+                    variant="outlined"
+                    className="p-4 bg-orange-50/60 border-orange-300 cursor-pointer hover:bg-orange-50 transition-colors"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                        <Camera size={20} className="text-white" />
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                        <Camera size={20} className="text-orange-700" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-bold">Completar perfil</p>
-                        <p className="text-sm text-white/80">Añade información para que los clientes te encuentren</p>
+                        <p className="font-bold text-orange-900">Completar perfil</p>
+                        <p className="text-sm text-orange-800/80">Añade información para que los clientes te encuentren</p>
                       </div>
-                      <ChevronRight size={20} className="text-white/70" />
+                      <ChevronRight size={20} className="text-orange-400" />
                     </div>
                   </Card>
                 </Link>
               )}
 
-              {/* Toggle activo/inactivo */}
-              <ActiveToggle vendorId={vendorId} />
-
-              {/* N11: Business hours */}
-              <BusinessHours vendorId={vendorId} />
-
-              {/* station_type picker — fixed (sits in one spot) vs mobile (rolls around) */}
+              {/* Toggle activo/inactivo + estación (móvil / fija)
+                  Consolidado en VendorVisibility (Sprint 2 fix). El antiguo
+                  ActiveToggle escribía el mismo `is_active` por una vía
+                  paralela (PUT /api/vendors/{id}/location) y generaba una
+                  race condition contra el toggle de Visibilidad. Ahora
+                  ambos controles viven en VendorVisibility con un solo
+                  endpoint (PATCH /api/vendors/me/settings) y polling GPS
+                  cada 10s cuando isActive=true. */}
               <VendorVisibility
                 vendorId={vendorId}
                 initialIsActive={vendorData?.isActive ?? true}
                 initialStationType={vendorData?.stationType ?? 'mobile'}
               />
+
+              {/* N11: Business hours */}
+              <BusinessHours vendorId={vendorId} />
 
               {/* Tu ubicación en el mapa: GPS automático + ajuste manual */}
               <Card variant="outlined" className="p-4">
@@ -360,7 +372,9 @@ function DashboardContent() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-sm">Tu ubicación en el mapa</h3>
+                    {/* h2 to maintain heading-order under the page's <h1>.
+                        The visual size stays text-sm to match the other cards. */}
+                    <h2 className="font-semibold text-gray-800 text-sm">Tu ubicación en el mapa</h2>
                     <p className="text-gray-500 text-xs mt-0.5">
                       {vendorData?.latitude
                         ? `Activa — lat ${vendorData.latitude.toFixed(4)}, lng ${vendorData.longitude.toFixed(4)}`
@@ -444,8 +458,11 @@ function DashboardContent() {
         {toast && <ConfirmToast toast={toast} onDismiss={dismiss} />}
 
         {/* Bottom Nav */}
-        {/* B10 fix: aria-current on active link */}
-        <nav className="bg-white border-t flex justify-around py-3 fixed bottom-0 left-0 right-0 z-10" aria-label="Navegación principal">
+        {/* B10 fix: aria-current on active link. */}
+        {/* Specific label so this doesn't collide with SiteHeader's
+            "Navegación principal del sitio" — axe flags two landmarks with
+            the same accessible name as redundant (landmark-unique rule). */}
+        <nav className="bg-white border-t flex justify-around py-3 fixed bottom-0 left-0 right-0 z-10" aria-label="Navegación del dashboard">
           <Link href="/dashboard" aria-current="page" className="flex flex-col items-center text-primary-700">
             <BarChart3 size={24} />
             <span className="text-xs mt-1">Dashboard</span>

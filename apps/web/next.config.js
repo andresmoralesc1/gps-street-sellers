@@ -61,12 +61,15 @@ const nextConfig = {
 
     const csp = [
       `default-src 'self'`,
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval'`, // Next.js hydration
+      // sync with /etc/caddy/Caddyfile line 24 (gps.andresmorales.com.co block).
+      // Caddy overwrites this header in production via header_down, so next.config.js
+      // is only authoritative in dev/preview. Keep them in lock-step.
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://umami.andresmorales.com.co`, // Next.js hydration + Umami analytics
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`, // Tailwind + Google Fonts CSS
       `style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `img-src 'self' data: blob: https:`, // Supabase storage + user uploads + external product photos
       `font-src 'self' data: https://fonts.gstatic.com`, // Google Fonts files
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://umami.andresmorales.com.co`,
       `worker-src 'self'`, // service worker for push notifications
       `manifest-src 'self'`,
       `frame-ancestors 'none'`,

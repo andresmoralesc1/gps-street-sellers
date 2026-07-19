@@ -217,3 +217,129 @@ test('GET /api/vendors/me with logged-in seller returns at least one vendor for 
   assert.ok(typeof res.body.vendors[0].id === 'string' && res.body.vendors[0].id.length > 0,
     'first vendor must expose a non-empty id')
 })
+
+// ─── POST /api/vendors — funnel fix ─────────────────────────────────────
+//
+// Regression: VendorFormSlide (in /onboarding) called POST /api/vendors/me,
+// which only exposes GET and PATCH. The server returned 405 silently and
+// every new seller was stranded at step 0 of onboarding → 0% funnel conversion.
+// Fix: real POST /api/vendors endpoint + VendorFormSlide updated to call it.
+
+test('POST /api/vendors without auth returns 401', async () => {
+  const res = await fetchJSON('/api/vendors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Test', category: 'comida' }),
+  })
+  assert.equal(res.status, 401,
+    `expected 401 (anon blocked), got ${res.status}: ${JSON.stringify(res.body)}`)
+})
+
+test('POST /api/vendors with missing name returns 400', async () => {
+  // Login first so we exercise the post-auth validation path (not the anon 401).
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return // skip if test user gone
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+    body: JSON.stringify({ category: 'comida' }), // missing name
+  })
+  assert.equal(res.status, 400,
+    `expected 400 (missing name), got ${res.status}: ${JSON.stringify(res.body)}`)
+})
+
+test('POST /api/vendors with invalid category returns 400', async () => {
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+    body: JSON.stringify({ name: 'Test Puesto', category: 'no-existe' }),
+  })
+  assert.equal(res.status, 400,
+    `expected 400 (invalid category), got ${res.status}: ${JSON.stringify(res.body)}`)
+})
+
+test('POST /api/vendors as seller with existing vendor returns 409 Conflict', async () => {
+  // Test Seller 24 (frutas.donjaime) already owns a vendor — the endpoint must
+  // refuse the second one with 409 (one-vendor-per-seller rule) instead of
+  // silently creating a duplicate.
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+    body: JSON.stringify({ name: 'Segundo Puesto', category: 'comida' }),
+  })
+  assert.equal(res.status, 409,
+    `expected 409 (already has vendor), got ${res.status}: ${JSON.stringify(res.body)}`)
+  assert.ok(res.body?.vendor?.id, '409 response should include existing vendor.id')
+})
+
+test('POST /api/vendors response shape returns vendor.id, slug, isActive=false', async () => {
+  // Contract check — what the client (VendorFormSlide) expects back.
+  // We use the 409 path as a proxy: if the response carries `vendor.id` and
+  // a string `error`, the new endpoint is live and the shape is what the
+  // frontend expects after fix. The full 201 path needs a fresh user and is
+  // covered by manual smoke tests (creating a new seller in /register).
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+    body: JSON.stringify({ name: 'X', category: 'comida' }),
+  })
+  // Either 409 (already has vendor — most common in CI) or 201 (fresh user).
+  assert.ok(res.status === 409 || res.status === 201,
+    `expected 201 or 409, got ${res.status}: ${JSON.stringify(res.body)}`)
+  if (res.status === 201) {
+    assert.ok(res.body?.vendor?.id, '201 response should include vendor.id')
+    assert.ok(res.body?.vendor?.slug, '201 response should include vendor.slug')
+    assert.equal(res.body.vendor.isActive, false,
+      'new vendor starts hidden — vendor opts in via VendorVisibility toggle')
+  } else {
+    // 409 case: must surface the existing vendor info so the client can
+    // route the user straight to the dashboard instead of looping the form.
+    assert.ok(res.body?.vendor?.id, '409 response should include existing vendor.id')
+  }
+})

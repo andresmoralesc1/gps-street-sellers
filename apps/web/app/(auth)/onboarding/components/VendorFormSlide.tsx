@@ -35,7 +35,10 @@ export function VendorFormSlide({ onCreated, initialName = '' }: VendorFormSlide
     setError('')
 
     try {
-      const res = await fetch('/api/vendors/me', {
+      // POST /api/vendors creates a vendor owned by the authenticated seller.
+      // (Previously this hit /api/vendors/me which has no POST handler — that
+      //  405 silently broke the entire seller onboarding funnel.)
+      const res = await fetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -44,7 +47,7 @@ export function VendorFormSlide({ onCreated, initialName = '' }: VendorFormSlide
           description: description.trim(),
           category,
           phone: phone.replace(/\D/g, ''),
-          cityId: cityId || 'bogota',
+          city_id: cityId || 'bogota',
         }),
       })
 

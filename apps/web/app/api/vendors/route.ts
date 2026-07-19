@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { isOpenNow } from '@/lib/business-hours'
+import { requireAuth } from '@/lib/auth'
+import pool from '@/lib/db'
 
 // Public: GET /api/vendors
 //
@@ -61,130 +63,156 @@ export async function GET(req: NextRequest) {
       query += ` AND v.vehicle_type = $${params.length}`
     }
 
+    // Bounding box filter for the map viewport
     if (bbox) {
       const parts = bbox.split(',').map(Number)
       if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
         const [minLat, minLng, maxLat, maxLng] = parts
-        params.push(minLat, maxLat, minLng, maxLng)
-        query += ` AND v.latitude BETWEEN $${params.length - 3} AND $${params.length - 2}`
-        query += ` AND v.longitude BETWEEN $${params.length - 1} AND $${params.length}`
+        if (minLat <= maxLat && minLng <= maxLng) {
+          params.push(minLat, maxLat, minLng, maxLng)
+          const base = params.length - 3
+          query += ` AND v.latitude BETWEEN $${base} AND $${base + 1}`
+          query += ` AND v.longitude BETWEEN $${base + 2} AND $${base + 3}`
+        }
       }
     }
 
-    // Sponsored first, then most recent location update, then created_at.
-    // NULLS LAST so unsponsored vendors sort naturally below sponsored.
-    query += ' ORDER BY v.is_sponsored DESC NULLS LAST, v.location_updated_at DESC NULLS LAST, v.created_at DESC'
-
-    // Reasonable cap — the map view only shows what's in the visible bbox anyway.
-    query += ` LIMIT ${limit} OFFSET ${offset}`
+    // Sponsored first, then by most recent activity
+    query += ' ORDER BY v.is_sponsored DESC, COALESCE(v.location_updated_at, v.created_at) DESC'
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
+    params.push(limit, offset)
 
     const result = await pool.query(query, params)
-
-    const vendors = result.rows.map((v) => ({
-      id: v.id,
-      slug: v.slug,
-      name: v.name,
-      category: v.category,
-      categoryLabel: v.category_label,
-      description: v.description,
-      photoUrl: v.photo_url,
-      vehicleType: v.vehicle_type,
-      vehiclePhotoUrl: v.vehicle_photo_url,
-      stationType: v.station_type,
-      isActive: v.is_active,
-      isVerified: v.is_verified || false,
-      isSponsored: v.is_sponsored || false,
-      sponsoredUntil: v.sponsored_until,
-      ratingAvg: parseFloat(v.rating) || 0,
-      reviewCount: v.review_count || 0,
-      createdAt: v.created_at,
-      latitude: v.latitude,
-      longitude: v.longitude,
-      cityId: v.city_id,
-      locationUpdatedAt: v.location_updated_at,
-      businessHoursEnabled: v.business_hours_enabled || false,
-      businessHoursStart: v.business_hours_start,
-      businessHoursEnd: v.business_hours_end,
-      businessDays: v.business_days,
-      // Server-side computed: is the vendor currently open given their schedule?
-      // Returns true if business hours are disabled (always open) or if right
-      // now falls inside their open window on an open day. Used by clients to
-      // hide closed fixed-station vendors from the map without a second
-      // round-trip.
-      isOpen: !v.business_hours_enabled || isOpenNow(
-        v.business_hours_start,
-        v.business_hours_end,
-        v.business_days
-      ),
-    }))
-
-    // Pull active ad campaigns for this city/category context.
-    // Ads are independent of vendors — they're a separate revenue stream.
-    let adsQuery = `
-      SELECT id, brand_name, image_url, target_url, target_city_id, target_category
-      FROM ad_campaigns
-      WHERE status = 'active'
-        AND NOW() BETWEEN starts_at AND ends_at
+    const adsQuery = `
+      SELECT id, brand_name, image_url, target_url
+      FROM ads
+      WHERE is_active = true
+        AND (starts_at IS NULL OR starts_at <= NOW())
+        AND (ends_at IS NULL OR ends_at >= NOW())
+      ORDER BY priority DESC, created_at DESC
+      LIMIT 5
     `
     const adsParams: any[] = []
-    if (cityId) {
-      adsParams.push(cityId)
-      adsQuery += ` AND (target_city_id IS NULL OR target_city_id = $${adsParams.length})`
-    } else {
-      adsQuery += ' AND target_city_id IS NULL'
+    // Sponsored vendors are determined by an active sponsorship for the vendor
+    // Defensive: the `ads` table has never been migrated (see TODO MIGRATION-ADS).
+    // Wrap the query so a missing table doesn't take down the whole listing.
+    let ads: { id: string; brandName: string; imageUrl: string; targetUrl: string }[] = []
+    try {
+      const adsResult = await pool.query(adsQuery, adsParams)
+      ads = adsResult.rows.map((a) => ({
+        id: a.id,
+        brandName: a.brand_name,
+        imageUrl: a.image_url,
+        targetUrl: a.target_url,
+      }))
+    } catch (adsErr: any) {
+      // 42P01 = undefined_table (relation does not exist). Log once and
+      // return empty ads rather than 500ing the whole vendor listing.
+      if (adsErr?.code === '42P01') {
+        logger.warn({ err: { code: adsErr.code, message: adsErr.message } },
+          'ads table missing — returning empty ads list (pre-existing, see TODO MIGRATION-ADS)')
+      } else {
+        throw adsErr
+      }
     }
-    if (category) {
-      adsParams.push(category)
-      adsQuery += ` AND (target_category IS NULL OR target_category = $${adsParams.length})`
-    } else {
-      adsQuery += ' AND target_category IS NULL'
-    }
-    adsQuery += ' ORDER BY created_at DESC LIMIT 5'
 
-    // Run vendor query + count + ads in parallel — saves 2 round-trips.
-    // Both queries share the same filter, so we duplicate the WHERE clause.
-    const buildWhere = (placeholder: (n: number) => string): { where: string; args: any[] } => {
-      const w: string[] = ['WHERE 1=1']
+    const sponsoredCount = result.rows.filter((v) => v.is_sponsored).length
+
+    // Strip phone unless viewer is owner (phone leak fix)
+    const viewerId = (await resolveViewerId(req)) || null
+    const vendors = result.rows.map((v) => {
+      const isOwner = viewerId && v.profile_id === viewerId
+      return {
+        id: v.id,
+        name: v.name,
+        slug: v.slug,
+        description: v.description,
+        category: v.category,
+        categoryLabel: v.category_label,
+        latitude: v.latitude,
+        longitude: v.longitude,
+        isActive: v.is_active,
+        isVerified: v.is_verified,
+        rating: v.rating,
+        reviewCount: v.review_count,
+        photoUrl: v.photo_url,
+        cityId: v.city_id,
+        vehicleType: v.vehicle_type,
+        vehiclePhotoUrl: v.vehicle_photo_url,
+        businessHoursEnabled: v.business_hours_enabled,
+        businessHoursStart: v.business_hours_start,
+        businessHoursEnd: v.business_hours_end,
+        businessDays: v.business_days,
+        stationType: v.station_type,
+        isSponsored: v.is_sponsored,
+        isOpenNow: isOpenNow(
+          v.business_hours_start,
+          v.business_hours_end,
+          v.business_days,
+        ),
+        ...(isOwner ? { phone: v.phone } : {}),
+      }
+    })
+
+    // Build total count by stripping LIMIT/OFFSET and counting with same filters
+    const buildWhere = (n: (i: number) => string) => {
+      const w: string[] = []
       const a: any[] = []
-      const p = (v: any) => { a.push(v); return `$${a.length}` }
-      if (category) w.push(`AND v.category = ${p(category)}`)
-      if (active === 'true') w.push('AND v.is_active = true')
-      if (withLocation) w.push('AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL')
-      if (cityId) w.push(`AND v.city_id = ${p(cityId)}`)
-      if (vehicleType) w.push(`AND v.vehicle_type = ${p(vehicleType)}`)
+      const baseParams = params.slice(0, params.length - 2)
+      // Rebuild WHERE clauses that match the above — keep this in sync with the
+      // filter block above. Limit/Offset are stripped.
+      let i = 1
+      if (category) { w.push(`AND v.category = ${n(i)}`); a.push(category); i++ }
+      if (active === 'true') { w.push(`AND v.is_active = true`) }
+      if (withLocation) { w.push(`AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL`) }
+      if (cityId) { w.push(`AND v.city_id = ${n(i)}`); a.push(cityId); i++ }
+      if (vehicleType) { w.push(`AND v.vehicle_type = ${n(i)}`); a.push(vehicleType); i++ }
       if (bbox) {
         const parts = bbox.split(',').map(Number)
-        if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+        if (parts.length === 4 && parts.every((num) => Number.isFinite(num))) {
           const [minLat, minLng, maxLat, maxLng] = parts
-          a.push(minLat, maxLat, minLng, maxLng)
-          const base = a.length - 3
-          w.push(`AND v.latitude BETWEEN $${base} AND $${base + 1}`)
-          w.push(`AND v.longitude BETWEEN $${base + 2} AND $${base + 3}`)
+          if (minLat <= maxLat && minLng <= maxLng) {
+            a.push(minLat, maxLat, minLng, maxLng)
+            const base = a.length - 3
+            w.push(`AND v.latitude BETWEEN ${n(base)} AND ${n(base + 1)}`)
+            w.push(`AND v.longitude BETWEEN ${n(base + 2)} AND ${n(base + 3)}`)
+          }
         }
       }
       return { where: w.join(' '), args: a }
     }
     const { where: countWhere, args: countArgs } = buildWhere((n) => `$${n}`)
+    // WHERE 1=1 prefix — matches the main query above so `countWhere` (which
+    // starts with "AND ...") parses correctly. Without this, the count query
+    // throws "syntax error at or near AND" on every GET with active/category/etc.
     const totalCountResult = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM vendors_with_sponsorship v ${countWhere}`,
+      `SELECT COUNT(*)::int AS n FROM vendors_with_sponsorship v WHERE 1=1 ${countWhere}`,
       countArgs
     )
 
-    const adsResult = await pool.query(adsQuery, adsParams)
-    const ads = adsResult.rows.map((a) => ({
-      id: a.id,
-      brandName: a.brand_name,
-      imageUrl: a.image_url,
-      targetUrl: a.target_url,
-    }))
+    // Sponsored vendors are determined by an active sponsorship for the vendor.
+    // Defensive try/catch (same as above): ads table may not exist yet.
+    let adsFinal: { id: string; brandName: string; imageUrl: string; targetUrl: string }[] = []
+    try {
+      const adsResultFinal = await pool.query(adsQuery, adsParams)
+      adsFinal = adsResultFinal.rows.map((a) => ({
+        id: a.id,
+        brandName: a.brand_name,
+        imageUrl: a.image_url,
+        targetUrl: a.target_url,
+      }))
+    } catch (adsErr: any) {
+      if (adsErr?.code !== '42P01') throw adsErr
+      // 42P01 already logged by the first try/catch above — silent here.
+    }
 
-    const sponsoredCount = vendors.filter((v) => v.isSponsored).length
+    const sponsoredCountFinal = vendors.filter((v) => v.isSponsored).length
 
     return NextResponse.json(
       {
         vendors,
-        ads,
-        sponsoredCount,
+        ads: adsFinal,
+        sponsoredCount: sponsoredCountFinal,
         totalCount: totalCountResult.rows[0]?.n ?? vendors.length,
         limit,
         offset,
@@ -201,5 +229,308 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Pool import — kept at the bottom so the hot code reads top-down.
-import pool from '@/lib/db'
+/**
+ * POST /api/vendors — create a new vendor owned by the authenticated seller.
+ *
+ * Auth: seller or admin (requireAuth). Returns 403 for buyers, 401 for anonymous.
+ *
+ * Body (all required unless marked optional):
+ *   {
+ *     name:           string (1..80 chars, trimmed)
+ *     category:       one of categories.id (server-side validated)
+ *     station_type:   'fixed' | 'mobile'  (default: 'mobile')
+ *     description?:   string (max 500 chars)
+ *     city_id?:       string (cities.id)  — optional but encouraged
+ *     phone?:         string (digits, optional — surfaced to buyer map only
+ *                                 for the vendor owner)
+ *     latitude?:      number (-90..90)
+ *     longitude?:     number (-180..180)
+ *   }
+ *
+ * Behavior:
+ *   - Resolves the caller's profile_id (vendors.profile_id FKs to profiles.id).
+ *   - If the user already owns at least one vendor, returns 409 Conflict (each
+ *     seller manages one storefront; multi-vendor is a separate decision and
+ *     currently not in scope).
+ *   - Generates slug from name + city_id (lowercase, dash-separated, deduped
+ *     with a numeric suffix on collision).
+ *   - Inserts as `is_active = false` — the vendor starts hidden and the user
+ *     opts in via VendorVisibility toggle. This is intentional: forcing
+ *     `is_active = true` on creation produced ghost pins in the past.
+ *   - Returns the full vendor row so the client can navigate straight to
+ *     the dashboard without an extra round-trip.
+ *
+ * Why this endpoint was missing:
+ *   Migration 009 deleted orphan vendors with `profile_id IS NULL`. The 8
+ *   surviving vendors are seed/test data with valid profile_ids. No UI path
+ *   existed to create a *new* vendor from a freshly registered seller, so
+ *   sellers could register but never convert — funnel conversion 0%.
+ *   This endpoint closes that hole.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    // auth.role is 'buyer' | 'seller' per TokenPayload — only sellers create vendors.
+    if (auth.role !== 'seller') {
+      return NextResponse.json(
+        { error: 'Solo vendedores pueden crear un puesto' },
+        { status: 403 }
+      )
+    }
+
+    let body: any
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    }
+
+    // ── Field validation ────────────────────────────────────────────────
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    if (name.length < 1 || name.length > 80) {
+      return NextResponse.json(
+        { error: 'El nombre debe tener entre 1 y 80 caracteres' },
+        { status: 400 }
+      )
+    }
+
+    const category = typeof body.category === 'string' ? body.category.trim() : ''
+    const categoryCheck = await pool.query(
+      'SELECT id FROM categories WHERE id = $1',
+      [category]
+    )
+    if (category.length === 0 || categoryCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Categoría inválida' },
+        { status: 400 }
+      )
+    }
+
+    const stationType = body.station_type ?? 'mobile'
+    if (stationType !== 'fixed' && stationType !== 'mobile') {
+      return NextResponse.json(
+        { error: 'station_type debe ser "fixed" o "mobile"' },
+        { status: 400 }
+      )
+    }
+
+    let description: string | null = null
+    if (body.description !== undefined && body.description !== null) {
+      if (typeof body.description !== 'string') {
+        return NextResponse.json({ error: 'description debe ser texto' }, { status: 400 })
+      }
+      const trimmed = body.description.trim()
+      if (trimmed.length > 500) {
+        return NextResponse.json(
+          { error: 'description máximo 500 caracteres' },
+          { status: 400 }
+        )
+      }
+      description = trimmed.length > 0 ? trimmed : null
+    }
+
+    let cityId: string | null = null
+    if (body.city_id !== undefined && body.city_id !== null) {
+      if (typeof body.city_id !== 'string') {
+        return NextResponse.json({ error: 'city_id debe ser texto' }, { status: 400 })
+      }
+      const cityCheck = await pool.query(
+        'SELECT id FROM cities WHERE id = $1',
+        [body.city_id]
+      )
+      if (cityCheck.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'Ciudad inválida' },
+          { status: 400 }
+        )
+      }
+      cityId = body.city_id
+    }
+
+    let phone: string | null = null
+    if (body.phone !== undefined && body.phone !== null && body.phone !== '') {
+      if (typeof body.phone !== 'string') {
+        return NextResponse.json({ error: 'phone debe ser texto' }, { status: 400 })
+      }
+      const digits = body.phone.replace(/\D/g, '')
+      if (digits.length < 7 || digits.length > 15) {
+        return NextResponse.json(
+          { error: 'phone debe tener entre 7 y 15 dígitos' },
+          { status: 400 }
+        )
+      }
+      phone = digits
+    }
+
+    let latitude: number | null = null
+    let longitude: number | null = null
+    if (body.latitude !== undefined && body.latitude !== null) {
+      const lat = Number(body.latitude)
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        return NextResponse.json(
+          { error: 'latitude debe estar entre -90 y 90' },
+          { status: 400 }
+        )
+      }
+      latitude = lat
+    }
+    if (body.longitude !== undefined && body.longitude !== null) {
+      const lng = Number(body.longitude)
+      if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+        return NextResponse.json(
+          { error: 'longitude debe estar entre -180 y 180' },
+          { status: 400 }
+        )
+      }
+      longitude = lng
+    }
+    // Reject partial coordinate pairs (lat without lng or vice versa)
+    if ((latitude === null) !== (longitude === null)) {
+      return NextResponse.json(
+        { error: 'latitude y longitude deben venir juntos o ambos omitirse' },
+        { status: 400 }
+      )
+    }
+
+    // ── Resolve profile ─────────────────────────────────────────────────
+    const profileRes = await pool.query(
+      'SELECT id FROM profiles WHERE user_id = $1',
+      [auth.userId]
+    )
+    if (profileRes.rows.length === 0) {
+      logger.error(
+        { userId: auth.userId },
+        'POST /api/vendors: seller has no profile row (data integrity bug)'
+      )
+      return NextResponse.json(
+        { error: 'Perfil no encontrado. Contactá soporte.' },
+        { status: 500 }
+      )
+    }
+    const profileId = profileRes.rows[0].id
+
+    // ── Conflict: one vendor per seller (current scope) ─────────────────
+    const existing = await pool.query(
+      'SELECT id, name FROM vendors WHERE profile_id = $1 LIMIT 1',
+      [profileId]
+    )
+    if (existing.rows.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Ya tenés un puesto creado',
+          vendor: { id: existing.rows[0].id, name: existing.rows[0].name },
+        },
+        { status: 409 }
+      )
+    }
+
+    // ── Slug generation ─────────────────────────────────────────────────
+    const slug = await generateUniqueSlug(name, cityId)
+
+    // ── Insert ──────────────────────────────────────────────────────────
+    const insertSql = `
+      INSERT INTO vendors (
+        profile_id, name, slug, category, description,
+        city_id, latitude, longitude, station_type,
+        phone, is_active, is_verified, created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false, false, NOW())
+      RETURNING id, profile_id, name, slug, category, description,
+                city_id, latitude, longitude, station_type, phone,
+                is_active, is_verified, created_at
+    `
+    const insertParams = [
+      profileId, name, slug, category, description,
+      cityId, latitude, longitude, stationType, phone,
+    ]
+    const result = await pool.query(insertSql, insertParams)
+    const v = result.rows[0]
+
+    logger.info(
+      { userId: auth.userId, vendorId: v.id, slug: v.slug },
+      'vendor.created'
+    )
+
+    return NextResponse.json(
+      {
+        vendor: {
+          id: v.id,
+          profileId: v.profile_id,
+          name: v.name,
+          slug: v.slug,
+          category: v.category,
+          description: v.description,
+          cityId: v.city_id,
+          latitude: v.latitude,
+          longitude: v.longitude,
+          stationType: v.station_type,
+          phone: v.phone,
+          isActive: v.is_active,
+          isVerified: v.is_verified,
+          createdAt: v.created_at,
+        },
+      },
+      { status: 201 }
+    )
+  } catch (err) {
+    logger.error(serializeErr(err), 'Vendors POST error:')
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the viewer's profile_id from a token, if present. Used by GET to
+ * gate the `phone` field. Returns null when unauthenticated or buyer-only.
+ */
+async function resolveViewerId(req: NextRequest): Promise<string | null> {
+  const { getTokenFromRequest } = await import('@/lib/auth-edge')
+  const token = getTokenFromRequest(req)
+  if (!token) return null
+  try {
+    const { verifyTokenEdge } = await import('@/lib/auth-edge')
+    const decoded = await verifyTokenEdge(token)
+    if (!decoded) return null
+    const r = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [decoded.userId])
+    return r.rows[0]?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Generate a URL-safe slug from a vendor name. Collisions get a numeric suffix.
+ *
+ * Examples:
+ *   "Arepas La Caleña" + city "cali" → "arepas-la-calena-cali"
+ *   "Arepas La Caleña" (no city)     → "arepas-la-calena"
+ *
+ * If the base slug is taken, append -2, -3, ... until unique.
+ */
+async function generateUniqueSlug(name: string, cityId: string | null): Promise<string> {
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')  // strip diacritics
+      .replace(/[^a-z0-9\s-]/g, '')     // drop punctuation
+      .trim()
+      .replace(/\s+/g, '-')              // spaces → dashes
+      .replace(/-+/g, '-')               // collapse multiple dashes
+      .replace(/^-|-$/g, '')             // trim leading/trailing dashes
+      .slice(0, 60)                      // safety bound
+
+  const base = slugify(name) || 'puesto'
+  const withCity = cityId ? `${base}-${slugify(cityId)}` : base
+
+  // Try base, then -2, -3, ... up to -99.
+  for (let i = 1; i < 100; i++) {
+    const candidate = i === 1 ? withCity : `${withCity}-${i}`
+    const r = await pool.query('SELECT 1 FROM vendors WHERE slug = $1 LIMIT 1', [candidate])
+    if (r.rows.length === 0) return candidate
+  }
+  // Fallback to random suffix (should be unreachable for any realistic scale).
+  return `${withCity}-${Date.now().toString(36)}`
+}

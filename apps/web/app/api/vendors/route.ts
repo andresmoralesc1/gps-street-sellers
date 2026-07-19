@@ -83,7 +83,10 @@ export async function GET(req: NextRequest) {
     params.push(limit, offset)
 
     const result = await pool.query(query, params)
-    const adsQuery = `
+    // ads is a VIEW (see migrations/014_ads_view_and_seed.sql) backed by
+    // ad_campaigns. Window filter is applied here, not in the view, so admin
+    // tooling can still SELECT paused/expired rows.
+    const adsResult = await pool.query(`
       SELECT id, brand_name, image_url, target_url
       FROM ads
       WHERE is_active = true
@@ -91,32 +94,13 @@ export async function GET(req: NextRequest) {
         AND (ends_at IS NULL OR ends_at >= NOW())
       ORDER BY priority DESC, created_at DESC
       LIMIT 5
-    `
-    const adsParams: any[] = []
-    // Sponsored vendors are determined by an active sponsorship for the vendor
-    // Defensive: the `ads` table has never been migrated (see TODO MIGRATION-ADS).
-    // Wrap the query so a missing table doesn't take down the whole listing.
-    let ads: { id: string; brandName: string; imageUrl: string; targetUrl: string }[] = []
-    try {
-      const adsResult = await pool.query(adsQuery, adsParams)
-      ads = adsResult.rows.map((a) => ({
-        id: a.id,
-        brandName: a.brand_name,
-        imageUrl: a.image_url,
-        targetUrl: a.target_url,
-      }))
-    } catch (adsErr: any) {
-      // 42P01 = undefined_table (relation does not exist). Log once and
-      // return empty ads rather than 500ing the whole vendor listing.
-      if (adsErr?.code === '42P01') {
-        logger.warn({ err: { code: adsErr.code, message: adsErr.message } },
-          'ads table missing — returning empty ads list (pre-existing, see TODO MIGRATION-ADS)')
-      } else {
-        throw adsErr
-      }
-    }
-
-    const sponsoredCount = result.rows.filter((v) => v.is_sponsored).length
+    `)
+    const ads = adsResult.rows.map((a) => ({
+      id: a.id,
+      brandName: a.brand_name,
+      imageUrl: a.image_url,
+      targetUrl: a.target_url,
+    }))
 
     // Strip phone unless viewer is owner (phone leak fix)
     const viewerId = (await resolveViewerId(req)) || null
@@ -190,29 +174,13 @@ export async function GET(req: NextRequest) {
       countArgs
     )
 
-    // Sponsored vendors are determined by an active sponsorship for the vendor.
-    // Defensive try/catch (same as above): ads table may not exist yet.
-    let adsFinal: { id: string; brandName: string; imageUrl: string; targetUrl: string }[] = []
-    try {
-      const adsResultFinal = await pool.query(adsQuery, adsParams)
-      adsFinal = adsResultFinal.rows.map((a) => ({
-        id: a.id,
-        brandName: a.brand_name,
-        imageUrl: a.image_url,
-        targetUrl: a.target_url,
-      }))
-    } catch (adsErr: any) {
-      if (adsErr?.code !== '42P01') throw adsErr
-      // 42P01 already logged by the first try/catch above — silent here.
-    }
-
-    const sponsoredCountFinal = vendors.filter((v) => v.isSponsored).length
+    const sponsoredCount = vendors.filter((v) => v.isSponsored).length
 
     return NextResponse.json(
       {
         vendors,
-        ads: adsFinal,
-        sponsoredCount: sponsoredCountFinal,
+        ads,
+        sponsoredCount,
         totalCount: totalCountResult.rows[0]?.n ?? vendors.length,
         limit,
         offset,

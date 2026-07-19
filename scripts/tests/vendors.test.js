@@ -40,6 +40,23 @@ test('GET /api/vendors returns vendor list', async () => {
   assert.ok(res.body.vendors.length > 0, 'should have at least one vendor')
 })
 
+test('GET /api/vendors response shape: ads is always an array (VIEW-backed)', async () => {
+  // Migration 014_ads_view_and_seed.sql creates a `ads` VIEW on top of
+  // ad_campaigns. Previously the GET silently returned ads: [] with a warn
+  // per request because the code read FROM ads but the real table was
+  // ad_campaigns. Now the response must include an `ads` array (possibly
+  // empty when no active campaigns exist) — and the endpoint must NOT 500
+  // when the underlying table is empty.
+  const res = await fetchJSON('/api/vendors')
+  assert.equal(res.status, 200)
+  assert.ok(Array.isArray(res.body.ads), 'ads should be an array (never undefined)')
+  // Shape contract: each ad row, if any, has the camelCase keys the UI expects.
+  for (const ad of res.body.ads) {
+    assert.ok('id' in ad && 'brandName' in ad && 'imageUrl' in ad && 'targetUrl' in ad,
+      'ad row must expose id/brandName/imageUrl/targetUrl keys')
+  }
+})
+
 test('GET /api/vendors exposes vehicle fields in payload', async () => {
   const res = await fetchJSON('/api/vendors')
   const sample = res.body.vendors[0]

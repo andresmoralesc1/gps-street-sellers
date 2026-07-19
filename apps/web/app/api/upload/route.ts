@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { writeFile, mkdir } from 'fs/promises'
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     const url = `/storage/${folder}/${filename}`
     return NextResponse.json({ url }, { status: 201 })
   } catch (err) {
-    console.error('Upload error:', err)
+    logger.error(serializeErr(err), 'Upload error:')
     return NextResponse.json({ error: 'Error interno al subir' }, { status: 500 })
   }
 }

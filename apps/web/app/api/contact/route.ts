@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Contact form error:', err)
+    logger.error(serializeErr(err), 'Contact form error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

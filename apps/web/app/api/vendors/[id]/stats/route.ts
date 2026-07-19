@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       rankPercentile,
     })
   } catch (err) {
-    console.error('Stats error:', err)
+    logger.error(serializeErr(err), 'Stats error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

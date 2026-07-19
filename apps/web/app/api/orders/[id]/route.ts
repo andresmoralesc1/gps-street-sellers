@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { notify } from '@/lib/push'
@@ -87,14 +88,14 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       if (buyerRes.rows.length > 0) {
         // Fire-and-forget — push failures must not fail the order update.
         void notify(buyerRes.rows[0].user_id, message).catch((err) => {
-          console.error('[orders] push notify failed:', err)
+          logger.error(serializeErr(err), '[orders] push notify failed:')
         })
       }
     }
 
     return NextResponse.json({ order: updatedOrder })
   } catch (err) {
-    console.error('Order PATCH error:', err)
+    logger.error(serializeErr(err), 'Order PATCH error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { isOpenNow } from '@/lib/business-hours'
 
 // Public: GET /api/vendors
@@ -195,7 +196,7 @@ export async function GET(req: NextRequest) {
       }
     )
   } catch (err) {
-    console.error('Vendors GET error:', err)
+    logger.error(serializeErr(err), 'Vendors GET error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

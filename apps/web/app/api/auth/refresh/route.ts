@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest, signTokenSync } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
 
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     return response
   } catch (err) {
-    console.error('POST /api/auth/refresh error:', err)
+    logger.error(serializeErr(err), 'POST /api/auth/refresh error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

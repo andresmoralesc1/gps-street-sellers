@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ sponsorships })
   } catch (err) {
-    console.error('Sponsorships GET error:', err)
+    logger.error(serializeErr(err), 'Sponsorships GET error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

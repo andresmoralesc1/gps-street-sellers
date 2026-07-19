@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { signTokenSync } from '@/lib/auth'
@@ -152,7 +153,7 @@ export async function POST(req: NextRequest) {
 
     return response
   } catch (err) {
-    console.error('Login error:', err)
+    logger.error(serializeErr(err), 'Login error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

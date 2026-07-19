@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { COLOMBIA_CITIES } from '@/lib/core/constants/cities'
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ vendor: result.rows[0] })
   } catch (err) {
-    console.error('Vendors/me PATCH error:', err)
+    logger.error(serializeErr(err), 'Vendors/me PATCH error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     const result = await pool.query(query, params)
     return NextResponse.json({ products: result.rows })
   } catch (err) {
-    console.error('Products GET error:', err)
+    logger.error(serializeErr(err), 'Products GET error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ product: result.rows[0] }, { status: 201 })
   } catch (err) {
-    console.error('Products POST error:', err)
+    logger.error(serializeErr(err), 'Products POST error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

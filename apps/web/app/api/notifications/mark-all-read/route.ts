@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ updated: result.rowCount ?? result.rows.length })
   } catch (err) {
-    console.error('mark-all-read error:', err)
+    logger.error(serializeErr(err), 'mark-all-read error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

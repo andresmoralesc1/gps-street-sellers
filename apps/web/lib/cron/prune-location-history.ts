@@ -1,4 +1,5 @@
 import pool from '@/lib/db'
+import { logger, serializeErr } from '@/lib/logger'
 import { recordJobRun } from '@/lib/job-status'
 
 /**
@@ -23,9 +24,9 @@ export function startLocationHistoryPruneCron() {
         [RETENTION_DAYS.toString()]
       )
       await recordJobRun('location-history-prune', { deleted: res.rowCount ?? 0 })
-      console.log(`[location-history-prune] Deleted ${res.rowCount} snapshots older than ${RETENTION_DAYS} days`)
+      logger.info(`[location-history-prune] Deleted ${res.rowCount} snapshots older than ${RETENTION_DAYS} days`)
     } catch (err) {
-      console.error('[location-history-prune] error:', err)
+      logger.error(serializeErr(err), '[location-history-prune] error:')
     }
   }
 
@@ -33,7 +34,7 @@ export function startLocationHistoryPruneCron() {
   void runOnce()
   timer = setInterval(runOnce, CHECK_INTERVAL_MS)
 
-  console.log(`[location-history-prune] Cron scheduled (every ${CHECK_INTERVAL_MS / 1000}s, retention ${RETENTION_DAYS}d)`)
+  logger.info(`[location-history-prune] Cron scheduled (every ${CHECK_INTERVAL_MS / 1000}s, retention ${RETENTION_DAYS}d)`)
 }
 
 export function stopLocationHistoryPruneCron() {

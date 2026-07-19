@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -168,7 +169,7 @@ export async function PATCH(req: NextRequest) {
     const result = await pool.query(sql, params)
     return NextResponse.json({ vendor: result.rows[0] })
   } catch (err) {
-    console.error('vendors/me/settings PATCH error:', err)
+    logger.error(serializeErr(err), 'vendors/me/settings PATCH error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

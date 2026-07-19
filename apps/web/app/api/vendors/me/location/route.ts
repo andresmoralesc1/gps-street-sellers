@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -71,7 +72,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, latitude, longitude })
   } catch (err) {
-    console.error('Vendor location update error:', err)
+    logger.error(serializeErr(err), 'Vendor location update error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

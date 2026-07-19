@@ -12,6 +12,7 @@
  */
 
 import webpush, { type WebPushError } from 'web-push'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from './db'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -35,7 +36,7 @@ function configureVapid(): boolean {
     vapidConfigured = true
     return true
   } catch (err) {
-    console.error('[push] Failed to configure VAPID:', err)
+    logger.error(serializeErr(err), '[push] Failed to configure VAPID:')
     return false
   }
 }
@@ -43,7 +44,7 @@ function configureVapid(): boolean {
 // Configure at module load — best-effort.
 vapidConfigured = configureVapid()
 if (!vapidConfigured) {
-  console.warn('[push] VAPID keys not configured. Push notifications are disabled. Run `npm run generate-vapid` to generate keys.')
+  logger.warn('[push] VAPID keys not configured. Push notifications are disabled. Run `npm run generate-vapid` to generate keys.')
 }
 
 export interface PushPayload {

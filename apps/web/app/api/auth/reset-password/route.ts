@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
       message: 'Contraseña actualizada. Inicia sesión con tu nueva contraseña.',
     })
   } catch (err) {
-    console.error('Reset password error:', err)
+    logger.error(serializeErr(err), 'Reset password error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

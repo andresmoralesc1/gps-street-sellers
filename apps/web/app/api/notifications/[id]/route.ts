@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ notification: result.rows[0] })
   } catch (err) {
-    console.error('Notifications PATCH error:', err)
+    logger.error(serializeErr(err), 'Notifications PATCH error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

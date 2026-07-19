@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import jwt from 'jsonwebtoken'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
           console.error('[forgot-password] Brevo send failed:', res.status, await res.text())
         }
       } catch (emailErr) {
-        console.error('[forgot-password] Email error (non-fatal):', emailErr)
+        logger.error(serializeErr(emailErr), '[forgot-password] Email error (non-fatal):')
       }
     }
 
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
       message: 'Si el email existe, recibirás un enlace para restablecer tu contraseña.',
     })
   } catch (err) {
-    console.error('Forgot password error:', err)
+    logger.error(serializeErr(err), 'Forgot password error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

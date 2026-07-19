@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 
 /**
@@ -56,7 +57,7 @@ async function checkDatabase(): Promise<CheckResult> {
     const msg = err instanceof Error ? err.message : ''
     const safeError = msg === 'timeout' ? 'timeout' : 'check_failed'
     if (msg) {
-      console.error('[health/ready] database check error:', msg)
+      logger.error(serializeErr(msg), '[health/ready] database check error:')
     }
     return {
       status: 'fail',

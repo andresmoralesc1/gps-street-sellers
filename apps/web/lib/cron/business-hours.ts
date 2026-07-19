@@ -1,4 +1,5 @@
 import pool from '@/lib/db'
+import { logger, serializeErr } from '@/lib/logger'
 import { recordJobRun } from '@/lib/job-status'
 
 /**
@@ -33,9 +34,9 @@ async function run() {
     const result = await pool.query(sql)
     const updated = result.rowCount ?? 0
     await recordJobRun('business-hours', { updated, ts: new Date().toISOString() })
-    console.log(`[business-hours] Updated ${updated} vendors`)
+    logger.info(`[business-hours] Updated ${updated} vendors`)
   } catch (err) {
-    console.error('[business-hours] Error:', err)
+    logger.error(serializeErr(err), '[business-hours] Error:')
     await recordJobRun('business-hours', { error: String(err) })
   }
 }
@@ -47,5 +48,5 @@ export function startBusinessHoursCron() {
   const interval = setInterval(run, 5 * 60 * 1000)
   // Don't keep the process alive just for this timer.
   if (typeof interval.unref === 'function') interval.unref()
-  console.log('[business-hours] Cron scheduled (every 5 min)')
+  logger.info('[business-hours] Cron scheduled (every 5 min)')
 }

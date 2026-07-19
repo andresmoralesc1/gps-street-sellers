@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { COLOMBIA_CITIES } from '@/lib/core/constants'
@@ -191,7 +192,7 @@ export async function POST(req: NextRequest) {
         [user.id, policyVersion, ip, req.headers.get('user-agent')]
       )
     } catch (err) {
-      console.error('[register] consent log failed (non-fatal):', err)
+      logger.error(serializeErr(err), '[register] consent log failed (non-fatal):')
     }
 
     const tokenPayload = { userId: user.id, email: user.email, role: user.role, tokenVersion: 1 }
@@ -229,7 +230,7 @@ export async function POST(req: NextRequest) {
 
     return response
   } catch (err) {
-    console.error('Register error:', err)
+    logger.error(serializeErr(err), 'Register error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

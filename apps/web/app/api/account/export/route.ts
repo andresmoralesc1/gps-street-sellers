@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -150,7 +151,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (err) {
-    console.error('[account export] error:', err)
+    logger.error(serializeErr(err), '[account export] error:')
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 import type { Pool } from 'pg'
+import { logger, serializeErr } from '@/lib/logger'
 
 // Per-process state. Next.js forks workers, so this module is evaluated
 // once per worker. We collect cleanup hooks and run them in order on
@@ -24,7 +25,7 @@ export function registerShutdownHandlers(): void {
   const handle = async (signal: NodeJS.Signals) => {
     if (shuttingDown) return
     shuttingDown = true
-    console.log(`[shutdown] received ${signal}, running ${hooks.length} hooks`)
+    logger.info(`[shutdown] received ${signal}, running ${hooks.length} hooks`)
 
     // Run hooks sequentially — order matters (cron-stop before pg-pool-end).
     // CRIT-19: per-hook 3000ms timeout. PM2's kill_timeout is 8s for the
@@ -38,12 +39,12 @@ export function registerShutdownHandlers(): void {
             setTimeout(() => reject(new Error('hook timeout')), 3000)
           ),
         ])
-        console.log(`[shutdown] ${hook.name} OK`)
+        logger.info(`[shutdown] ${hook.name} OK`)
       } catch (err) {
-        console.error(`[shutdown] ${hook.name} FAILED:`, err)
+        logger.error(serializeErr(err), `[shutdown] ${hook.name} FAILED:`)
       }
     }
-    console.log('[shutdown] done, exiting')
+    logger.info('[shutdown] done, exiting')
     // Don't call process.exit here — let Node exit naturally once the
     // event loop drains. PM2 has kill_timeout 8s as a backstop.
   }

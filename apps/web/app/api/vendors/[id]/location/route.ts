@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
@@ -110,13 +111,13 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
     // Fire-and-forget so push failures don't fail the location update.
     if (!wasActive && updated.is_active) {
       void notifyFavoriteBuyers(vendorId, vendorName).catch((err) => {
-        console.error('[vendor location] push to favorites failed:', err)
+        logger.error(serializeErr(err), '[vendor location] push to favorites failed:')
       })
     }
 
     return NextResponse.json({ vendor: updated })
   } catch (err) {
-    console.error('Vendor location PUT error:', err)
+    logger.error(serializeErr(err), 'Vendor location PUT error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -55,7 +56,7 @@ const userId = auth.userId
       days,
     })
   } catch (err) {
-    console.error('GET location-history error:', err)
+    logger.error(serializeErr(err), 'GET location-history error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

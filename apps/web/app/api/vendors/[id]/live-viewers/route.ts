@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import {
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
         )
         send('viewer_count', { count: Number(result.rows[0]?.viewers ?? 0), ts: Date.now() })
       } catch (err) {
-        console.error('live-viewers initial error:', err)
+        logger.error(serializeErr(err), 'live-viewers initial error:')
       }
 
       const interval = setInterval(async () => {
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
           )
           send('viewer_count', { count: Number(result.rows[0]?.viewers ?? 0), ts: Date.now() })
         } catch (err) {
-          console.error('live-viewers tick error:', err)
+          logger.error(serializeErr(err), 'live-viewers tick error:')
         }
       }, 10000)
 

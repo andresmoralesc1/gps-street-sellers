@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 
 /**
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       shareUrl: `/vendedor/${v.slug ?? v.id}`,
     })
   } catch (err) {
-    console.error('GET catalog error:', err)
+    logger.error(serializeErr(err), 'GET catalog error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

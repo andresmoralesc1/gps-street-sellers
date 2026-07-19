@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 async function getUserFromDb(userId: string) {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(user)
   } catch (err) {
-    console.error('GET /api/auth/me error:', err)
+    logger.error(serializeErr(err), 'GET /api/auth/me error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -92,7 +93,7 @@ export async function PATCH(req: NextRequest) {
       avatarUrl: '',
     })
   } catch (err) {
-    console.error('PATCH /api/auth/me error:', err)
+    logger.error(serializeErr(err), 'PATCH /api/auth/me error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest, requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
@@ -157,7 +158,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       reviews,
     })
   } catch (err) {
-    console.error('Vendor GET error:', err)
+    logger.error(serializeErr(err), 'Vendor GET error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -222,7 +223,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ vendor: result.rows[0] })
   } catch (err) {
-    console.error('Vendor PATCH error:', err)
+    logger.error(serializeErr(err), 'Vendor PATCH error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

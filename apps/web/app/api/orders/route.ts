@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -114,7 +115,7 @@ export async function GET(req: NextRequest) {
       client.release()
     }
   } catch (err) {
-    console.error('Orders POST error:', err)
+    logger.error(serializeErr(err), 'Orders POST error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

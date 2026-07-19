@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import pool from '@/lib/db'
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
       [userId, email, consentType, policyVersion, body.granted, ip, userAgent]
     )
   } catch (err) {
-    console.error('[consent] insert failed:', err)
+    logger.error(serializeErr(err), '[consent] insert failed:')
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 

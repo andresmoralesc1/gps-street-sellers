@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
       client.release()
     }
   } catch (err) {
-    console.error('Reviews POST error:', err)
+    logger.error(serializeErr(err), 'Reviews POST error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -131,7 +132,7 @@ export async function GET(req: NextRequest) {
     const result = await pool.query(query, params)
     return NextResponse.json({ reviews: result.rows })
   } catch (err) {
-    console.error('Reviews GET error:', err)
+    logger.error(serializeErr(err), 'Reviews GET error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

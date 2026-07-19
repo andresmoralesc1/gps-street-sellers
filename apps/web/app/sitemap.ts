@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 
 /**
@@ -76,7 +77,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     })
   } catch (err) {
-    console.error('Sitemap: failed to fetch vendors', err)
+    logger.error(serializeErr(err), 'Sitemap: failed to fetch vendors')
   }
 
   return [...staticPages, ...vendorPages]

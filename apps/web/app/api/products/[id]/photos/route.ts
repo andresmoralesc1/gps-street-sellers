@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
     )
     return NextResponse.json({ photos: result.rows })
   } catch (err) {
-    console.error('GET photos error:', err)
+    logger.error(serializeErr(err), 'GET photos error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -72,7 +73,7 @@ const userId = auth.userId
 
     return NextResponse.json({ photo: inserted.rows[0] }, { status: 201 })
   } catch (err) {
-    console.error('POST photos error:', err)
+    logger.error(serializeErr(err), 'POST photos error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -105,7 +106,7 @@ export async function DELETE(req: NextRequest, { params: paramsPromise }: { para
     }
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('DELETE photos error:', err)
+    logger.error(serializeErr(err), 'DELETE photos error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

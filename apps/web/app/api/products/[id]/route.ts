@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -41,7 +42,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     await pool.query('DELETE FROM products WHERE id = $1', [productId])
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Products DELETE error:', err)
+    logger.error(serializeErr(err), 'Products DELETE error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

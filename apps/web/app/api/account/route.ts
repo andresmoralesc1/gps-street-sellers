@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -107,7 +108,7 @@ export async function DELETE(request: NextRequest) {
     return response
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
-    console.error('[account delete] error:', err)
+    logger.error(serializeErr(err), '[account delete] error:')
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   } finally {
     client.release()

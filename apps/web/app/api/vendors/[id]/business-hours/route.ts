@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
     }
     return NextResponse.json({ hours: result.rows[0] })
   } catch (err) {
-    console.error('GET business-hours error:', err)
+    logger.error(serializeErr(err), 'GET business-hours error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -75,7 +76,7 @@ const userId = auth.userId
 
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('PUT business-hours error:', err)
+    logger.error(serializeErr(err), 'PUT business-hours error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

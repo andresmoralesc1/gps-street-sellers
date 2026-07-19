@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     clearCookies(response)
     return response
   } catch (err) {
-    console.error('Logout error:', err)
+    logger.error(serializeErr(err), 'Logout error:')
     const response = NextResponse.json({ success: true })
     clearCookies(response)
     return response

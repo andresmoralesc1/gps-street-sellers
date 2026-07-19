@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import {
   acquireStreamSlot,
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
           })
         }
       } catch (err) {
-        console.error('[stream] initial snapshot failed:', err)
+        logger.error(serializeErr(err), '[stream] initial snapshot failed:')
       }
 
       // Periodic poll — emit vendors whose location_updated_at > lastSeen.
@@ -127,7 +128,7 @@ export async function GET(req: NextRequest) {
           // Heartbeat to keep connection alive (every 5s) and avoid proxy timeouts.
           send({ type: 'ping', ts: Date.now() })
         } catch (err) {
-          console.error('[stream] poll failed:', err)
+          logger.error(serializeErr(err), '[stream] poll failed:')
         }
       }, POLL_INTERVAL_MS)
 

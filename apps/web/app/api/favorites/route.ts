@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 201 })
   } catch (err) {
-    console.error('Favorites POST error:', err)
+    logger.error(serializeErr(err), 'Favorites POST error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ favorites })
   } catch (err) {
-    console.error('Favorites GET error:', err)
+    logger.error(serializeErr(err), 'Favorites GET error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -110,7 +111,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Favorites DELETE error:', err)
+    logger.error(serializeErr(err), 'Favorites DELETE error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

@@ -18,3 +18,4 @@ backups/
 
 scripts/__pycache__/
 .hermes/
+apps/web/storage/

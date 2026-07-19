@@ -59,8 +59,18 @@ export async function POST(req: NextRequest) {
 
     const { name, description, price, photo_url, vendor_id } = await req.json()
 
-    if (!name || !price) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
+    }
+    const priceNum = Number(price)
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      return NextResponse.json({ error: 'Precio inválido (debe ser mayor a 0)' }, { status: 400 })
+    }
+    if (priceNum > 99999999.99) {
+      return NextResponse.json(
+        { error: 'Precio demasiado grande (máx 99,999,999.99 COP)' },
+        { status: 400 }
+      )
     }
 
     let vendorId = vendor_id
@@ -90,12 +100,18 @@ export async function POST(req: NextRequest) {
     const result = await pool.query(
       `INSERT INTO products (vendor_id, name, description, price, photo_url)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [vendorId, name, description || '', price, photo_url || null]
+      [vendorId, name, description || '', priceNum, photo_url || null]
     )
 
     return NextResponse.json({ product: result.rows[0] }, { status: 201 })
-  } catch (err) {
+  } catch (err: any) {
     logger.error(serializeErr(err), 'Products POST error:')
+    if (err?.code === '22003') {
+      return NextResponse.json(
+        { error: 'Precio demasiado grande (máx 99,999,999.99 COP)' },
+        { status: 400 }
+      )
+    }
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

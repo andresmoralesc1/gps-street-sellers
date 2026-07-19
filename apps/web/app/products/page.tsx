@@ -93,6 +93,20 @@ export default function ProductsPage() {
   const handleAdd = async () => {
     if (!formName || !formPrice || !vendorId) return
 
+    // CRIT fix: surface invalid price (NaN, <= 0, overflow) BEFORE hitting the
+    // server. parseFloat('') === NaN; parseFloat('1e9') === 1e9 which overflows
+    // numeric(10,2). Show a useful inline message instead of letting the
+    // backend return 500.
+    const priceNum = parseFloat(formPrice)
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      setFormError('Precio inválido (debe ser un número mayor a 0)')
+      return
+    }
+    if (priceNum > 99999999.99) {
+      setFormError('Precio demasiado grande (máx 99,999,999.99 COP)')
+      return
+    }
+
     setFormSaving(true)
     setFormError('')
     setFormSuccess('')
@@ -105,7 +119,7 @@ export default function ProductsPage() {
         body: JSON.stringify({
           name: formName,
           description: formDescription,
-          price: parseFloat(formPrice),
+          price: priceNum,
           photo_url: formPhotoUrl || null,
           vendor_id: vendorId,
         }),
@@ -130,6 +144,17 @@ export default function ProductsPage() {
   const handleEdit = async (productId: string) => {
     if (!formName || !formPrice) return
 
+    // Same validation as handleAdd — see comment there.
+    const priceNum = parseFloat(formPrice)
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      setFormError('Precio inválido (debe ser un número mayor a 0)')
+      return
+    }
+    if (priceNum > 99999999.99) {
+      setFormError('Precio demasiado grande (máx 99,999,999.99 COP)')
+      return
+    }
+
     setFormSaving(true)
     setFormError('')
     setFormSuccess('')
@@ -142,7 +167,7 @@ export default function ProductsPage() {
         body: JSON.stringify({
           name: formName,
           description: formDescription,
-          price: parseFloat(formPrice),
+          price: priceNum,
           photo_url: formPhotoUrl || null,
         }),
       })

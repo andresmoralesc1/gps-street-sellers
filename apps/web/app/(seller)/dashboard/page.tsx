@@ -8,7 +8,6 @@ import { BarChart3, Package, Settings, Edit3, ChevronRight, Camera, RefreshCw, B
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { ActiveToggle } from '@/components/seller/ActiveToggle' // legacy, kept for compat but unused on dashboard
 import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { ConnectivityIndicator } from '@/components/seller/ConnectivityIndicator'
 import { FloatingActionButton } from '@/components/seller/FloatingActionButton'
@@ -434,10 +433,32 @@ function DashboardContent() {
                 vendorId={vendorId}
                 products={products.slice(0, 3)}
                 productCount={products.length}
-                onOrderAction={(action: string) => {
+                onOrderAction={async (action: string, orderId?: string) => {
                   if (action === 'refresh') {
                     fetchDashboardData()
                     showToast('Actualizando pedidos...', 'info')
+                    return
+                  }
+                  if (action === 'mark_delivered' && orderId) {
+                    // PATCH /api/orders/[id] with { status: 'completed' }.
+                    // Re-use the same status whitelist the route enforces.
+                    try {
+                      const res = await fetch(`/api/orders/${orderId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ status: 'completed' }),
+                      })
+                      if (res.ok) {
+                        showToast('Pedido marcado como entregado', 'success')
+                        await fetchDashboardData()
+                      } else {
+                        const data = await res.json().catch(() => ({}))
+                        showToast(data.error || 'No se pudo actualizar el pedido', 'error')
+                      }
+                    } catch {
+                      showToast('Error de conexión', 'error')
+                    }
                   }
                 }}
               />

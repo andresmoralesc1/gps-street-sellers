@@ -126,11 +126,22 @@ export function VendorVisibility({
   // In battery mode, the zone center moves as the vendor moves. We track
   // the live center here so the "are we still inside?" check uses the
   // latest anchor, not the one originally saved in /profile/edit.
+  //
+  // The ref initializer only fires once. We also keep zoneCenterRef in sync
+  // with the props in a separate effect so /profile/edit changes (which
+  // re-mount the dashboard with new coords) are picked up without a stale
+  // "no zone saved yet" tick.
   const zoneCenterRef = useRef<{ lat: number; lng: number } | null>(
     geoZoneLat != null && geoZoneLng != null
       ? { lat: geoZoneLat, lng: geoZoneLng }
       : null
   )
+  useEffect(() => {
+    zoneCenterRef.current =
+      geoZoneLat != null && geoZoneLng != null
+        ? { lat: geoZoneLat, lng: geoZoneLng }
+        : null
+  }, [geoZoneLat, geoZoneLng])
 
   useEffect(() => {
     if (!isActive || !navigator.geolocation) return
@@ -241,7 +252,7 @@ export function VendorVisibility({
         watcherRef.current = null
       }
     }
-  }, [isActive, vendorId, setUserLocation, geoMode, geoZoneRadiusM])
+  }, [isActive, vendorId, setUserLocation, geoMode, geoZoneRadiusM, geoZoneLat, geoZoneLng])
 
   // If the parent changes the initial values (after a re-fetch), mirror them.
   useEffect(() => {

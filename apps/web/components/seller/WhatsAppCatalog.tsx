@@ -32,7 +32,7 @@ export function WhatsAppCatalog({ vendorId }: WhatsAppCatalogProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/vendors/${vendorId}/catalog`)
+    fetch(`/api/vendors/${vendorId}/catalog`, { credentials: 'include' })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data) setCatalog(data)

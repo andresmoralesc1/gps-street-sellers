@@ -11,6 +11,21 @@ import pool from '@/lib/db'
 export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   try {
+    // SECURITY: business hours reveal when a vendor is open/closed. Before
+    // this check any caller could enumerate vendor UUIDs and learn the
+    // schedule of any competitor. Now the route requires auth + ownership.
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+
+    const ownerCheck = await pool.query(
+      `SELECT 1 FROM vendors
+       WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)`,
+      [params.id, auth.userId]
+    )
+    if (ownerCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const result = await pool.query(
       `SELECT business_hours_enabled, business_hours_start, business_hours_end, business_days
        FROM vendors WHERE id = $1`,

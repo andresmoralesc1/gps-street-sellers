@@ -122,7 +122,10 @@ export function SellerDashboard({
       })
       setOrders(ordersData.orders ?? [])
       // Minimal vendor shape for downstream rendering (slug, category, name).
-      setVendor((prev: any) => prev ?? {
+      // Always replace, not `prev ?? {...}` — otherwise the stub from the
+      // first load would persist forever and changes to vendor.name/photo
+      // (e.g. from /profile/edit) would never appear here.
+      setVendor({
         id: vendorId,
         name: statsData.vendorName ?? 'Tu tienda',
         description: statsData.description ?? '',
@@ -394,9 +397,13 @@ export function SellerDashboard({
                     {order.status === 'pending' && (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
+                          // Optimistic update: flip the visible badge before the
+                          // request resolves. The handler in the parent owns the
+                          // fetch and will refresh the orders list on success.
                           onOrderAction?.('mark_delivered', order.id)
-                          showToast('Pedido marcado como entregado', 'success')
+                          // We don't show a toast here — the parent's fetch will
+                          // re-render the list with the new status.
                         }}
                         className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100"
                       >

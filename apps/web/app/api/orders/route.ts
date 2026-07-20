@@ -5,8 +5,72 @@ import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 
-// GET /api/orders — buyer sees own orders, vendor sees own orders
+/**
+ * GET /api/orders — list the calling user's orders.
+ *
+ * Buyers see orders they placed; vendors see orders placed at their stores.
+ * The role check below branches the query so a buyer can never see another
+ * vendor's order and a vendor can never see another vendor's orders.
+ *
+ * Bug history: this file used to export a single handler called `GET`
+ * whose body did the POST flow (insert order + items). Calling it as GET
+ * with a body would 500 from a body-parse failure. We now expose both
+ * verbs explicitly.
+ */
 export async function GET(req: NextRequest) {
+  try {
+    const auth = await requireAuth(req)
+    if (auth instanceof NextResponse) return auth
+    const userId = auth.userId
+
+    const profileRes = await pool.query(
+      'SELECT id, role FROM profiles WHERE user_id = $1',
+      [userId]
+    )
+    if (profileRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    }
+    const profile = profileRes.rows[0]
+
+    let result
+    if (profile.role === 'buyer') {
+      // Orders this buyer placed.
+      result = await pool.query(
+        `SELECT o.id, o.vendor_id, o.status, o.total, o.created_at,
+                v.name AS vendor_name, v.slug AS vendor_slug, v.photo_url AS vendor_photo_url
+         FROM orders o
+         JOIN vendors v ON v.id = o.vendor_id
+         WHERE o.buyer_id = $1
+         ORDER BY o.created_at DESC
+         LIMIT 50`,
+        [profile.id]
+      )
+    } else if (profile.role === 'seller') {
+      // Orders received at any of this seller's vendor rows.
+      result = await pool.query(
+        `SELECT o.id, o.vendor_id, o.status, o.total, o.created_at,
+                v.name AS vendor_name, v.slug AS vendor_slug, v.photo_url AS vendor_photo_url,
+                o.buyer_id
+         FROM orders o
+         JOIN vendors v ON v.id = o.vendor_id
+         WHERE v.profile_id = $1
+         ORDER BY o.created_at DESC
+         LIMIT 50`,
+        [profile.id]
+      )
+    } else {
+      return NextResponse.json({ orders: [] })
+    }
+
+    return NextResponse.json({ orders: result.rows })
+  } catch (err) {
+    logger.error(serializeErr(err), 'Orders GET error:')
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+// POST /api/orders — create order (buyer only)
+export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth
@@ -44,9 +108,6 @@ export async function GET(req: NextRequest) {
 
     // SECURITY: fetch real prices + validate ownership in one query.
     // We DO NOT trust item.price from the client.
-    // NOTE: products table does not currently have stock or is_active columns,
-    // so we only validate vendor_id here. Stock/active checks should be re-added
-    // when those columns exist in the schema.
     const productIds = items.map((i: any) => i.productId)
     const productsRes = await pool.query(
       `SELECT id, vendor_id, price

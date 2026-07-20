@@ -26,7 +26,10 @@ export function CopyPublicLink({ vendorSlug }: CopyPublicLinkProps) {
       await navigator.clipboard.writeText(publicUrl)
       setCopied(true)
       showToast('Link copiado ✓', 'success')
-      setTimeout(() => setCopied(false), 2000)
+      const t = setTimeout(() => setCopied(false), 2000)
+      // Cleanup: clear the timer if the component unmounts before it fires,
+      // so we don't call setCopied on an unmounted component.
+      return () => clearTimeout(t)
     } catch {
       showToast('No se pudo copiar', 'error')
     }

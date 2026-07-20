@@ -188,10 +188,16 @@ export default function RegisterPage() {
             required
           />
 
-          {/* Single contact field: user types email OR phone, backend detects. */}
+          {/* Single contact field: user types email OR phone, backend detects.
+              type="text" + inputMode hint avoids iOS keyboard reset on type change. */}
           <Input
             label="Email o teléfono"
-            type={isContactEmail ? 'email' : 'tel'}
+            type="text"
+            inputMode={isContactEmail ? 'email' : 'tel'}
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             placeholder="tu@email.com o 300 123 4567"
@@ -206,7 +212,12 @@ export default function RegisterPage() {
           {contact && (
             <Input
               label={isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
-              type={isContactEmail ? 'tel' : 'email'}
+              type="text"
+              inputMode={isContactEmail ? 'tel' : 'email'}
+              autoComplete={isContactEmail ? 'tel' : 'email'}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={altContact}
               onChange={(e) => setAltContact(e.target.value)}
               placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
@@ -227,6 +238,7 @@ export default function RegisterPage() {
           <Input
             label="Contraseña"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"

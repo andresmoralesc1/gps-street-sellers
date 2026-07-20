@@ -5,8 +5,13 @@ import pool from '@/lib/db'
 import { notify } from '@/lib/push'
 
 
-// GET /api/orders/[id] — buyer or vendor of this order only
-export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+// PATCH /api/orders/[id] — change order status (vendor only)
+//
+// The handler was historically exported as GET (Next.js convention is
+// GET=read / PATCH=update). The single handler does an UPDATE so we rename
+// the export to PATCH to match the verb — callers hitting GET will now get
+// the proper 405 instead of a confusing 500 from a body parse failure.
+export async function PATCH(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
 
   try {

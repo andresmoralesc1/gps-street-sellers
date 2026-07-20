@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     )
   } catch (err) {
     logger.error(serializeErr(err), '[consent] insert failed:')
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno. Intenta de nuevo.' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })

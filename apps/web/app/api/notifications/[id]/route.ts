@@ -17,6 +17,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (!notifId) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
     }
+    // Defense: reject non-UUID up front so we never hit a 22P02 from PG.
+    if (!/^[0-9a-f-]{36}$/i.test(notifId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
 
     // Verify ownership
     const check = await pool.query(

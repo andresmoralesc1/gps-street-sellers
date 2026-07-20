@@ -33,7 +33,17 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData()
     const file = formData.get('file') as File | null
-    const folder = (formData.get('folder') as string || 'misc').replace(/[^a-z0-9_-]/gi, '')
+    const rawFolder = (formData.get('folder') as string || 'misc').replace(/[^a-z0-9_-]/gi, '')
+
+    // Defense in depth: the regex above strips slashes and dots, but we still
+    // reject '..', empty strings, and anything that smells like a separator
+    // before we hit the filesystem. Cheap to compute, prevents the filename
+    // sanitizer from leaking a path separator through legitimate-looking input
+    // like '..' (regex collapses to '' or '..' depending on which chars hit).
+    if (!rawFolder || rawFolder === '..' || rawFolder === '.' || rawFolder.includes('/') || rawFolder.includes('\\')) {
+      return NextResponse.json({ error: 'folder inválido' }, { status: 400 })
+    }
+    const folder = rawFolder
 
     if (!file) {
       return NextResponse.json({ error: 'No se envió archivo' }, { status: 400 })

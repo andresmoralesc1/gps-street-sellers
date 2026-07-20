@@ -56,12 +56,50 @@ export async function PATCH(req: NextRequest) {
     let paramCount = 1
 
     if (name !== undefined) {
+      if (typeof name !== 'string') {
+        return NextResponse.json({ error: 'name debe ser texto' }, { status: 400 })
+      }
+      const trimmed = name.trim().replace(/\s+/g, ' ')
+      if (!trimmed) {
+        return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
+      }
+      if (trimmed.length < 2) {
+        return NextResponse.json(
+          { error: 'El nombre debe tener al menos 2 caracteres' },
+          { status: 400 }
+        )
+      }
+      if (trimmed.length > 100) {
+        return NextResponse.json(
+          { error: 'El nombre es demasiado largo (máx 100 caracteres)' },
+          { status: 400 }
+        )
+      }
       updates.push(`name = $${paramCount++}`)
-      values.push(name)
+      values.push(trimmed)
     }
     if (phone !== undefined) {
+      if (phone !== null && typeof phone !== 'string') {
+        return NextResponse.json({ error: 'phone debe ser texto' }, { status: 400 })
+      }
+      // Empty string clears the phone. Otherwise validate Colombian mobile
+      // shape (10 digits starting with 3, or 12 with 57 prefix).
+      let normalizedPhone: string | null = null
+      if (typeof phone === 'string' && phone.trim() !== '') {
+        const digits = phone.replace(/\D/g, '')
+        const valid =
+          (digits.length === 10 && digits.startsWith('3')) ||
+          (digits.startsWith('57') && digits.length === 12 && digits.startsWith('573'))
+        if (!valid) {
+          return NextResponse.json(
+            { error: 'Ingresa un número de teléfono colombiano válido (10 dígitos)' },
+            { status: 400 }
+          )
+        }
+        normalizedPhone = digits
+      }
       updates.push(`phone = $${paramCount++}`)
-      values.push(phone)
+      values.push(normalizedPhone)
     }
     if (cityId !== undefined) {
       updates.push(`city_id = $${paramCount++}`)

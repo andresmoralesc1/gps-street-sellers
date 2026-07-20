@@ -22,7 +22,10 @@ export async function GET(req: NextRequest) {
     }
     const profile = profileRes.rows[0]
 
-    if (profile.role !== 'buyer') {
+    // SECURITY: trust the JWT role, not the DB profile.role. A seller whose
+    // profile role was somehow flipped, or a JWT issued before a role change,
+    // could otherwise bypass the buyer-only check here.
+    if (auth.role !== 'buyer' || profile.role !== 'buyer') {
       return NextResponse.json({ error: 'Solo compradores pueden crear órdenes' }, { status: 403 })
     }
 

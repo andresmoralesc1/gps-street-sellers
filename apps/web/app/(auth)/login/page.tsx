@@ -37,10 +37,14 @@ function AuthPageContent() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Used by the login input to switch its keyboard mode based on what the user
-  // is typing — better mobile UX (numeric keypad for phones).
+  // Used by the login input to hint the right virtual keyboard on mobile.
+  // We keep `type="text"` so iOS doesn't reset cursor when the heuristic flips
+  // (changing input type mid-typing kicks the keyboard off on iOS Safari).
+  // `inputMode` + `autoComplete` give the OS enough hint for the right layout.
   const isIdentifierEmail = identifier.includes('@')
   const isContactEmail = contact.includes('@')
+  const identifierInputMode = isIdentifierEmail ? 'email' : 'tel'
+  const contactInputMode = isContactEmail ? 'email' : 'tel'
   // Live stats for the side panel — pulled from /api/stats on mount.
   // Falls back to 0/0 if the API is unreachable; the panel hides the row
   // in that case so we never show a stale or fake number.
@@ -215,7 +219,12 @@ function AuthPageContent() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Email o teléfono</label>
               <input
-                type={isIdentifierEmail ? 'email' : 'tel'}
+                type="text"
+                inputMode={identifierInputMode}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="tu@email.com o 300 123 4567"
@@ -240,6 +249,7 @@ function AuthPageContent() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={isLoading}
+                  autoComplete="current-password"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
                 />
                 <button
@@ -257,7 +267,17 @@ function AuthPageContent() {
               <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
-            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
+            {!error && (!identifier || !password) && (
+              <p className="text-xs text-gray-500">Ingresa tu email o teléfono y tu contraseña.</p>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              isLoading={isLoading}
+              disabled={isLoading || !identifier || !password}
+            >
               {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
             </Button>
           </form>
@@ -311,7 +331,12 @@ function AuthPageContent() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Email o teléfono</label>
               <input
-                type={isContactEmail ? 'email' : 'tel'}
+                type="text"
+                inputMode={contactInputMode}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
                 placeholder="tu@email.com o 300 123 4567"
@@ -327,7 +352,12 @@ function AuthPageContent() {
                   {isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
                 </label>
                 <input
-                  type={isContactEmail ? 'tel' : 'email'}
+                  type="text"
+                  inputMode={isContactEmail ? 'tel' : 'email'}
+                  autoComplete={isContactEmail ? 'tel' : 'email'}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={altContact}
                   onChange={(e) => setAltContact(e.target.value)}
                   placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
@@ -356,6 +386,7 @@ function AuthPageContent() {
                   onChange={(e) => setRegPassword(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
                   disabled={isLoading}
+                  autoComplete="new-password"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
                 />
                 <button
@@ -380,7 +411,6 @@ function AuthPageContent() {
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
                   className="mt-0.5 w-5 h-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
-                  required
                 />
                 <span>
                   Acepto los{' '}
@@ -395,7 +425,6 @@ function AuthPageContent() {
                   checked={acceptedPrivacy}
                   onChange={(e) => setAcceptedPrivacy(e.target.checked)}
                   className="mt-0.5 w-5 h-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
-                  required
                 />
                 <span>
                   Acepto la{' '}
@@ -407,7 +436,11 @@ function AuthPageContent() {
               </label>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading || !acceptedTerms || !acceptedPrivacy}>
+            {!acceptedTerms || !acceptedPrivacy ? (
+              <p className="text-xs text-gray-500">Acepta los Términos y la Política para continuar.</p>
+            ) : null}
+
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
               {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
             </Button>
           </form>

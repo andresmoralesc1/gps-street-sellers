@@ -275,13 +275,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const stationType = body.station_type ?? 'mobile'
-    if (stationType !== 'fixed' && stationType !== 'mobile') {
+    const rawStationType = (body.station_type ?? body.stationType) ?? 'mobile'
+    if (rawStationType !== 'fixed' && rawStationType !== 'mobile') {
       return NextResponse.json(
-        { error: 'station_type debe ser "fixed" o "mobile"' },
+        { error: 'stationType debe ser "fixed" o "mobile"' },
         { status: 400 }
       )
     }
+    const stationType = rawStationType
 
     let description: string | null = null
     if (body.description !== undefined && body.description !== null) {
@@ -299,29 +300,41 @@ export async function POST(req: NextRequest) {
     }
 
     let cityId: string | null = null
-    if (body.city_id !== undefined && body.city_id !== null) {
-      if (typeof body.city_id !== 'string') {
-        return NextResponse.json({ error: 'city_id debe ser texto' }, { status: 400 })
-      }
-      const cityCheck = await pool.query(
-        'SELECT id FROM cities WHERE id = $1',
-        [body.city_id]
+    // Accept both snake_case (city_id) and camelCase (cityId) so callers don't
+    // silently drop the field. city_id is REQUIRED by the DB constraint; we
+    // validate it here instead of letting Postgres 23514 bubble up as a 500.
+    const rawCityId = (body.city_id ?? body.cityId) as unknown
+    if (rawCityId === undefined || rawCityId === null || rawCityId === '') {
+      return NextResponse.json(
+        { error: 'cityId es requerido' },
+        { status: 400 }
       )
-      if (cityCheck.rows.length === 0) {
-        return NextResponse.json(
-          { error: 'Ciudad inválida' },
-          { status: 400 }
-        )
-      }
-      cityId = body.city_id
     }
+    if (typeof rawCityId !== 'string') {
+      return NextResponse.json(
+        { error: 'cityId debe ser texto' },
+        { status: 400 }
+      )
+    }
+    const cityCheck = await pool.query(
+      'SELECT id FROM cities WHERE id = $1',
+      [rawCityId]
+    )
+    if (cityCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Ciudad inválida' },
+        { status: 400 }
+      )
+    }
+    cityId = rawCityId
 
     let phone: string | null = null
-    if (body.phone !== undefined && body.phone !== null && body.phone !== '') {
-      if (typeof body.phone !== 'string') {
+    const rawPhone = body.phone ?? body.phoneNumber
+    if (rawPhone !== undefined && rawPhone !== null && rawPhone !== '') {
+      if (typeof rawPhone !== 'string') {
         return NextResponse.json({ error: 'phone debe ser texto' }, { status: 400 })
       }
-      const digits = body.phone.replace(/\D/g, '')
+      const digits = rawPhone.replace(/\D/g, '')
       if (digits.length < 7 || digits.length > 15) {
         return NextResponse.json(
           { error: 'phone debe tener entre 7 y 15 dígitos' },

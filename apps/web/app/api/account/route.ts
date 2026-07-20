@@ -39,8 +39,8 @@ export async function DELETE(request: NextRequest) {
   if (request.headers.get('x-confirm-delete') !== 'true') {
     return NextResponse.json(
       {
-        error: 'Confirmation header missing',
-        hint: 'Re-send with header "X-Confirm-Delete: true" to confirm.',
+        error: 'Falta confirmación. Reenvía con el encabezado "X-Confirm-Delete: true".',
+        hint: 'Re-envía con el encabezado "X-Confirm-Delete: true" para confirmar.',
       },
       { status: 409 }
     )
@@ -104,7 +104,7 @@ export async function DELETE(request: NextRequest) {
 
     if (delRes.rowCount === 0) {
       await client.query('ROLLBACK')
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
     await client.query('COMMIT')
@@ -121,7 +121,7 @@ export async function DELETE(request: NextRequest) {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
     logger.error(serializeErr(err), '[account delete] error:')
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno. Intenta de nuevo.' }, { status: 500 })
   } finally {
     client.release()
   }

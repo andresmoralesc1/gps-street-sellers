@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Body requerido' }, { status: 400 })
     }
     const b = body as { vendor_id?: unknown; vendorId?: unknown; rating?: unknown; comment?: unknown }
+    // Accept both snake_case (vendor_id) and camelCase (vendorId) so callers
+    // don't silently drop the field. Reviews already had this fallback.
     const vendor_id = (b.vendor_id ?? b.vendorId) as string | undefined
     const rating = b.rating
     const comment = b.comment

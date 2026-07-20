@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       [userId]
     )
     if (userRes.rows.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
     const user = userRes.rows[0]
 
@@ -152,6 +152,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (err) {
     logger.error(serializeErr(err), '[account export] error:')
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno. Intenta de nuevo.' }, { status: 500 })
   }
 }

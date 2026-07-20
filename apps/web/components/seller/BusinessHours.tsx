@@ -78,7 +78,19 @@ export function BusinessHours({ vendorId }: BusinessHoursProps) {
     }
   }
 
-  if (loading) return null
+  if (loading) {
+    return (
+      <Card variant="outlined" className="p-4 animate-pulse">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="h-3 bg-gray-100 rounded w-1/2" />
+          </div>
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <Card variant="outlined" className="p-4">

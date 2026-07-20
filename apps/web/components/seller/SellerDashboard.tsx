@@ -27,6 +27,11 @@ interface SellerDashboardProps {
   products?: any[]
   productCount?: number
   vendorPhotoUrl?: string | null
+  // Optional initial vendor fields from the parent (avoids the round-trip
+  // of fetching stats just to render the vendor name/description/photo).
+  initialVendorName?: string
+  initialVendorDescription?: string
+  initialVendorPhotoUrl?: string | null
   onOrderAction?: (action: string, orderId?: string) => void
 }
 
@@ -63,13 +68,28 @@ export function SellerDashboard({
   products = [],
   productCount = 0,
   vendorPhotoUrl = null,
+  initialVendorName,
+  initialVendorDescription,
+  initialVendorPhotoUrl,
   onOrderAction,
 }: SellerDashboardProps) {
-  const [vendor, setVendor] = useState<any>(null)
+  const [vendor, setVendor] = useState<any>(initialVendorName
+    ? {
+        id: vendorId,
+        name: initialVendorName,
+        description: initialVendorDescription ?? '',
+        category: 'otros',
+        photoUrl: initialVendorPhotoUrl ?? null,
+      }
+    : null
+  )
   const [stats, setStats] = useState<VendorStats>({
     viewsToday: 0, totalOrders: 0, rating: 0, reviewCount: 0,
     weeklyViews: 0, weeklyOrders: 0, conversionRate: 0,
   })
+  // Pre-seed the vendor from the parent's props so the info card renders
+  // immediately on first paint (no FOUC). The stats loadAll below overwrites
+  // these values as soon as the API returns.
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)

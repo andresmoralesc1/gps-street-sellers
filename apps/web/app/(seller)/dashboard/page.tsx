@@ -428,11 +428,18 @@ function DashboardContent() {
               {/* N6: Copy public vendor link */}
               <CopyPublicLink vendorSlug={vendorData.slug ?? vendorId} />
 
-              {/* Dashboard stats */}
+              {/* Dashboard stats — keyed by vendorId so switching vendors
+                  remounts the child with the new props (no need to manually
+                  re-call loadAll; React does it). Avoids the round-trip of
+                  "parent fetches new data, then re-fetches inside the child". */}
               <SellerDashboard
+                key={vendorId}
                 vendorId={vendorId}
                 products={products.slice(0, 3)}
                 productCount={products.length}
+                initialVendorName={vendorData?.name}
+                initialVendorDescription={vendorData?.description}
+                initialVendorPhotoUrl={vendorData?.photo_url}
                 onOrderAction={async (action: string, orderId?: string) => {
                   if (action === 'refresh') {
                     fetchDashboardData()

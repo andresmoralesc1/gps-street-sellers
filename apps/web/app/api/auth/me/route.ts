@@ -131,6 +131,15 @@ export async function PATCH(req: NextRequest) {
           { status: 409 }
         )
       }
+      // P0001 = trigger-raised exception (see migration 020). Today only
+      // users_role_immutable_guard uses it, surfacing it as 409 makes the
+      // contract explicit if/when we expose role in this endpoint.
+      if (err?.code === 'P0001' && /role is immutable/i.test(err?.message ?? '')) {
+        return NextResponse.json(
+          { error: 'El rol de la cuenta no se puede cambiar' },
+          { status: 409 }
+        )
+      }
       throw err
     }
 

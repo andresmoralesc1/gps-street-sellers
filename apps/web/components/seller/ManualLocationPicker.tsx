@@ -76,6 +76,25 @@ export function ManualLocationPicker({
     }
   }, [pin, success, error])
 
+  // Mirror parent updates to initialLat/initialLng into the local pin when
+  // the user hasn't moved it themselves (pin matches prop within ~50m of
+  // GPS jitter). Without this, server-side updates from a background GPS
+  // poll never show up in the picker until the user saves.
+  useEffect(() => {
+    if (initialLat == null || initialLng == null) return
+    setPin((cur) => {
+      if (cur) {
+        const dLat = Math.abs(cur.lat - initialLat)
+        const dLng = Math.abs(cur.lng - initialLng)
+        if (dLat < 0.0005 && dLng < 0.0005) {
+          return { lat: initialLat, lng: initialLng }
+        }
+        return cur
+      }
+      return { lat: initialLat, lng: initialLng }
+    })
+  }, [initialLat, initialLng])
+
   const handleUseGPS = () => {
     if (!navigator.geolocation) {
       setError('Tu navegador no soporta geolocalización')

@@ -11,7 +11,9 @@ import { Card } from '@/components/ui/Card'
  * Renders a Leaflet map with a heat layer (or circle markers as fallback).
  */
 
-// Lazy-load MapContainer only on client.
+// Lazy-load MapContainer only on client AND only when we actually have
+// cells to render. New vendors (no GPS history yet) skip the import
+// entirely instead of paying the Leaflet bundle cost up front.
 const HeatMap = dynamic(() => import('./LocationHeatMapInner'), {
   ssr: false,
   loading: () => (

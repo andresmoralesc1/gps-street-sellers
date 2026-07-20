@@ -41,10 +41,20 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password, name, phone, cityId, role, acceptedTerms, acceptedPrivacy } = await req.json()
 
-    // ── Required: name + role + password + at least one of (email, phone)
-    const trimmedName = typeof name === 'string' ? name.trim() : ''
+// ── Required: name + role + password + at least one of (email, phone)
+    // Name: trim, collapse internal whitespace, min 2 chars, max 100.
+    // ponytail: min length kept at 2 (real 2-char names exist).
+    const trimmedName = typeof name === 'string'
+      ? name.trim().replace(/\s+/g, ' ')
+      : ''
     if (!trimmedName) {
       return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
+    }
+    if (trimmedName.length < 2) {
+      return NextResponse.json(
+        { error: 'El nombre debe tener al menos 2 caracteres' },
+        { status: 400 }
+      )
     }
     if (trimmedName.length > 100) {
       return NextResponse.json(
@@ -142,60 +152,80 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12)
     const roleValue = role
 
-    const userResult = await pool.query(
-      `INSERT INTO users (email, password_hash, name, phone, city_id, role)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT DO NOTHING
-       RETURNING id, email, name, role, phone, city_id`,
-      [cleanEmail, passwordHash, trimmedName, cleanPhone, cityId || null, roleValue]
-    )
-
-    if (userResult.rows.length === 0) {
-      // Could be email OR phone conflict — narrow it down so the user knows
-      // which field to change.
-      if (cleanEmail) {
-        const dup = await pool.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [cleanEmail])
-        if (dup.rows.length > 0) {
-          return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
-        }
-      }
-      if (cleanPhone) {
-        const dup = await pool.query('SELECT 1 FROM users WHERE phone = $1 LIMIT 1', [cleanPhone])
-        if (dup.rows.length > 0) {
-          return NextResponse.json({ error: 'El teléfono ya está registrado' }, { status: 400 })
-        }
-      }
-      // Both NULL — race condition we couldn't narrow down.
-      return NextResponse.json({ error: 'No se pudo crear la cuenta. Verifica email y teléfono.' }, { status: 400 })
-    }
-
-    const user = userResult.rows[0]
-
-    // Create profile entry with token_version = 1.
-    // For phone-only users we mirror email as NULL — the partial UNIQUE index
-    // allows multiple NULLs.
-    await pool.query(
-      `INSERT INTO profiles (id, user_id, email, name, role, token_version)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, 1)
-       ON CONFLICT (user_id) DO NOTHING`,
-      [user.id, user.email, user.name, roleValue]
-    )
-
-    // ── Ley 1581/2012 — record the consent. Non-fatal on failure (audit only).
+    // Wrap users + profiles insert in a transaction so a profile failure
+    // rolls back the user row. Before this fix a profile INSERT failure left
+    // a user with no profile, making logout a no-op (isTokenRevoked returns
+    // false when no profile exists). DO UPDATE on conflict guarantees the
+    // token_version matches the JWT we issue right after.
+    const client = await pool.connect()
+    let user: { id: string; email: string; name: string; role: string; phone: string; city_id: string | null }
     try {
+      await client.query('BEGIN')
+
+      const userResult = await client.query(
+        `INSERT INTO users (email, password_hash, name, phone, city_id, role)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT DO NOTHING
+         RETURNING id, email, name, role, phone, city_id`,
+        [cleanEmail, passwordHash, trimmedName, cleanPhone, cityId || null, roleValue]
+      )
+
+      if (userResult.rows.length === 0) {
+        await client.query('ROLLBACK')
+        // Could be email OR phone conflict — narrow it down so the user knows
+        // which field to change.
+        if (cleanEmail) {
+          const dup = await client.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [cleanEmail])
+          if (dup.rows.length > 0) {
+            return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+          }
+        }
+        if (cleanPhone) {
+          const dup = await client.query('SELECT 1 FROM users WHERE phone = $1 LIMIT 1', [cleanPhone])
+          if (dup.rows.length > 0) {
+            return NextResponse.json({ error: 'El teléfono ya está registrado' }, { status: 400 })
+          }
+        }
+        // Both NULL — race condition we couldn't narrow down.
+        return NextResponse.json({ error: 'No se pudo crear la cuenta. Verifica email y teléfono.' }, { status: 400 })
+      }
+
+      user = userResult.rows[0]
+
+      // Profile upsert: token_version is forced to 1 so the JWT we issue
+      // matches profiles.token_version (otherwise isTokenRevoked would treat
+      // the brand-new token as revoked on the very first request).
+      await client.query(
+        `INSERT INTO profiles (id, user_id, email, name, role, token_version)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, 1)
+         ON CONFLICT (user_id) DO UPDATE
+           SET token_version = 1,
+               email = EXCLUDED.email,
+               name = EXCLUDED.name,
+               role = EXCLUDED.role`,
+        [user.id, user.email, user.name, roleValue]
+      )
+
+      // ── Ley 1581/2012 — record the consent inside the same tx so the
+      // audit log never refers to a user that doesn't exist.
       const policyVersion = process.env.POLICY_VERSION || 'v1.0'
-      await pool.query(
+      await client.query(
         `INSERT INTO consent_logs
           (user_id, consent_type, policy_version, granted, ip_address, user_agent)
          VALUES ($1, 'terms', $2, true, $3, $4),
                 ($1, 'privacy', $2, true, $3, $4)`,
         [user.id, policyVersion, ip, req.headers.get('user-agent')]
       )
+
+      await client.query('COMMIT')
     } catch (err) {
-      logger.error(serializeErr(err), '[register] consent log failed (non-fatal):')
+      await client.query('ROLLBACK').catch(() => {})
+      throw err
+    } finally {
+      client.release()
     }
 
-    const tokenPayload = { userId: user.id, email: user.email, role: user.role, tokenVersion: 1 }
+    const tokenPayload = { userId: user.id, email: user.email, role: roleValue as 'buyer' | 'seller', tokenVersion: 1 }
     const token = signTokenSync(tokenPayload, '15m')
     const refreshToken = signTokenSync(tokenPayload, '7d')
 

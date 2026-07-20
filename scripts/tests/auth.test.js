@@ -182,7 +182,7 @@ test('POST /api/auth/register rejects invalid city', async () => {
       email: 'unique-fresh-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: String(ts).slice(-10), // unique per run
+      phone: ('3' + String(ts).slice(-9)).slice(-10), // 10-digit Colombian mobile
       cityId: 'atlantis', // not in COLOMBIA_CITIES
       role: 'buyer',
       acceptedTerms: true,   // Ley 1581/2012 — Etapa 4
@@ -202,7 +202,7 @@ test('POST /api/auth/register rejects when consent checkboxes missing', async ()
       email: 'no-consent-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: String(ts).slice(-10), // unique per run
+      phone: ('3' + String(ts).slice(-9)).slice(-10), // 10-digit Colombian mobile
       cityId: 'bogota',
       role: 'buyer',
       // missing acceptedTerms + acceptedPrivacy
@@ -223,7 +223,7 @@ test('POST /api/auth/register rejects when role missing', async () => {
       email: 'no-role-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: String(ts).slice(-10), // unique per run
+      phone: ('3' + String(ts).slice(-9)).slice(-10), // 10-digit Colombian mobile
       cityId: 'bogota',
       acceptedTerms: true,
       acceptedPrivacy: true,
@@ -243,7 +243,7 @@ test('POST /api/auth/register rejects invalid role value', async () => {
       email: 'bad-role-' + ts + '@test.local',
       password: 'Password123',
       name: 'Test',
-      phone: String(ts).slice(-10), // unique per run
+      phone: ('3' + String(ts).slice(-9)).slice(-10), // 10-digit Colombian mobile
       cityId: 'bogota',
       role: 'admin', // only 'buyer' or 'seller' allowed
       acceptedTerms: true,
@@ -263,7 +263,7 @@ test('POST /api/auth/register creates user as seller when role=seller', async ()
       email: 'new-seller-' + ts + '@test.local',
       password: 'Password123',
       name: 'Fresh Seller',
-      phone: String(ts).slice(-10), // unique per run
+      phone: ('3' + String(ts).slice(-9)).slice(-10), // 10-digit Colombian mobile
       cityId: 'bogota',
       role: 'seller',
       acceptedTerms: true,
@@ -284,7 +284,7 @@ test('POST /api/auth/register creates user as buyer when role=buyer', async () =
       email: 'new-buyer-' + ts + '@test.local',
       password: 'Password123',
       name: 'Fresh Buyer',
-      phone: String(ts).slice(-10), // unique per run
+      phone: ('3' + String(ts).slice(-9)).slice(-10), // 10-digit Colombian mobile
       cityId: 'bogota',
       role: 'buyer',
       acceptedTerms: true,
@@ -325,7 +325,7 @@ test('PATCH /api/products/[id] rejects malformed UUID', async () => {
 test('POST /api/auth/register allows phone-only registration (no email)', async () => {
   await resetRateLimit()
   const ts = Date.now()
-  const phone = String(ts).slice(-10) // 10 unique digits
+  const phone = ('3' + String(ts).slice(-9)).slice(-10) // 10-digit Colombian mobile
   const res = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -374,7 +374,7 @@ test('POST /api/auth/register rejects invalid email format', async () => {
       email: 'not-an-email',
       password: 'Password123',
       name: 'Bad Email',
-      phone: String(ts).slice(-10),
+      phone: ('3' + String(ts).slice(-9)).slice(-10),
       cityId: 'cali',
       role: 'buyer',
       acceptedTerms: true,
@@ -407,7 +407,7 @@ test('POST /api/auth/register rejects invalid phone format', async () => {
 
 test('POST /api/auth/register rejects duplicate phone', async () => {
   const ts = Date.now()
-  const phone = String(ts).slice(-10)
+  const phone = ('3' + String(ts).slice(-9)).slice(-10)
   // First registration with phone only
   await fetchJSON('/api/auth/register', {
     method: 'POST',
@@ -445,7 +445,7 @@ test('POST /api/auth/login accepts a phone as identifier', async () => {
   // Register a phone-only user first
   await resetRateLimit()
   const ts = Date.now()
-  const phone = String(ts).slice(-10)
+  const phone = ('3' + String(ts).slice(-9)).slice(-10)
   const regRes = await fetchJSON('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

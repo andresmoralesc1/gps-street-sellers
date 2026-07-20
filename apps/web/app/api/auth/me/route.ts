@@ -73,10 +73,28 @@ export async function PATCH(req: NextRequest) {
     }
 
     values.push(auth.userId)
-    const result = await pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, name, role, phone, city_id`,
-      values
-    )
+    let result
+    try {
+      result = await pool.query(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, name, role, phone, city_id`,
+        values
+      )
+    } catch (err: any) {
+      // 23505 = unique_violation — surface which field collided so the
+      // frontend can highlight the right input. Before this catch the
+      // user saw a generic 500 and the endpoint looked broken.
+      if (err?.code === '23505') {
+        const constraint = err?.constraint ?? ''
+        const field = constraint.includes('email') ? 'email'
+          : constraint.includes('phone') ? 'phone'
+          : 'campo'
+        return NextResponse.json(
+          { error: `Ya existe otro usuario con ese ${field}` },
+          { status: 409 }
+        )
+      }
+      throw err
+    }
 
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })

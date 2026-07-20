@@ -29,10 +29,11 @@ import { useStore } from '@/store/useStore'
  *     so backend state stays in sync with the visible toggle.
  *   - When isActive=false, stops polling and clears the watcher.
  *
- * Why /api/vendors/me/settings (not /api/vendors/{id}/location): the settings
- * endpoint already accepts is_active + lat + lng + station_type in one
- * payload; the legacy /location route stays for backwards compatibility with
- * older clients but new code should prefer this one.
+ * Why /api/vendors/[id]/location for periodic GPS: that route accepts
+ * camelCase {isActive, latitude, longitude} and persists them in one go.
+ * /api/vendors/me/settings is used by toggleActive/setType (snake_case
+ * settings: is_active + station_type + business_hours). Mixing the two
+ * endpoints by purpose keeps the field conventions of each intact.
  */
 
 interface VendorVisibilityProps {
@@ -123,14 +124,23 @@ export function VendorVisibility({
           setUserLocation({ lat, lng })
           // Fire-and-forget: don't block UI on the periodic save.
           // The optimistic toggle above already wrote the is_active.
+          //
+          // Bug fix: previously this hit PATCH /api/vendors/me/settings
+          // with {is_active, latitude, longitude}, but that endpoint only
+          // accepts snake_case and has no latitude/longitude columns in its
+          // SET clause — the backend silently dropped lat/lng and returned
+          // 200 OK (because is_active was persisted). The vendor's GPS pin
+          // therefore never moved. The legacy ActiveToggle used PUT
+          // /api/vendors/[id]/location with camelCase keys — that endpoint
+          // does persist lat/lng. Keep using it for the periodic update.
           fetch(
-            `/api/vendors/me/settings?vendorId=${encodeURIComponent(vendorId)}`,
+            `/api/vendors/${encodeURIComponent(vendorId)}/location`,
             {
-              method: 'PATCH',
+              method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
               body: JSON.stringify({
-                is_active: true,
+                isActive: true,
                 latitude: lat,
                 longitude: lng,
               }),

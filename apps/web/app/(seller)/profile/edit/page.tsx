@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package, ChevronLeft } from 'lucide-react'
+import { Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package, ChevronLeft, Zap, BatteryLow } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -39,6 +39,13 @@ export default function EditProfilePage() {
   const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')
   const [vehiclePhotoUrl, setVehiclePhotoUrl] = useState('')
 
+  // Geo mode: 'precise' = GPS cada 10s, 'battery' = zona circular.
+  // Cuando es battery, el vendedor define un radio (100–5000m) y un centro
+  // (su posición actual al guardar). El servidor solo recibe updates cuando
+  // cruza la frontera del círculo.
+  const [geoMode, setGeoMode] = useState<'precise' | 'battery'>('precise')
+  const [geoZoneRadiusM, setGeoZoneRadiusM] = useState<number>(500)
+
   useEffect(() => {
     if (user?.role !== 'seller') {
       // Seller-only page. Since role is immutable post-register, redirect
@@ -62,6 +69,14 @@ export default function EditProfilePage() {
           return
         }
         setVendorId(firstVendor.id)
+        // Hydrate geo mode from the first vendor in the list — this endpoint
+        // exposes geoMode / geoZoneRadiusM directly (added in geo-mode sprint).
+        if (firstVendor.geoMode === 'battery' || firstVendor.geoMode === 'precise') {
+          setGeoMode(firstVendor.geoMode)
+        }
+        if (typeof firstVendor.geoZoneRadiusM === 'number') {
+          setGeoZoneRadiusM(firstVendor.geoZoneRadiusM)
+        }
 
         // Then fetch full vendor data
         return fetch(`/api/vendors/${firstVendor.id}`, {
@@ -94,6 +109,32 @@ export default function EditProfilePage() {
     setError('')
 
     try {
+      // If switching to 'battery' mode (or already in it but changing the
+      // radius), we need a "center" for the zone — the vendor's current
+      // position. We grab it via the browser geolocation API before saving.
+      // If geolocation is denied/unavailable, we still save the mode (the
+      // server keeps the previous zone center in DB).
+      let geoZoneLat: number | undefined
+      let geoZoneLng: number | undefined
+
+      if (geoMode === 'battery') {
+        const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+          if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            resolve(null)
+            return
+          }
+          navigator.geolocation.getCurrentPosition(
+            (p) => resolve(p),
+            () => resolve(null),
+            { timeout: 5000, maximumAge: 60_000 }
+          )
+        })
+        if (pos) {
+          geoZoneLat = pos.coords.latitude
+          geoZoneLng = pos.coords.longitude
+        }
+      }
+
       const res = await fetch('/api/vendors/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -111,6 +152,13 @@ export default function EditProfilePage() {
           photoUrl,
           vehicleType: vehicleType || null,
           vehiclePhotoUrl: vehiclePhotoUrl || null,
+          // Geo mode persistence. Only send the zone center if we have one
+          // (mode=battery + geolocation succeeded). The radius is always
+          // sent so the server can validate the range.
+          geoMode,
+          geoZoneRadiusM: geoZoneRadiusM,
+          ...(geoZoneLat !== undefined && { geoZoneLat }),
+          ...(geoZoneLng !== undefined && { geoZoneLng }),
         }),
       })
 
@@ -264,6 +312,70 @@ export default function EditProfilePage() {
               folder="vendors/vehicles"
             />
           </div>
+        </Card>
+
+        {/* Modo de ubicación (ahorro de batería) */}
+        <Card variant="outlined" className="p-4 space-y-4">
+          <div>
+            <p className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <BatteryLow size={16} aria-hidden="true" />
+              Modo de ubicación
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Si tienes datos limitados o batería baja, elige &ldquo;Ahorro de batería&rdquo;.
+              Tu pin solo se actualizará cuando salgas del círculo que definas.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={geoMode === 'precise' ? 'primary' : 'outline'}
+              className="cursor-pointer flex items-center gap-1"
+              onClick={() => setGeoMode('precise')}
+              aria-pressed={geoMode === 'precise'}
+            >
+              <Zap size={14} aria-hidden="true" />
+              Preciso (cada 10 s)
+            </Badge>
+            <Badge
+              variant={geoMode === 'battery' ? 'primary' : 'outline'}
+              className="cursor-pointer flex items-center gap-1"
+              onClick={() => setGeoMode('battery')}
+              aria-pressed={geoMode === 'battery'}
+            >
+              <BatteryLow size={14} aria-hidden="true" />
+              Ahorro de batería
+            </Badge>
+          </div>
+
+          {geoMode === 'battery' && (
+            <div className="space-y-2 pt-2 border-t border-gray-100">
+              <label htmlFor="geo-radius" className="text-sm font-medium text-gray-700 block">
+                Radio de actualización: <span className="text-primary font-bold">{geoZoneRadiusM} m</span>
+              </label>
+              <input
+                id="geo-radius"
+                type="range"
+                min={100}
+                max={5000}
+                step={100}
+                value={geoZoneRadiusM}
+                onChange={(e) => setGeoZoneRadiusM(Number(e.target.value))}
+                className="w-full accent-primary"
+                aria-label="Radio de la zona en metros"
+              />
+              <div className="flex justify-between text-xs text-gray-400" aria-hidden="true">
+                <span>100 m</span>
+                <span>1 km</span>
+                <span>2 km</span>
+                <span>5 km</span>
+              </div>
+              <p className="text-xs text-gray-500 pt-1">
+                Al guardar, anclamos el círculo a tu ubicación actual. Cuando salgas del
+                círculo, mandaremos tu nueva posición y volveremos a anclar.
+              </p>
+            </div>
+          )}
         </Card>
 
         {error && (

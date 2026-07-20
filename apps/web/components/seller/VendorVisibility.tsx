@@ -24,9 +24,15 @@ import { useStore } from '@/store/useStore'
  * What this component now does:
  *   - Renders the "Estoy abierto/cerrado" switch (isActive).
  *   - Renders the "Puesto fijo / Me muevo" pair (stationType).
- *   - When isActive=true, polls geolocation every 10s and writes
- *     {isActive, lat, lng} to /api/vendors/me/settings in one roundtrip
- *     so backend state stays in sync with the visible toggle.
+ *   - When isActive=true, polls geolocation. Behavior depends on geoMode:
+ *     * 'precise': every 10s, push {isActive, lat, lng} to
+ *       /api/vendors/{id}/location (legacy ActiveToggle path).
+ *     * 'battery': every 60s while the vendor stays inside their saved zone
+ *       (center + radius), only push {isActive} (skip coords entirely). If
+ *       the new position is OUTSIDE the zone, push coords + re-anchor the
+ *       zone to the new center by also PATCHing /api/vendors/me with the new
+ *       geoZoneLat/Lng. This trades some precision for ~6x fewer network
+ *       pings in the common case (vendor stays near their usual spot).
  *   - When isActive=false, stops polling and clears the watcher.
  *
  * Why /api/vendors/[id]/location for periodic GPS: that route accepts
@@ -40,12 +46,23 @@ interface VendorVisibilityProps {
   vendorId: string
   initialIsActive: boolean
   initialStationType: 'fixed' | 'mobile' | null
+  // Geo mode (configured by the seller in /profile/edit).
+  // 'precise' = send GPS every 10s.
+  // 'battery' = send GPS only when the seller leaves a saved circular zone.
+  geoMode: 'precise' | 'battery'
+  geoZoneLat: number | null
+  geoZoneLng: number | null
+  geoZoneRadiusM: number
 }
 
 export function VendorVisibility({
   vendorId,
   initialIsActive,
   initialStationType,
+  geoMode = 'precise',
+  geoZoneLat = null,
+  geoZoneLng = null,
+  geoZoneRadiusM = 500,
 }: VendorVisibilityProps) {
   const [isActive, setIsActive] = useState(initialIsActive)
   const [stationType, setStationType] = useState<'fixed' | 'mobile' | null>(
@@ -103,60 +120,120 @@ export function VendorVisibility({
     if (!ok) setStationType(prev)
   }
 
-  // Migrated from ActiveToggle: when isActive, poll geolocation every 10s
-  // and push the new coords to /api/vendors/me/settings. Keeps the dashboard
-  // marker moving and the vendor's published position fresh.
+  // Migrated from ActiveToggle: when isActive, poll geolocation. Polling
+  // interval and payload depend on geoMode (see component header).
   const watcherRef = useRef<number | null>(null)
+  // In battery mode, the zone center moves as the vendor moves. We track
+  // the live center here so the "are we still inside?" check uses the
+  // latest anchor, not the one originally saved in /profile/edit.
+  const zoneCenterRef = useRef<{ lat: number; lng: number } | null>(
+    geoZoneLat != null && geoZoneLng != null
+      ? { lat: geoZoneLat, lng: geoZoneLng }
+      : null
+  )
 
   useEffect(() => {
     if (!isActive || !navigator.geolocation) return
 
     let inFlight = false
 
+    const pushLocation = async (lat: number, lng: number) => {
+      // Fire-and-forget. Errors are intentionally swallowed: this is a
+      // background best-effort pinger, the toggle above already wrote the
+      // visible state.
+      try {
+        await fetch(
+          `/api/vendors/${encodeURIComponent(vendorId)}/location`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              isActive: true,
+              latitude: lat,
+              longitude: lng,
+            }),
+          }
+        )
+      } catch {
+        /* best-effort */
+      }
+    }
+
+    // In battery mode, when the vendor crosses the zone boundary we re-anchor
+    // the zone center to the new position. This is a separate PATCH from the
+    // location update because /vendors/[id]/location only handles lat/lng,
+    // not the geo_zone_* columns.
+    const reanchorZone = async (lat: number, lng: number) => {
+      try {
+        await fetch('/api/vendors/me', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ geoZoneLat: lat, geoZoneLng: lng }),
+        })
+      } catch {
+        /* best-effort */
+      }
+    }
+
     const tick = () => {
       if (inFlight) return
       inFlight = true
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        async (pos) => {
           inFlight = false
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
           setUserLocation({ lat, lng })
-          // Fire-and-forget: don't block UI on the periodic save.
-          // The optimistic toggle above already wrote the is_active.
-          //
-          // Bug fix: previously this hit PATCH /api/vendors/me/settings
-          // with {is_active, latitude, longitude}, but that endpoint only
-          // accepts snake_case and has no latitude/longitude columns in its
-          // SET clause — the backend silently dropped lat/lng and returned
-          // 200 OK (because is_active was persisted). The vendor's GPS pin
-          // therefore never moved. The legacy ActiveToggle used PUT
-          // /api/vendors/[id]/location with camelCase keys — that endpoint
-          // does persist lat/lng. Keep using it for the periodic update.
-          fetch(
-            `/api/vendors/${encodeURIComponent(vendorId)}/location`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                isActive: true,
-                latitude: lat,
-                longitude: lng,
-              }),
-            }
-          ).catch(() => {/* periodic best-effort, ignore */})
+
+          if (geoMode === 'precise') {
+            await pushLocation(lat, lng)
+            return
+          }
+
+          // Battery mode: send only when crossing the zone boundary.
+          const center = zoneCenterRef.current
+          if (!center) {
+            // No zone saved yet (vendor never configured one or geoZoneLat
+            // was null). Fall back to precise behavior for this tick so we
+            // don't silently drop updates. Also seed the zone so future
+            // ticks can be lazy.
+            zoneCenterRef.current = { lat, lng }
+            await pushLocation(lat, lng)
+            await reanchorZone(lat, lng)
+            return
+          }
+
+          const distanceM = haversineMeters(center.lat, center.lng, lat, lng)
+          if (distanceM > geoZoneRadiusM) {
+            // Crossed the boundary → push new coords AND re-anchor.
+            await pushLocation(lat, lng)
+            await reanchorZone(lat, lng)
+            zoneCenterRef.current = { lat, lng }
+          }
+          // Inside the zone: do nothing. The next tick (60s) will check
+          // again. We deliberately skip the network round-trip entirely
+          // here — no isActive ping, nothing.
         },
         () => {
           inFlight = false
         },
+        // enableHighAccuracy=false saves battery; in battery mode this is
+        // exactly what we want. Precise mode also uses false because the
+        // iOS Safari `watchPosition` continuous-accuracy prompt is hostile
+        // to non-tech sellers.
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 5000 }
       )
     }
 
     // Prime one immediate sample so the marker moves instantly on toggle.
     tick()
-    watcherRef.current = window.setInterval(tick, 10000)
+    // Precise: 10s (legacy ActiveToggle cadence). Battery: 60s — gives the
+    // seller ~1 boundary check per minute, which is enough to detect
+    // a significant move without hammering the radio.
+    const intervalMs = geoMode === 'battery' ? 60_000 : 10_000
+    watcherRef.current = window.setInterval(tick, intervalMs)
 
     return () => {
       if (watcherRef.current) {
@@ -164,7 +241,7 @@ export function VendorVisibility({
         watcherRef.current = null
       }
     }
-  }, [isActive, vendorId, setUserLocation])
+  }, [isActive, vendorId, setUserLocation, geoMode, geoZoneRadiusM])
 
   // If the parent changes the initial values (after a re-fetch), mirror them.
   useEffect(() => {
@@ -248,4 +325,26 @@ export function VendorVisibility({
       </div>
     </Card>
   )
+}
+
+// Great-circle distance in meters between two lat/lng points. Inline
+// implementation to avoid pulling in a geo library for one call site.
+// Inputs are degrees; R is the mean Earth radius.
+function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6_371_000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }

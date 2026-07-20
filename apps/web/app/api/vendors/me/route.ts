@@ -42,7 +42,8 @@ export async function GET(req: NextRequest) {
               v.is_active, v.is_verified, v.business_hours_enabled,
               v.business_hours_start, v.business_hours_end, v.business_days,
               v.latitude, v.longitude, v.city_id,
-              v.created_at, v.location_updated_at
+              v.created_at, v.location_updated_at,
+              v.geo_mode, v.geo_zone_lat, v.geo_zone_lng, v.geo_zone_radius_m
        FROM vendors v
        JOIN profiles p ON p.id = v.profile_id
        WHERE p.user_id = $1
@@ -74,6 +75,13 @@ export async function GET(req: NextRequest) {
       cityId: v.city_id,
       createdAt: v.created_at,
       locationUpdatedAt: v.location_updated_at,
+      // Geo mode + zone (added so the dashboard can show the active GPS
+      // cadence badge and so the client can pass the zone center back to
+      // the periodic pinger without a second round-trip).
+      geoMode: v.geo_mode || 'precise',
+      geoZoneLat: v.geo_zone_lat,
+      geoZoneLng: v.geo_zone_lng,
+      geoZoneRadiusM: v.geo_zone_radius_m,
     }))
 
     return NextResponse.json({ vendors })
@@ -128,6 +136,29 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
+    // Geo mode validation: only the two known values are accepted. Anything
+    // else is silently dropped by the clientToDb map below, which would let
+    // a typo (e.g. 'precisee') persist the old value without telling the
+    // seller something went wrong.
+    if (body.geoMode !== undefined && body.geoMode !== null &&
+        body.geoMode !== 'precise' && body.geoMode !== 'battery') {
+      return NextResponse.json(
+        { error: 'geoMode debe ser "precise" o "battery"' },
+        { status: 400 }
+      )
+    }
+
+    // Validate zone radius range (matches DB CHECK constraint 100–5000).
+    if (body.geoZoneRadiusM !== undefined && body.geoZoneRadiusM !== null) {
+      const r = body.geoZoneRadiusM as number
+      if (typeof r !== 'number' || r < 100 || r > 5000) {
+        return NextResponse.json(
+          { error: 'geoZoneRadiusM debe estar entre 100 y 5000 metros' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Client camelCase → DB snake_case. Keys not in this map are ignored.
     const clientToDb: Record<string, string> = {
       name: 'name',
@@ -140,6 +171,13 @@ export async function PATCH(req: NextRequest) {
       vehicleType: 'vehicle_type',
       vehiclePhotoUrl: 'vehicle_photo_url',
       stationType: 'station_type',
+      // Geo mode (added in geo-mode sprint). Mode controls the periodic GPS
+      // cadence on the dashboard; zone center + radius define the boundary
+      // for battery mode (crossing it triggers an update).
+      geoMode: 'geo_mode',
+      geoZoneLat: 'geo_zone_lat',
+      geoZoneLng: 'geo_zone_lng',
+      geoZoneRadiusM: 'geo_zone_radius_m',
     }
 
     const updates: string[] = []

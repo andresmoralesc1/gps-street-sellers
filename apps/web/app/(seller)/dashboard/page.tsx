@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { BarChart3, Package, Settings, Edit3, ChevronRight, Camera, RefreshCw } from 'lucide-react'
+import { BarChart3, Package, Settings, Edit3, ChevronRight, Camera, RefreshCw, BatteryLow, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -358,10 +358,36 @@ function DashboardContent() {
                   ambos controles viven en VendorVisibility con un solo
                   endpoint (PATCH /api/vendors/me/settings) y polling GPS
                   cada 10s cuando isActive=true. */}
+
+              {/* Geo-mode badge — shows the seller which GPS cadence is active
+                  right now. Lives here (not inside VendorVisibility) because
+                  the badge is informational and the seller should be able to
+                  see it even if they collapse/hide the visibility card.
+                  Geo mode is configured in /profile/edit. */}
+              {vendorData?.geoMode === 'battery' ? (
+                <Link href="/profile/edit" className="block" aria-label="Cambiar modo de ubicación en el perfil">
+                  <Badge variant="outline" className="w-full justify-center gap-1.5 py-2 cursor-pointer hover:bg-green-50 border-green-300 text-green-800">
+                    <BatteryLow size={14} aria-hidden="true" />
+                    Modo batería · radio {vendorData.geoZoneRadiusM ?? 500} m
+                  </Badge>
+                </Link>
+              ) : (
+                <Link href="/profile/edit" className="block" aria-label="Cambiar modo de ubicación en el perfil">
+                  <Badge variant="outline" className="w-full justify-center gap-1.5 py-2 cursor-pointer hover:bg-gray-50 border-gray-300 text-gray-700">
+                    <Zap size={14} aria-hidden="true" />
+                    Modo preciso · GPS cada 10 s
+                  </Badge>
+                </Link>
+              )}
+
               <VendorVisibility
                 vendorId={vendorId}
                 initialIsActive={vendorData?.isActive ?? true}
                 initialStationType={vendorData?.stationType ?? 'mobile'}
+                geoMode={vendorData?.geoMode ?? 'precise'}
+                geoZoneLat={vendorData?.geoZoneLat ?? null}
+                geoZoneLng={vendorData?.geoZoneLng ?? null}
+                geoZoneRadiusM={vendorData?.geoZoneRadiusM ?? 500}
               />
 
               {/* N11: Business hours */}

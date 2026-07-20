@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { Plus, X, Image as ImageIcon } from 'lucide-react'
+import { Plus, X, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { useToast } from './Toast'
 
 /**
@@ -36,6 +36,7 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos)
   const [newUrl, setNewUrl] = useState('')
   const [adding, setAdding] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [reordering, setReordering] = useState(false)
   // A: confirmation modal state. null = no dialog.
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -43,6 +44,7 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const { showToast } = useToast()
   const fetchedRef = useRef(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Drag-and-drop state (B).
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -116,6 +118,52 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
       showToast('Error de conexión', 'error')
     } finally {
       setAdding(false)
+    }
+  }
+
+  // File picker flow: upload the file to /api/upload, then register the
+  // returned /storage/... URL as a photo on this product. The dedicated
+  // /api/products/[id]/photos endpoint persists position, owner-check and
+  // cap (max 6) consistently with the URL path.
+  const handleFileSelected = async (file: File) => {
+    if (uploading) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', 'products')
+      const upRes = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      })
+      const upData = await upRes.json().catch(() => ({}))
+      if (!upRes.ok) {
+        showToast(upData.error || 'Error al subir el archivo', 'error')
+        return
+      }
+      const url: string = upData.url
+      const regRes = await fetch(`/api/products/${productId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ url }),
+      })
+      const regData = await regRes.json().catch(() => ({}))
+      if (!regRes.ok) {
+        showToast(regData.error || 'Error al registrar la foto', 'error')
+        return
+      }
+      const next = [...photos, regData.photo]
+      setPhotos(next)
+      onChange?.(next)
+      showToast('Foto agregada ✓', 'success')
+    } catch {
+      showToast('Error de conexión', 'error')
+    } finally {
+      setUploading(false)
+      // Reset input so picking the same file again re-triggers onChange.
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -243,9 +291,41 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
           </div>
         ))}
         {photos.length < 6 && (
-          <div className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400">
-            <ImageIcon size={24} />
-          </div>
+          <>
+            {/* Hidden file input — clicking the "+" tile or the "Subir"
+                button opens the picker. After selection, handleFileSelected
+                uploads to /api/upload then registers the URL. */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              aria-label="Subir foto desde tu dispositivo"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) handleFileSelected(f)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              aria-label={uploading ? 'Subiendo foto…' : 'Subir foto (abrir selector de archivos)'}
+              className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 size={22} className="animate-spin" />
+                  <span className="text-[10px] mt-1">Subiendo…</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={22} aria-hidden="true" />
+                  <span className="text-[10px] mt-1">Subir foto</span>
+                </>
+              )}
+            </button>
+          </>
         )}
       </div>
 

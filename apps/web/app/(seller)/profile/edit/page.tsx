@@ -98,14 +98,19 @@ export default function EditProfilePage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        // camelCase keys — backend's clientToDb map only recognizes these.
+        // snake_case keys are silently dropped, returning 400 "No se
+        // proporcionaron campos para actualizar" with the image never
+        // persisted (the file itself was uploaded to /storage but the
+        // DB row never gets the URL).
         body: JSON.stringify({
           name,
           description,
           category,
           phone,
-          photo_url: photoUrl,
-          vehicle_type: vehicleType || null,
-          vehicle_photo_url: vehiclePhotoUrl || null,
+          photoUrl,
+          vehicleType: vehicleType || null,
+          vehiclePhotoUrl: vehiclePhotoUrl || null,
         }),
       })
 

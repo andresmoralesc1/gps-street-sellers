@@ -83,6 +83,18 @@ export async function DELETE(request: NextRequest) {
       [userId]
     )
 
+    // Revoke any in-flight tokens BEFORE the cascade wipes profiles.token_version.
+    // Without this, a token issued just before DELETE stays valid for up to 7
+    // days (refresh window) — incompatible with Ley 1581/2012 art. 9 (right
+    // of suppression). Bumping token_version here lets isTokenRevoked reject
+    // existing JWTs even after the profile row is gone.
+    if (profileId) {
+      await client.query(
+        'UPDATE profiles SET token_version = token_version + 1 WHERE user_id = $1',
+        [userId]
+      )
+    }
+
     // Hard-delete the user. ON DELETE CASCADE on profiles/push_subscriptions/
     // consent_logs handles related tables in one shot.
     const delRes = await client.query(

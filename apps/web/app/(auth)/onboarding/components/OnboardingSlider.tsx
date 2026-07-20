@@ -12,12 +12,12 @@ const SLIDES = [
   },
   {
     title: 'Activa tu negocio',
-    description: 'Como vendedor, muestra tu ubicación y reach más clientes',
+    description: 'Como vendedor, comparte tu ubicación y llega a más clientes',
     Icon: ShoppingCart,
   },
   {
-    title: 'Califica y favorito',
-    description: 'Guarda tus vendedores favoritos y recíbelo cuando esté cerca',
+    title: 'Guarda y califica',
+    description: 'Guarda tus vendedores favoritos y recibe avisos cuando estén cerca',
     Icon: Heart,
   },
 ]

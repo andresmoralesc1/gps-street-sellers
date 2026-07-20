@@ -9,20 +9,20 @@ const STORAGE_KEY = 'seller_onboarding_done'
 
 const SLIDES = [
   {
-    title: '📸 Tu Foto de Perfil',
+    title: '📸 Tu foto de perfil',
     description: 'Añade una foto clara de ti o de tu negocio para que los compradores te reconozcan.',
     Icon: Camera,
     tip: 'Usa buena iluminación y asegúrate de que se vea tu rostro o logo.',
   },
   {
-    title: '📦 Tus Productos',
+    title: '📦 Tus productos',
     description: 'Agrega los productos que vendes con fotos, precios y descripciones atractivas.',
     Icon: Package,
-    tip: 'Mientras más fotos de calidad, más ventas recibirás.',
+    tip: 'Las fotos claras ayudan a que tus productos se entiendan mejor.',
   },
   {
-    title: '📍 Tu Ubicación',
-    description: 'Activa la ubicación para que los compradores知道你 cerca puedan encontrarte.',
+    title: '📍 Tu ubicación',
+    description: 'Activa la ubicación para que los compradores cercanos puedan encontrarte.',
     Icon: MapPin,
     tip: 'Puedes ajustar tu radio de cobertura desde tu perfil.',
   },
@@ -30,7 +30,7 @@ const SLIDES = [
     title: '💬 WhatsApp',
     description: 'Conecta tu WhatsApp para recibir mensajes directos de clientes interesados.',
     Icon: MessageCircle,
-    tip: 'Respuesta rápida = más confianza = más ventas.',
+    tip: 'Responder pronto ayuda a generar confianza.',
   },
 ]
 

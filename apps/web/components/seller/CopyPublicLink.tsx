@@ -39,7 +39,7 @@ export function CopyPublicLink({ vendorSlug }: CopyPublicLinkProps) {
     }
     try {
       await navigator.share({
-        title: 'Mi tienda en GPS Street Sellers',
+        title: 'Mi tienda en BarrioTech',
         text: 'Mira mis productos aquí:',
         url: publicUrl,
       })

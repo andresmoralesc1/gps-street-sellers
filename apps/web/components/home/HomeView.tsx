@@ -21,14 +21,14 @@ const Heart = (props: any) => (
 )
 
 const FEATURES_BUYERS = [
-  { icon: MapPin, title: 'GPS en tiempo real', desc: 'Ve vendedores activos en el mapa y encuentra los más cercanos', color: 'bg-orange-100 text-orange-600' },
-  { icon: Heart, title: 'Favoritos', desc: 'Guarda tus vendedores preferidos y recibe alertas cuando estén activos', color: 'bg-red-100 text-red-500' },
-  { icon: Star, title: 'Reseñas verificadas', desc: 'Lee opiniones reales de otros compradores antes de pedir', color: 'bg-yellow-100 text-yellow-600' },
+  { icon: MapPin, title: 'Vendedores en tiempo real', desc: 'Consulta quién está activo y encuentra opciones cerca de ti', color: 'bg-orange-100 text-orange-600' },
+  { icon: Heart, title: 'Guarda tus favoritos', desc: 'Encuentra fácilmente a los vendedores que más te gustan', color: 'bg-red-100 text-red-500' },
+  { icon: Star, title: 'Calificaciones de la comunidad', desc: 'Lee calificaciones y comentarios de otros compradores', color: 'bg-yellow-100 text-yellow-600' },
 ]
 const FEATURES_VENDORS = [
-  { icon: TrendingUp, title: 'Más visibilidad', desc: 'Aparece en el mapa para miles de compradores cerca de ti', color: 'bg-primary-100 text-primary-600' },
-  { icon: Clock, title: 'Gestiona tu tiempo', desc: 'Activa o desactiva tu ubicación cuando quieras trabajar', color: 'bg-green-100 text-green-600' },
-  { icon: Shield, title: 'Sin comisiones', desc: 'Sin cobros por aparecer en el mapa. Tú controlas tu negocio', color: 'bg-purple-100 text-purple-600' },
+  { icon: TrendingUp, title: 'Haz visible tu negocio', desc: 'Permite que compradores cercanos te encuentren en el mapa', color: 'bg-primary-100 text-primary-600' },
+  { icon: Clock, title: 'Tú decides cuándo aparecer', desc: 'Activa o desactiva tu ubicación según tu jornada', color: 'bg-green-100 text-green-600' },
+  { icon: Shield, title: 'Sin comisiones por venta', desc: 'Tus ventas son tuyas. La promoción destacada es opcional', color: 'bg-purple-100 text-purple-600' },
 ]
 
 // ponytail: inline icons to avoid extra deps
@@ -95,7 +95,7 @@ export function HomeView() {
       {/* Hero */}
       <section className="relative min-h-[580px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src={HERO_PHOTO} alt="Vendedores callejeros Colombia" className="w-full h-full object-cover object-[right_center] md:object-[center_30%]" />
+          <img src={HERO_PHOTO} alt="Vendedores locales en Colombia" className="w-full h-full object-cover object-[right_center] md:object-[center_30%]" />
           <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/75 to-gray-900/30" />
         </div>
         <div className="relative max-w-6xl mx-auto px-4 py-20 w-full">
@@ -107,24 +107,24 @@ export function HomeView() {
               </span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
-              El sabor de tu barrio,
+              Encuentra lo mejor de tu barrio,
               <br />
-              <span className="text-secondary-light">ahora en tu celular.</span>
+              <span className="text-secondary-light">en tiempo real.</span>
             </h1>
             <p className="text-lg text-white/95 mb-8">
-              Descubre vendedores informales cerca de ti. Comida, frutas, artesanías y más — en tiempo real.
+              Descubre vendedores locales cerca de ti, mira qué ofrecen y contáctalos directamente desde el mapa.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link href="/map">
                 <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-xl w-full sm:w-auto">
                   <MapPin size={20} className="mr-2" />
-                  Ver mapa en vivo
+                  Ver vendedores cercanos
                 </Button>
               </Link>
               <Link href="/register">
                 <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 w-full sm:w-auto">
                   <Zap size={20} className="mr-2" />
-                  Soy vendedor
+                  Publicar mi negocio
                 </Button>
               </Link>
             </div>
@@ -144,12 +144,12 @@ export function HomeView() {
           <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-3">
             ¿Cómo funciona?
           </h2>
-          <p className="text-center text-gray-500 mb-12">Tres pasos para encontrar lo que necesitas</p>
+          <p className="text-center text-gray-500 mb-12">Tres pasos para conectar con vendedores de tu barrio</p>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { step: 1, icon: MapPin, title: 'Encuentra', desc: 'Busca por categoría o explora el mapa para descubrir vendedores cerca de ti.', photo: STEPS_PHOTOS[0] },
-              { step: 2, icon: ShoppingBag, title: 'Ordena', desc: 'Contacta al vendedor directamente y realiza tu pedido.', photo: STEPS_PHOTOS[1] },
-              { step: 3, icon: Truck, title: 'Recibe', desc: 'Sigue al vendedor y recibe tu pedido fresco y a tiempo.', photo: STEPS_PHOTOS[2] },
+              { step: 1, icon: MapPin, title: 'Explora', desc: 'Permite tu ubicación o busca por categoría para ver vendedores cercanos.', photo: STEPS_PHOTOS[0] },
+              { step: 2, icon: ShoppingBag, title: 'Consulta', desc: 'Revisa sus productos, precios y calificaciones antes de elegir.', photo: STEPS_PHOTOS[1] },
+              { step: 3, icon: Truck, title: 'Contacta', desc: 'Habla directamente con el vendedor para coordinar tu pedido.', photo: STEPS_PHOTOS[2] },
             ].map((item) => (
               <div key={item.step} className="bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-shadow">
                 <div className="h-40 relative">
@@ -175,7 +175,7 @@ export function HomeView() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">Para compradores</h2>
-              <p className="text-gray-500 text-sm">La mejor experiencia de compra en tu barrio</p>
+              <p className="text-gray-500 text-sm">Encuentra opciones cercanas y compra directamente</p>
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
@@ -203,7 +203,7 @@ export function HomeView() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">Para vendedores</h2>
-              <p className="text-gray-500 text-sm">Haz crecer tu negocio sin pagar comisiones</p>
+              <p className="text-gray-500 text-sm">Haz visible tu negocio sin pagar comisiones por venta</p>
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
@@ -226,10 +226,10 @@ export function HomeView() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider text-primary-700 mb-3">Lo que hemos logrado</span>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">BarrioTech en cifras</h2>
+            <span className="inline-block text-xs font-bold uppercase tracking-wider text-primary-700 mb-3">BarrioTech hoy</span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">La comunidad en el mapa</h2>
             <p className="text-gray-500 text-sm max-w-md mx-auto">
-              Números reales, actualizados en vivo desde la plataforma. No prometemos cifras que aún no tenemos.
+              Vendedores y ciudades activas, actualizados en vivo desde la plataforma.
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
@@ -246,16 +246,16 @@ export function HomeView() {
               tone="secondary"
             />
             <StatCard
-              value="100%"
-              label="Gratis para siempre"
-              sublabel="Sin comisiones, sin planes premium"
+              value="Gratis"
+              label="Registro y perfil"
+              sublabel="Promoción destacada opcional"
               icon={<Star size={20} className="text-yellow-600" />}
               tone="amber"
             />
             <StatCard
-              value="0"
-              label="Documentos requeridos"
-              sublabel="Sin RUT ni NIT para registrarse"
+              value="0%"
+              label="Comisión por venta"
+              sublabel="Tus ventas son tuyas"
               icon={<Shield size={20} className="text-purple-600" />}
               tone="purple"
             />
@@ -266,8 +266,8 @@ export function HomeView() {
             <Quote size={36} className="absolute top-4 left-4 text-primary/20" aria-hidden="true" />
             <blockquote className="relative">
               <p className="text-lg md:text-xl text-gray-800 leading-relaxed font-medium italic mb-5 pl-2">
-                "Construimos BarrioTech porque creemos que un vendedor de frutas que trabaja 12 horas al día merece la misma tecnología que una
-                gran cadena. No vendemos la promesa de inclusion — la construimos, una ciudad a la vez."
+                "Creamos BarrioTech para que los vendedores de barrio puedan usar herramientas digitales sencillas,
+                hacerse visibles y conectar con más personas, una ciudad a la vez."
               </p>
               <footer className="flex items-center gap-3 pl-2">
                 <div className="relative w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary/30">
@@ -275,7 +275,7 @@ export function HomeView() {
                 </div>
                 <div>
                   <cite className="not-italic font-bold text-gray-800">Andrés Morales</cite>
-                  <p className="text-sm text-gray-500">Fundador & CEO · BarrioTech</p>
+                  <p className="text-sm text-gray-500">Fundador y CEO · BarrioTech</p>
                 </div>
               </footer>
             </blockquote>
@@ -316,31 +316,31 @@ export function HomeView() {
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-3xl p-8 md:p-12 text-center">
             <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm mb-6">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-gray-600">Lanzamiento 2026 · Colombia</span>
+              <span className="text-sm font-medium text-gray-600">MVP · Lanzamiento 2026 · Colombia</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">
-              Tu barrio todavía no está en el mapa.
+              Sé parte de los primeros barrios en el mapa.
             </h2>
             <p className="text-gray-500 mb-8 max-w-lg mx-auto text-base">
               {stats.cities > 0 || stats.vendors > 0
-                ? `Ya somos ${stats.cities} ciudad${stats.cities !== 1 ? 'es' : ''} · ${stats.vendors} vendedor${stats.vendors !== 1 ? 'es' : ''} activo${stats.vendors !== 1 ? 's' : ''}. ¡Sé el primero en tu barrio!`
-                : 'Tu barrio todavía no está en el mapa. Si te registras hoy, eres el primer vendedor de tu ciudad en la app.'}
+                ? `${stats.vendors} vendedor${stats.vendors !== 1 ? 'es' : ''} activo${stats.vendors !== 1 ? 's' : ''} · ${stats.cities} ciudad${stats.cities !== 1 ? 'es' : ''} en el mapa. Súmate al MVP de BarrioTech.`
+                : 'Estamos preparando el mapa de BarrioTech. Registra tu negocio y sé de los primeros en aparecer.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/register">
                 <Button size="lg" className="bg-primary hover:bg-primary-700">
                   <MapPin size={18} className="mr-2" />
-                  Quiero ser vendedor
+                  Publicar mi negocio
                 </Button>
               </Link>
               <Link href="/map">
                 <Button variant="outline" size="lg" className="border-orange-200 text-primary hover:bg-orange-50">
-                  Explorar como comprador
+                  Ver vendedores cercanos
                 </Button>
               </Link>
             </div>
             <p className="mt-6 text-xs text-gray-400">
-              100% gratis · Sin comisiones · Sin número mínimo de pedidos
+              Registro gratuito · Sin comisiones por venta · Publicidad opcional
             </p>
           </div>
         </div>

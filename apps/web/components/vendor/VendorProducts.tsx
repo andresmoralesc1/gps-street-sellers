@@ -82,7 +82,8 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
               <Package size={32} className="text-gray-400" />
             </div>
           )}
-          {/* N12: dots indicator for multi-photo carousel */}
+          {/* N12: dots indicator for multi-photo carousel. Dots are 6×6
+              visual but the clickable button is 24×24 for mobile targets. */}
           {allPhotos.length > 1 && (
             <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
               {allPhotos.map((_, idx) => (
@@ -91,10 +92,15 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
                   type="button"
                   onClick={() => setPhotoIdx(idx)}
                   aria-label={`Foto ${idx + 1} de ${allPhotos.length}`}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    idx === photoIdx ? 'bg-white w-4' : 'bg-white/60'
-                  }`}
-                />
+                  className={`min-w-[24px] min-h-[24px] flex items-center justify-center`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`block rounded-full transition-all ${
+                      idx === photoIdx ? 'bg-white w-4 h-1.5' : 'bg-white/60 w-1.5 h-1.5'
+                    }`}
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -121,7 +127,7 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
             ) : (
               <button
                 onClick={() => router.push('/register')}
-                className="p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition-colors flex-shrink-0"
+                className="p-2 min-w-[36px] min-h-[36px] bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition-colors flex-shrink-0 flex items-center justify-center"
                 title="Regístrate para agregar"
                 aria-label="Regístrate para agregar al carrito"
               >

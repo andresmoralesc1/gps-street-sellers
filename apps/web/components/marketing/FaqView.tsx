@@ -20,17 +20,17 @@ const FAQ_CATEGORIES: Record<string, { label: string; emoji: string; questions: 
       },
       {
         q: '¿Es gratis?',
-        a: 'Sí. La app es 100% gratuita para compradores y vendedores. No cobramos comisiones ni tarifas de registro. Tampoco hay planes premium ni cobros ocultos.',
+        a: 'BarrioTech es gratis para compradores. Los vendedores pueden registrarse y aparecer en el mapa sin costo; las promociones destacadas son opcionales y de pago. No cobramos comisiones sobre las ventas.',
         tags: ['cobro', 'costo', 'precio', 'pago', 'commission'],
       },
       {
         q: '¿En qué ciudades está disponible?',
-        a: 'Hoy cubrimos 2 ciudades en Colombia. Estamos en plena expansión — puedes ver las ciudades activas en tiempo real dentro del mapa. Si quieres sugerir una nueva ciudad, escríbenos a hola@barriotech.com.',
+        a: 'Las ciudades activas se actualizan directamente en el mapa. Ábrelo para consultar la cobertura actual o escríbenos a hola@barriotech.com si quieres sugerir una nueva ciudad.',
         tags: ['cobertura', 'ubicación', 'ciudad', 'donde'],
       },
       {
         q: '¿Necesito descargar una app?',
-        a: 'No. Puedes usar BarrioTech desde cualquier navegador en tu celular o computador — funciona como una web app optimizada. Próximamente lanzaremos las versiones nativas en iOS y Android.',
+        a: 'No. Puedes usar BarrioTech desde cualquier navegador en tu celular o computador: funciona como una aplicación web. Más adelante evaluaremos versiones nativas para iOS y Android.',
         tags: ['app', 'descarga', 'movil', 'ios', 'android'],
       },
     ],
@@ -67,17 +67,17 @@ const FAQ_CATEGORIES: Record<string, { label: string; emoji: string; questions: 
     questions: [
       {
         q: '¿Cómo me registro como vendedor?',
-        a: 'Regístrate en la app, selecciona "Soy vendedor" durante el registro, completa tu perfil (nombre del negocio, categoría, descripción, foto) y activa tu ubicación. En menos de 24 horas verificamos tu cuenta y empiezas a aparecer en el mapa.',
+        a: 'Regístrate, selecciona "Soy vendedor", completa el perfil de tu negocio y activa tu ubicación. Cuando marques tu negocio como activo, podrá aparecer en el mapa.',
         tags: ['registro', 'registrarse', 'vendedor', 'alta'],
       },
       {
         q: '¿Cómo activo mi ubicación en el mapa?',
-        a: 'En tu dashboard de vendedor hay un toggle de "Activo/Inactivo". Cuando estés atendiendo, actívalo y los compradores podrán verte en el mapa en tiempo real. Cuando termines tu jornada, desactívalo.',
+        a: 'En tu panel de vendedor encontrarás el control "Activo/Inactivo". Actívalo cuando estés atendiendo para aparecer en el mapa y desactívalo cuando termine tu jornada.',
         tags: ['activar', 'mapa', 'ubicación', 'gps', 'toggle'],
       },
       {
         q: '¿Cuánto cuesta aparecer en el mapa?',
-        a: 'Nada. Es completamente gratis. No cobramos comisiones, ni tarifas mensuales, ni porcentajes sobre tus ventas. Tampoco pedimos datos de tarjeta para registrarte.',
+        a: 'Registrarte y aparecer de forma básica en el mapa es gratis. No cobramos comisiones sobre tus ventas. Si quieres mayor visibilidad, puedes contratar una promoción destacada de forma opcional.',
         tags: ['costo', 'gratis', 'tarifa', 'comision'],
       },
       {
@@ -108,7 +108,7 @@ const FAQ_CATEGORIES: Record<string, { label: string; emoji: string; questions: 
       },
       {
         q: '¿Cómo protegen mi ubicación?',
-        a: 'Tu ubicación precisa solo se comparte cuando estás activamente viendo el mapa. Puedes desactivar el acceso desde los ajustes de tu navegador o dispositivo en cualquier momento. Nunca almacenamos histórico de ubicaciones.',
+        a: 'La ubicación del comprador se usa para mostrar resultados cercanos mientras consulta el mapa. Cuando un vendedor está activo, guardamos sus actualizaciones recientes durante un máximo de 7 días para mostrarle su historial; después se eliminan automáticamente.',
         tags: ['ubicación', 'gps', 'privacidad'],
       },
       {
@@ -134,7 +134,7 @@ const FAQ_CATEGORIES: Record<string, { label: string; emoji: string; questions: 
       },
       {
         q: '¿Qué hago si tengo un problema con un pedido?',
-        a: 'Si tuviste un problema con un vendedor (producto equivocado, mala atención, etc.), primero intenta contactarlo directamente. Si no se resuelve, escríbenos a hola@barriotech.com y mediamo entre las dos partes.',
+        a: 'Si tuviste un problema con un vendedor, primero intenta contactarlo directamente. Si no se resuelve, escríbenos a hola@barriotech.com y mediamos entre las dos partes.',
         tags: ['problema', 'disputa', 'reembolso', 'queja', 'conflicto'],
       },
       {
@@ -144,7 +144,7 @@ const FAQ_CATEGORIES: Record<string, { label: string; emoji: string; questions: 
       },
       {
         q: '¿Por qué no hay pagos integrados?',
-        a: 'Es una decisión intencional para esta etapa. Procesar pagos requiere certificaciones, manejo de fraude y soporte dedicado — agrega complejidad que no aporta valor cuando el 80% de las transacciones del comercio informal son en efectivo. Cuando escale el volumen, evaluaremos opciones como Nequi y Bre-B.',
+        a: 'En esta etapa MVP, comprador y vendedor acuerdan directamente el método de pago. Así evitamos añadir comisiones y complejidad mientras validamos el servicio. Más adelante evaluaremos opciones de pago integrado.',
         tags: ['nequi', 'bre-b', 'futuro', 'por que'],
       },
     ],
@@ -183,10 +183,10 @@ export function FaqView() {
   const searchActive = query.trim().length > 0
 
   return (
-    <div className="min-h-screen bg-background-cream">
+    <div className="marketing-page min-h-screen bg-background-cream">
       <div className="max-w-3xl mx-auto px-4 py-16">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-800 mb-3">Preguntas Frecuentes</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-3">Preguntas frecuentes</h1>
           <p className="text-gray-500">Encuentra respuestas a las dudas más comunes</p>
         </div>
 
@@ -299,8 +299,8 @@ export function FaqView() {
 
         {/* Still have questions */}
         <div className="mt-12 text-center bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl p-8">
-          <h3 className="text-lg font-bold text-gray-800 mb-2">¿No encontraste tu respuesta?</h3>
-          <p className="text-gray-500 mb-4 text-sm">Estamos para ayudarte. Te respondemos en menos de 24 horas.</p>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">¿No encontraste tu respuesta?</h2>
+          <p className="text-gray-500 mb-4 text-sm">Estamos para ayudarte. Te responderemos lo antes posible.</p>
           <Link href="/contacto"><Button>Contactar soporte</Button></Link>
         </div>
       </div>

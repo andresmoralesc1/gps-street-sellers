@@ -136,7 +136,7 @@ export default function EditProfilePage() {
           <Link href="/dashboard">
             <Button variant="ghost"><ChevronLeft size={20} /></Button>
           </Link>
-          <h1 className="text-lg font-bold">Editar Perfil</h1>
+          <h1 className="text-lg font-bold">Editar perfil</h1>
         </header>
         <div className="p-4">
           <Card variant="outlined" className="p-8 text-center">
@@ -160,7 +160,7 @@ export default function EditProfilePage() {
         <Link href="/dashboard">
           <Button variant="ghost"><ChevronLeft size={20} /></Button>
         </Link>
-        <h1 className="text-lg font-bold">Editar Perfil</h1>
+        <h1 className="text-lg font-bold">Editar perfil</h1>
       </header>
 
       <div className="p-4 space-y-4">
@@ -185,7 +185,7 @@ export default function EditProfilePage() {
             label="Nombre del negocio"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: Don Juan's Empanadas"
+            placeholder="Ej.: Empanadas Don Juan"
           />
 
           <Input

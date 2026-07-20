@@ -8,7 +8,7 @@ const BUYER_STEPS = [
   {
     icon: MapPin,
     title: '1. Abre el mapa',
-    body: 'Al entrar, ves los vendedores activos cerca tuyo. El mapa se actualiza en tiempo real — si alguien se mueve, lo ves.',
+    body: 'Al abrir el mapa, ves vendedores activos cerca de ti. Su ubicación se actualiza mientras están vendiendo.',
   },
   {
     icon: Store,
@@ -26,7 +26,7 @@ const SELLER_STEPS = [
   {
     icon: Smartphone,
     title: '1. Crea tu perfil',
-    body: 'Foto tuya, foto de tu carrito, qué vendes. Toma 2 minutos.',
+    body: 'Añade una foto de tu negocio y cuenta qué vendes. Crea tu perfil en pocos pasos.',
   },
   {
     icon: MapPin,
@@ -36,18 +36,17 @@ const SELLER_STEPS = [
   {
     icon: TrendingUp,
     title: '3. Aparece destacado',
-    body: 'Paga una sponsorship semanal o mensual y aparece primero en el mapa de tu zona. Más vistos = más ventas.',
+    body: 'Si quieres más visibilidad, activa una promoción semanal o mensual para aparecer primero en tu zona. Es opcional.',
   },
 ]
 
 export function ComoFuncionaView() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-16">
+    <div className="marketing-page max-w-6xl mx-auto px-4 py-16">
       <header className="text-center mb-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Cómo funciona BarrioTech</h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          La forma más fácil de encontrar vendedores informales cerca tuyo — y la
-          forma más fácil para ellos de conseguir más clientes.
+          Encuentra vendedores locales cerca de ti y ayuda a los negocios de barrio a llegar a más clientes.
         </p>
       </header>
 
@@ -84,7 +83,7 @@ export function ComoFuncionaView() {
       <section className="mb-16">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Si quieres vender</h2>
-          <p className="text-gray-600">Más visibilidad = más ventas.</p>
+          <p className="text-gray-600">Más visibilidad, cuando la necesites.</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -105,12 +104,11 @@ export function ComoFuncionaView() {
         <div className="mt-8 bg-primary-50 border border-primary-200 rounded-2xl p-6">
           <h3 className="font-bold text-primary-900 mb-2">Destaca tu negocio</h3>
           <p className="text-primary-800 mb-4">
-            Por <strong>COP $20.000/semana</strong> o <strong>$60.000/mes</strong> apareces primero
-            en los mapas y búsquedas de tu zona. Pin dorado con ⭐ para que los clientes
-            te identifiquen al instante.
+            Por <strong>$20.000 COP por semana</strong> o <strong>$60.000 COP al mes</strong>, tu negocio aparece primero
+            en los mapas y búsquedas de tu zona con un distintivo para que los clientes lo identifiquen.
           </p>
           <Link href="/register">
-            <Button variant="secondary">Crear cuenta de vendedor</Button>
+            <Button variant="secondary">Crear mi perfil gratuito</Button>
           </Link>
         </div>
       </section>

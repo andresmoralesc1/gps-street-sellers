@@ -70,9 +70,17 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
 
   useEffect(() => {
     // If the URL was a UUID and we now know the canonical slug, redirect
-    // once so the URL is human-friendly. Skip if the URL is already the slug
-    // to avoid an infinite loop.
-    if (vendorSlug && isUuid(vendorId) && vendorSlug !== vendorId) {
+    // once so the URL is human-friendly. Skip if:
+    //   - URL already has the slug (avoid infinite loop)
+    //   - URL is the public /vendedor/[slug] route (must stay canonical-public)
+    //   - we don't have the slug yet
+    if (
+      vendorSlug &&
+      isUuid(vendorId) &&
+      vendorSlug !== vendorId &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/vendedor/')
+    ) {
       router.replace(`/vendor/${vendorSlug}`)
       return
     }
@@ -283,8 +291,8 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
   return (
     <div className="min-h-screen bg-background-cream pb-20">
       <header className="bg-white shadow-sm p-4 flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()}>
-          <ChevronLeft size={20} />
+        <Button variant="ghost" onClick={() => router.back()} aria-label="Volver">
+          <ChevronLeft size={20} aria-hidden="true" />
         </Button>
         <h1 className="text-lg font-bold">{vendor.name}</h1>
         <button

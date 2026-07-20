@@ -4,7 +4,7 @@ import { NosotrosView } from '@/components/marketing/NosotrosView'
 export const metadata: Metadata = {
   title: 'Nosotros — Nuestra misión y equipo',
   description:
-    'BarrioTech es la plataforma que conecta compradores con los 13,2 millones de vendedores informales de Colombia. Conoce nuestra misión, valores y equipo.',
+    'BarrioTech conecta compradores con vendedores locales en Colombia. Conoce nuestra misión, valores y equipo.',
   alternates: {
     canonical: 'https://gps.andresmorales.com.co/nosotros',
   },

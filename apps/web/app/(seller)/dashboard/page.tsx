@@ -66,8 +66,10 @@ function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-background-cream flex items-center justify-center">
       <div className="text-center">
+        {/* sr-only h1 for axe page-has-heading-one — visible to screen readers */}
+        <h1 className="sr-only">Cargando panel de vendedor</h1>
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3" />
-        <p className="text-gray-500">Cargando tu dashboard...</p>
+        <p className="text-gray-500">Cargando tu panel...</p>
       </div>
     </div>
   )
@@ -258,7 +260,7 @@ function DashboardContent() {
       <div className="min-h-screen bg-background-cream flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3" />
-          <p className="text-gray-500">Cargando tu dashboard...</p>
+          <p className="text-gray-500">Cargando tu panel...</p>
         </div>
       </div>
     )
@@ -289,7 +291,7 @@ function DashboardContent() {
         <header className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-10">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
-              Mi Dashboard
+              Mi panel
               <Badge variant="primary">Vendedor</Badge>
             </h1>
             {/* B6 fix: don't render fullName until store hydrated to avoid flicker. */}
@@ -465,10 +467,10 @@ function DashboardContent() {
         {/* Specific label so this doesn't collide with SiteHeader's
             "Navegación principal del sitio" — axe flags two landmarks with
             the same accessible name as redundant (landmark-unique rule). */}
-        <nav className="bg-white border-t flex justify-around py-3 fixed bottom-0 left-0 right-0 z-10" aria-label="Navegación del dashboard">
+        <nav className="bg-white border-t flex justify-around py-3 fixed bottom-0 left-0 right-0 z-10" aria-label="Navegación del panel">
           <Link href="/dashboard" aria-current="page" className="flex flex-col items-center text-primary-700">
             <BarChart3 size={24} />
-            <span className="text-xs mt-1">Dashboard</span>
+            <span className="text-xs mt-1">Panel</span>
           </Link>
           <Link href="/products" className="flex flex-col items-center text-gray-400 hover:text-primary-700 transition-colors">
             <Package size={24} />

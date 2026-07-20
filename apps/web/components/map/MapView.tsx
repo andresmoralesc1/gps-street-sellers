@@ -4,6 +4,14 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Frown, LogIn, X } from 'lucide-react'
+
+// Leaflet touch-target override is injected from the MapContainer via a
+// runtime <style> tag (see LeafletTouchTargetOverride component below).
+// Doing it at runtime instead of via globals.css because Next.js extracts
+// `import 'leaflet/dist/leaflet.css'` into its own chunk which loads AFTER
+// globals.css, and Tailwind's purge discards `.leaflet-*` selectors from
+// the base layer. Runtime injection guarantees the override reaches the
+// browser after Leaflet's CSS chunk is parsed.
 import Link from 'next/link'
 import { VendorCard } from './VendorCard'
 import { LocationAdjustControl } from './LocationAdjustControl'
@@ -31,6 +39,36 @@ function MapClickCloser({ onMapClick }: { onMapClick: () => void }) {
   useMapEvents({
     click: () => onMapClick(),
   })
+  return null
+}
+
+// Injects a <style> tag that bumps Leaflet's zoom +/- buttons to
+// WCAG-compliant 44x44px on mobile viewports. The selector chains through
+// `html body` so it wins specificity against Leaflet's own
+// `.leaflet-touch .leaflet-bar a { width: 30px }` without needing to
+// globally raise Leaflet's selector priority. !important is kept as a
+// defensive guard for any future Leaflet refactor.
+function LeafletTouchTargetOverride() {
+  useEffect(() => {
+    const STYLE_ID = 'leaflet-touch-target-override'
+    if (document.getElementById(STYLE_ID)) return
+    const style = document.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = `
+      @media (max-width: 768px) {
+        html body .leaflet-touch .leaflet-bar a,
+        html body .leaflet-control-zoom a,
+        html body .leaflet-control-zoom-in,
+        html body .leaflet-control-zoom-out {
+          width: 44px !important;
+          height: 44px !important;
+          line-height: 44px !important;
+          font-size: 22px !important;
+        }
+      }
+    `
+    document.head.appendChild(style)
+  }, [])
   return null
 }
 
@@ -312,6 +350,7 @@ export function MapView() {
 
   return (
     <div className="relative w-full h-full">
+      <LeafletTouchTargetOverride />
       <MapContainer
         center={center}
         zoom={15}

@@ -21,7 +21,7 @@ export default function NotFound() {
         </h2>
         <p className="text-gray-600 mb-8">
           La ruta que buscas no existe o se movió. Vuelve al inicio o explora el mapa
-          para descubrir vendedores cerca tuyo.
+          para descubrir vendedores cerca de ti.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/">

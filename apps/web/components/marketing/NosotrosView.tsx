@@ -49,9 +49,9 @@ const TIMELINE: readonly TimelineItem[] = [
   {
     phase: 'future' as const,
     period: 'A futuro',
-    title: 'Apps nativas (iOS + Android)',
+    title: 'Aplicaciones nativas (iOS y Android)',
     description:
-      'Versiones nativas para eliminar la fricción de los móviles y habilitar notificaciones push cuando un vendedor cercano está activo.',
+      'Versiones nativas para facilitar la experiencia en celulares y enviar notificaciones cuando un vendedor cercano esté activo.',
   },
   {
     phase: 'future' as const,
@@ -77,9 +77,9 @@ const TEAM = [
   // but also doesn't make up names. Drop entries as people join.
   {
     name: '¿Te sumas al equipo?',
-    role: 'CTO / Co-founder',
+    role: 'CTO / Cofundador(a)',
     photo: null,
-    bio: 'Buscamos un(a) co-founder técnico con experiencia en mobile-first products, geolocalización y escalabilidad. Equity + rol de liderazgo desde el día 1.',
+    bio: 'Buscamos un cofundador o una cofundadora con experiencia en productos móviles, geolocalización y escalabilidad. Ofrecemos participación en la empresa y un rol de liderazgo desde el primer día.',
     web: 'mailto:hola@barriotech.com',
     linkedin: 'https://www.linkedin.com/in/andresmoralesc1',
     isPlaceholder: true,
@@ -94,15 +94,15 @@ const VALUES = [
 ]
 
 const PILLARS = [
-  { icon: Globe, title: 'Visión Nacional', desc: 'Infraestructura escalable que integra vendedores desde las grandes metrópolis hasta áreas de alta dispersión —donde la informalidad alcanza el 83% y la necesidad de visibilidad es aún mayor.' },
-  { icon: Sparkles, title: 'Red de Publicidad Híbrida', desc: 'El vendedor monetiza su espacio físico y su presencia digital, ganando por visibilidad y por ventas.' },
-  { icon: Users, title: 'Inclusión Tecnológica', desc: 'Herramientas intuitivas con iconos visuales y interfaces gamificadas, diseñadas para cerrar la brecha digital en cualquier sector urbano o rural de Colombia.' },
-  { icon: BarChart3, title: 'Ecosistema de Datos', desc: 'Insights de comportamiento y ubicación que conectan el consumo informal con el desarrollo urbano sostenible a nivel país.' },
+  { icon: Globe, title: 'Visión nacional', desc: 'Una plataforma diseñada para validar el modelo en Cali y crecer después hacia otras ciudades y regiones de Colombia.' },
+  { icon: Sparkles, title: 'Publicidad opcional', desc: 'El perfil básico es gratuito y los vendedores pueden contratar promociones destacadas cuando necesiten más visibilidad.' },
+  { icon: Users, title: 'Inclusión tecnológica', desc: 'Herramientas intuitivas y visuales, pensadas para reducir barreras de uso en contextos urbanos y rurales.' },
+  { icon: BarChart3, title: 'Datos responsables', desc: 'Trabajamos con datos agregados y consentidos para comprender mejor el comercio local sin identificar a las personas.' },
 ]
 
 export function NosotrosView() {
   return (
-    <div className="min-h-screen bg-background-cream">
+    <div className="marketing-page min-h-screen bg-background-cream">
       {/* Hero */}
       <section className="relative py-12 px-4 bg-gradient-to-br from-primary via-primary-600 to-secondary overflow-hidden">
         <div className="absolute inset-0 opacity-10">
@@ -114,7 +114,7 @@ export function NosotrosView() {
             Conectando barrios, creando comunidad
           </h1>
           <p className="text-white/90 text-base max-w-2xl mx-auto leading-relaxed">
-            BarrioTech nació de una creencia simple: los vendedores informales de Colombia merecen ser encontrados. Somos la plataforma que los conecta con las personas que están a solo unos pasos de distancia.
+            BarrioTech nació de una creencia simple: los vendedores locales de Colombia merecen ser encontrados. Somos la plataforma que los conecta con personas que están a solo unos pasos de distancia.
           </p>
         </div>
       </section>
@@ -128,11 +128,11 @@ export function NosotrosView() {
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Nuestra misión</h2>
               <div className="bg-orange-50 border-l-4 border-primary rounded-r-2xl p-6 mb-6">
                 <p className="text-gray-700 text-lg leading-relaxed italic">
-                  Democratizar el acceso a la tecnología y a canales publicitarios de alto impacto para los vendedores informales en toda Colombia. Convertimos carritos y puestos de calle en nodos de publicidad física y puntos de venta digitales, otorgando a los vendedores de cualquier región una fuente de ingresos adicional y a las marcas nacionales un canal de comunicación único con su audiencia en el corazón del barrio.
+                  Democratizar el acceso a herramientas digitales para los vendedores de calle en Colombia. En la etapa MVP los ayudamos a mostrar su negocio y ubicación; más adelante exploraremos promociones y oportunidades publicitarias opcionales que generen valor para vendedores y marcas.
                 </p>
               </div>
               <p className="text-gray-600">
-                En Colombia hay más de <strong>13,2 millones</strong> de vendedores informales — el <strong>55,1%</strong> de la fuerza laboral nacional. BarrioTech existe para que ninguno se quede sin ser encontrado.
+                En Colombia hay más de <strong>13,2 millones</strong> de trabajadores informales, según cifras del DANE. BarrioTech se enfoca en los vendedores de calle y está validando este segmento desde Cali.
               </p>
             </div>
             {/* Image — vertical */}
@@ -292,7 +292,7 @@ export function NosotrosView() {
       {/* CTA */}
       <section className="py-16 px-4 bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">¿Quieres hacer parte de la revolución?</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">¿Quieres construir BarrioTech con nosotros?</h2>
           <p className="text-gray-400 mb-8">Únete como vendedor o contribuye al proyecto. Estamos siempre buscando personas apasionadas.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register">

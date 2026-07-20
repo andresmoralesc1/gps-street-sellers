@@ -129,7 +129,7 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Single-step role picker — 2 visible cards, buyer/seller. */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">¿Qué quieres hacer?</label>
+            <span className="text-sm font-medium text-gray-700 block min-h-[24px]">¿Qué quieres hacer?</span>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -245,7 +245,7 @@ export default function RegisterPage() {
                 className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
                 required
               />
-              <span>
+              <span className="min-h-[44px] flex items-center">
                 Acepto los{' '}
                 <Link href="/terminos" className="text-primary-700 underline" target="_blank">
                   Términos y Condiciones

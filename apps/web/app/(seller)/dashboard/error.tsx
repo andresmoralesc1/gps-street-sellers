@@ -49,7 +49,7 @@ export default function DashboardError({
           </div>
           <div className="flex-1">
             <h1 className="text-lg font-bold text-gray-900 mb-1">
-              No pudimos cargar tu dashboard
+              No pudimos cargar tu panel
             </h1>
             <p className="text-sm text-gray-600">
               Ocurrió un error inesperado al iniciar la página. Intenta de nuevo — si el problema persiste, contáctanos.

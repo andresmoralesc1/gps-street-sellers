@@ -9,18 +9,18 @@ import { TrendingUp, MapPin, BarChart3, Building2, Sparkles, Mail, FileText, Use
 const PILLARS = [
   {
     icon: MapPin,
-    title: 'Red de Micro-logística',
-    desc: 'Plataforma de geolocalización que convierte carritos informales en puntos de venta visibles y georreferenciados en tiempo real.',
+    title: 'Red de micrologística',
+    desc: 'La plataforma ayuda a que los vendedores de calle sean visibles y puedan ser encontrados en tiempo real.',
   },
   {
     icon: TrendingUp,
-    title: 'Monetización Híbrida',
-    desc: 'El vendedor gana por venta directa y por alquiler de espacio publicitario en su puesto. Doble fuente de ingresos desde un solo lugar.',
+    title: 'Monetización transparente',
+    desc: 'El acceso básico es gratuito. Los vendedores pueden contratar promociones destacadas opcionales para ganar visibilidad.',
   },
   {
     icon: BarChart3,
-    title: 'Inteligencia de Datos',
-    desc: 'Transformamos la informalidad en un activo de información valioso para el desarrollo urbano y el marketing hiper-local.',
+    title: 'Datos para mejores decisiones',
+    desc: 'Los datos agregados y consentidos pueden ayudar a comprender el comercio local sin identificar a las personas.',
   },
 ]
 
@@ -31,9 +31,9 @@ const METRICS = [
 ]
 
 const TRACTION = [
-  { icon: Sparkles, title: 'Fase actual', desc: 'Desarrollo de WebApp MVP enfocada en validación de geolocalización y experiencia de vendedor.' },
-  { icon: Building2, title: 'Modelo de negocio', desc: 'Suscripciones B2B para vendedores y compradores con funciones extra de visibilidad, y red de publicidad hiper-local para marcas nacionales.' },
-  { icon: Target, title: 'Visión estratégica', desc: 'Infraestructura escalable diseñada para expandirse de Bogotá a nivel nacional.' },
+  { icon: Sparkles, title: 'Fase actual', desc: 'Aplicación web en etapa MVP, enfocada en validar la geolocalización y la experiencia de los vendedores.' },
+  { icon: Building2, title: 'Modelo de negocio', desc: 'Acceso básico gratuito, promociones destacadas opcionales y oportunidades publicitarias para marcas.' },
+  { icon: Target, title: 'Visión estratégica', desc: 'Infraestructura diseñada para validar el modelo en Cali y crecer después hacia otras ciudades de Colombia.' },
 ]
 
 export function InversionistasView() {
@@ -70,7 +70,7 @@ export function InversionistasView() {
   }
 
   return (
-    <div className="min-h-screen bg-background-cream">
+    <div className="marketing-page min-h-screen bg-background-cream">
       {/* Hero */}
       <section className="relative py-16 md:py-20 px-4 bg-gradient-to-br from-primary via-primary-600 to-secondary overflow-hidden">
         <div className="absolute inset-0 opacity-10">
@@ -82,10 +82,10 @@ export function InversionistasView() {
             Inversores
           </span>
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-5 leading-tight">
-            Transformando la economía informal de Colombia en un ecosistema de datos.
+            Visibilidad digital para el comercio de calle en Colombia.
           </h1>
           <p className="text-white/90 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-            La primera red de micro-logística y publicidad que conecta a 13,2 millones de vendedores con el mercado digital.
+            BarrioTech desarrolla una plataforma de geolocalización y promoción que conecta vendedores locales con compradores cercanos. Actualmente validamos el MVP en Cali.
           </p>
           <a
             href="/pitch-deck.pdf"
@@ -94,7 +94,7 @@ export function InversionistasView() {
             className="inline-flex items-center gap-2 bg-white text-primary-700 font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
           >
             <FileText size={18} />
-            Descargar Pitch Deck (PDF)
+            Descargar presentación (PDF)
           </a>
         </div>
       </section>
@@ -120,14 +120,14 @@ export function InversionistasView() {
               <Users className="text-primary-700 mb-3" size={28} />
               <h3 className="font-bold text-gray-800 mb-2">Brecha de mercado</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Millones de micro-vendedores carecen de presencia digital, lo que limita su alcance, su clientela y su rentabilidad diaria.
+                Muchos vendedores de calle tienen poca presencia digital, lo que limita la posibilidad de que nuevos clientes los encuentren.
               </p>
             </div>
             <div className="bg-orange-50 border-l-4 border-primary rounded-r-2xl p-6">
               <Building2 className="text-primary-700 mb-3" size={28} />
-              <h3 className="font-bold text-gray-800 mb-2">Desperdicio publicitario</h3>
+              <h3 className="font-bold text-gray-800 mb-2">Canal poco aprovechado</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Las grandes marcas pierden acceso a un canal masivo de comunicación que ocurre diariamente, calle por calle, en toda Colombia.
+                Las marcas todavía tienen pocos canales para colaborar de forma directa y medible con los comercios de barrio.
               </p>
             </div>
           </div>
@@ -157,11 +157,11 @@ export function InversionistasView() {
         </div>
       </section>
 
-      {/* Market opportunity — números grandes */}
+      {/* Oportunidad de mercado — números grandes */}
       <section className="py-16 px-4 bg-gray-900 text-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Market opportunity</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Oportunidad de mercado</span>
             <h2 className="text-2xl md:text-3xl font-bold text-white mt-2">
               Un mercado subestimado que está migrando a lo digital.
             </h2>
@@ -177,8 +177,7 @@ export function InversionistasView() {
           </div>
           <div className="mt-10 max-w-3xl mx-auto text-center">
             <p className="text-white/70 text-sm leading-relaxed">
-              <strong className="text-white">TAM:</strong> 13,2 millones de trabajadores informales en Colombia.
-              Capacidad de escalabilidad en zonas rurales donde la informalidad llega al 83% — un mercado masivo que apenas comienza su transición digital.
+              Las cifras de informalidad laboral muestran el contexto nacional. El tamaño específico del segmento de vendedores de calle se está validando con el MVP en Cali.
             </p>
           </div>
         </div>
@@ -188,9 +187,9 @@ export function InversionistasView() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Traction · Status</span>
+            <span className="text-primary-700 text-xs font-bold uppercase tracking-wider">Avance actual</span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
-              Dónde estamos hoy.
+              Dónde estamos hoy
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -247,7 +246,7 @@ export function InversionistasView() {
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Mensaje enviado</h3>
               <p className="text-sm text-gray-600 mb-6">
-                Te respondemos en menos de 24 horas.
+                Te responderemos lo antes posible.
               </p>
               <Button
                 onClick={() => setStatus('idle')}
@@ -284,8 +283,9 @@ export function InversionistasView() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Motivo</label>
+                <label htmlFor="investor-reason" className="text-sm font-medium text-gray-700 mb-1 block">Motivo</label>
                 <select
+                  id="investor-reason"
                   value={form.reason}
                   onChange={(e) => setForm({ ...form, reason: e.target.value })}
                   disabled={status === 'sending'}
@@ -324,9 +324,9 @@ export function InversionistasView() {
 
               <p className="text-xs text-gray-500 text-center pt-2">
                 También puedes escribirnos directamente a{' '}
-                <a href="mailto:hola@gpsstreetsellers.com" className="text-primary-700 font-medium hover:underline inline-flex items-center gap-1">
+                <a href="mailto:hola@barriotech.com" className="text-primary-700 font-medium hover:underline inline-flex items-center gap-1">
                   <Mail size={12} />
-                  hola@gpsstreetsellers.com
+                  hola@barriotech.com
                 </a>
               </p>
             </form>

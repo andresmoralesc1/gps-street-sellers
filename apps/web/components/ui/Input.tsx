@@ -12,7 +12,7 @@ export function Input({ className, label, error, id, ...props }: InputProps) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={inputId} className="text-sm font-medium text-stone-700">
+        <label htmlFor={inputId} className="text-sm font-medium text-stone-700 block min-h-[24px]">
           {label}
         </label>
       )}

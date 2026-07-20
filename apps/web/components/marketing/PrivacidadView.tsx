@@ -8,7 +8,7 @@ const POLICY_EFFECTIVE = '28 de junio de 2026'
 
 export function PrivacidadView() {
   return (
-    <div className="min-h-screen bg-background-cream">
+    <div className="marketing-page min-h-screen bg-background-cream">
       <div className="max-w-3xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           Política de Tratamiento de Datos Personales
@@ -18,7 +18,7 @@ export function PrivacidadView() {
           {' '}Vigente desde: {POLICY_EFFECTIVE}
         </p>
         <p className="text-gray-500 text-sm mb-8">
-          BarrioTech (GPS Street Sellers) · Colombia
+          BarrioTech · Colombia
         </p>
 
         <div className="prose prose-gray max-w-none space-y-8">
@@ -295,8 +295,8 @@ export function PrivacidadView() {
                 </em>
               </li>
               <li>
-                <strong>Oposición:</strong> revoc consentimientos otorgados
-                (notificaciones, analytics). Configurable desde tu perfil.
+                <strong>Oposición:</strong> revocar los consentimientos otorgados
+                (notificaciones, analítica). Configurable desde tu perfil.
               </li>
             </ul>
             <p className="text-gray-600 mt-3">

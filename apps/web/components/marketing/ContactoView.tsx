@@ -77,14 +77,14 @@ export function ContactoView() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background-cream flex items-center justify-center p-4">
+      <div className="marketing-page min-h-screen bg-background-cream flex items-center justify-center p-4">
         <Card variant="elevated" className="max-w-md w-full p-8 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={32} className="text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">¡Mensaje enviado!</h1>
           <p className="text-gray-600 mb-6">
-            Te respondemos en menos de 24 horas hábiles. También puedes revisar nuestras{' '}
+            Te responderemos lo antes posible. También puedes revisar nuestras{' '}
             <Link href="/preguntas-frecuentes" className="text-primary-700 underline">
               preguntas frecuentes
             </Link>
@@ -92,7 +92,7 @@ export function ContactoView() {
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <Link href="/preguntas-frecuentes">
-              <Button variant="outline">Ver FAQ</Button>
+              <Button variant="outline">Ver preguntas frecuentes</Button>
             </Link>
             <Button onClick={() => window.location.reload()}>Enviar otro</Button>
           </div>
@@ -102,7 +102,7 @@ export function ContactoView() {
   }
 
   return (
-    <div className="min-h-screen bg-background-cream">
+    <div className="marketing-page min-h-screen bg-background-cream">
       <div className="max-w-6xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-gray-800 mb-3">Contáctanos</h1>
@@ -125,7 +125,7 @@ export function ContactoView() {
                   <Mail size={20} className="text-primary-700" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-gray-800 mb-1">Email</h3>
+                  <h3 className="font-semibold text-gray-800 mb-1">Correo electrónico</h3>
                   <a
                     href={`mailto:${EMAIL_INFO}`}
                     className="block text-gray-500 text-sm hover:text-primary-700 truncate"
@@ -158,8 +158,8 @@ export function ContactoView() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-1">Horario de respuesta</h3>
-                  <p className="text-gray-500 text-sm">Lunes a Viernes: 8am - 6pm</p>
-                  <p className="text-gray-500 text-sm">Sábados: 9am - 1pm</p>
+                  <p className="text-gray-500 text-sm">Lunes a viernes: 8:00 a. m. a 6:00 p. m.</p>
+                  <p className="text-gray-500 text-sm">Sábados: 9:00 a. m. a 1:00 p. m.</p>
                 </div>
               </div>
             </Card>
@@ -172,7 +172,7 @@ export function ContactoView() {
               <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                 {/* Honeypot — visually hidden, off-screen, no aria, no tab. Bots fill it; humans don't. */}
                 <div aria-hidden="true" className="absolute -left-[9999px] w-px h-px overflow-hidden">
-                  <label htmlFor="website">Website (déjalo vacío)</label>
+                  <label htmlFor="website">Sitio web (déjalo vacío)</label>
                   <input
                     id="website"
                     type="text"
@@ -193,7 +193,7 @@ export function ContactoView() {
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                   <Input
-                    label="Email"
+                    label="Correo electrónico"
                     type="email"
                     required
                     autoComplete="email"

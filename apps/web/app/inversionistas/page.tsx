@@ -4,7 +4,7 @@ import { InversionistasView } from '@/components/marketing/InversionistasView'
 export const metadata: Metadata = {
   title: 'Inversionistas — Oportunidad de mercado en economía informal',
   description:
-    'BarrioTech conecta a 13,2 millones de vendedores informales en Colombia. Conoce nuestra propuesta de valor, mercado y plan de negocio para inversores y aliados estratégicos.',
+    'BarrioTech desarrolla una plataforma de geolocalización y promoción para vendedores de calle. Conoce el MVP, el modelo de negocio y la oportunidad de mercado.',
   alternates: {
     canonical: 'https://gps.andresmorales.com.co/inversionistas',
   },
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Inversionistas — BarrioTech',
     description:
-      'La primera red de micro-logística y publicidad para los 13,2 millones de vendedores informales de Colombia.',
+      'Una plataforma de geolocalización y promoción para conectar vendedores locales con compradores cercanos.',
     images: ['/hero.jpg'],
     type: 'website',
     locale: 'es_CO',

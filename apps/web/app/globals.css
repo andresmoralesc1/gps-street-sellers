@@ -162,15 +162,38 @@
     cursor: grabbing;
   }
 
-  /* Mobile touch targets — Leaflet defaults to 30x30 zoom buttons which
-     fail WCAG 2.5.5 (target size 36x36 minimum) on mobile. Bumping them
-     to 40x40 keeps them tappable with a thumb without breaking desktop. */
+  /* Mobile touch targets — Leaflet defaults to 30x30 zoom buttons via
+     `.leaflet-touch .leaflet-bar a` (high specificity), which fail
+     WCAG 2.5.5 (target size 44x44 recommended). Bumping them to 44x44
+     keeps them tappable with a thumb without breaking desktop.
+
+     IMPORTANT: Leaflet CSS is imported as a separate chunk by the Map
+     components (apps/web/components/map/*) via `import "leaflet/dist/leaflet.css"`.
+     Next.js extracts that CSS into its own chunk which is appended AFTER
+     globals.css. To override it we use `html body .leaflet-touch .leaflet-bar a`
+     (specificity 0,4,0 vs Leaflet's 0,3,0) so the cascade resolves in our favor
+     without needing !important to win specificity wars. !important is still used
+     as a defensive guard. */
   @media (max-width: 768px) {
-    .leaflet-control-zoom a {
-      width: 40px !important;
-      height: 40px !important;
-      line-height: 40px !important;
+    html body .leaflet-touch .leaflet-bar a,
+    html body .leaflet-control-zoom a,
+    html body .leaflet-control-zoom-in,
+    html body .leaflet-control-zoom-out {
+      width: 44px !important;
+      height: 44px !important;
+      line-height: 44px !important;
       font-size: 22px !important;
+    }
+  }
+
+  /* Marketing page touch targets — bump anchor inline links to 44px min
+     height on mobile so they meet WCAG 2.5.5. Inline-flex preserves
+     layout. Scoped to marketing pages via the .marketing-page wrapper. */
+  @media (max-width: 768px) {
+    .marketing-page a:not(.btn):not([class*="px-"]):not([class*="py-"]) {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
     }
   }
 }

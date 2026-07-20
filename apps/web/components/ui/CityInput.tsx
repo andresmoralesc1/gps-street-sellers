@@ -139,7 +139,7 @@ export function CityInput({
           className="flex-1 bg-transparent outline-none placeholder:text-gray-400"
           aria-label="Buscar ciudad"
           aria-autocomplete="list"
-          aria-controls="city-input-listbox"
+          {...(open ? { 'aria-controls': 'city-input-listbox' } : {})}
         />
         {selectedCity && !disabled && (
           <button

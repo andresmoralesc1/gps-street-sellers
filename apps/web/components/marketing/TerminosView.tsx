@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 
 export function TerminosView() {
   return (
-    <div className="min-h-screen bg-background-cream">
+    <div className="marketing-page min-h-screen bg-background-cream">
 
       <div className="max-w-3xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Términos y Condiciones</h1>

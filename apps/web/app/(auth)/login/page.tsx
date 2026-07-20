@@ -93,7 +93,7 @@ function AuthPageContent() {
       try {
         data = await res.json()
       } catch {
-        setError('Error interpretando respuesta del servidor')
+        setError('No pudimos procesar la respuesta. Intenta de nuevo.')
         setIsLoading(false)
         return
       }
@@ -111,7 +111,7 @@ function AuthPageContent() {
         router.push('/map')
       }
     } catch {
-      setError('Error de conexión')
+      setError('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')
       setIsLoading(false)
     }
   }
@@ -179,7 +179,7 @@ function AuthPageContent() {
       setUser(data.user)
       redirectAfterLogin(data.user)
     } catch {
-      setError('Error de conexión')
+      setError('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')
       setIsLoading(false)
     }
   }
@@ -205,7 +205,7 @@ function AuthPageContent() {
           <p className="text-gray-500 text-sm mt-1">
             {step === 'login'
               ? 'Ingresa para buscar vendedores cerca de ti'
-              : 'Gratis · Sin comisiones · Sin compromisos'}
+              : 'Registro gratuito · Sin comisiones por venta · Publicidad opcional'}
           </p>
         </div>
 

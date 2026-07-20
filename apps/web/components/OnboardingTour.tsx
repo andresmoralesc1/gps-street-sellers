@@ -13,7 +13,7 @@ const LABELS: Record<string, string> = {
 const STEPS = [
   {
     icon: MapPin,
-    title: 'Encuentra vendedores cerca tuyo',
+    title: 'Encuentra vendedores cerca de ti',
     body: 'El mapa te muestra vendedores activos en tu barrio en tiempo real.',
     target: '/map',
   },

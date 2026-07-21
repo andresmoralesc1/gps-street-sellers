@@ -77,6 +77,14 @@ const userId = auth.userId
       if (days.length === 0) {
         return NextResponse.json({ error: 'Selecciona al menos un día' }, { status: 400 })
       }
+      // end < start: a business hours window that closes before it opens
+      // is almost certainly a mistake. Reject with a clear message.
+      if (endTime && endTime <= startTime) {
+        return NextResponse.json(
+          { error: 'La hora de fin debe ser posterior a la hora de inicio' },
+          { status: 400 }
+        )
+      }
     }
 
     await pool.query(

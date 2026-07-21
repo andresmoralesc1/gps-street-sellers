@@ -1,0 +1,293 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { CityInput } from '@/components/ui/CityInput'
+import { useStore } from '@/store/useStore'
+
+interface Props {
+  isLoading: boolean
+  error: string
+  setError: (msg: string) => void
+  setIsLoading: (b: boolean) => void
+  /** Pre-selected role from the URL (?role=seller) or null. */
+  initialRole?: 'buyer' | 'seller'
+  /** Where to send the user after a successful registration. */
+  redirectTo: 'dashboard' | 'onboarding' | 'map'
+}
+
+/**
+ * Registration form — full name + contact (email OR phone) + alt contact
+ * (optional) + city + password + role + Ley 1581/2012 consent.
+ *
+ * Used by both the login page (as a toggle step) and the standalone
+ * /register route, so it accepts an initial role and a redirect target
+ * as props instead of hard-coding them.
+ *
+ * The "single contact field" UX: user types either an email or a phone
+ * number into one input, and we detect which one it is. They can fill
+ * the alt-contact field too — backend accepts either, at least one is
+ * required.
+ */
+export function RegisterForm({
+  isLoading,
+  error,
+  setError,
+  setIsLoading,
+  initialRole = 'buyer',
+  redirectTo,
+}: Props) {
+  const router = useRouter()
+  const setUser = useStore((s) => s.setUser)
+
+  const [fullName, setFullName] = useState('')
+  const [contact, setContact] = useState('')
+  const [altContact, setAltContact] = useState('')
+  const [cityId, setCityId] = useState('')
+  const [regPassword, setRegPassword] = useState('')
+  const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>(initialRole)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  const isContactEmail = contact.includes('@')
+  const contactInputMode = isContactEmail ? 'email' : 'tel'
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+
+    if (!fullName || !regPassword) {
+      setError('Completa tu nombre y contraseña')
+      setIsLoading(false)
+      return
+    }
+    if (!contact && !altContact) {
+      setError('Necesitas al menos un email o un teléfono para registrarte')
+      setIsLoading(false)
+      return
+    }
+    if (regPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
+      setIsLoading(false)
+      return
+    }
+    if (!acceptedTerms || !acceptedPrivacy) {
+      setError('Debes aceptar los Términos y la Política de Tratamiento de Datos Personales para continuar.')
+      setIsLoading(false)
+      return
+    }
+
+    // Build payload — backend normalizes email/phone.
+    const payload: Record<string, unknown> = {
+      password: regPassword,
+      name: fullName,
+      cityId,
+      role: selectedRole,
+      acceptedTerms,
+      acceptedPrivacy,
+    }
+    if (contact.includes('@')) {
+      payload.email = contact
+      if (altContact) payload.phone = altContact
+    } else {
+      payload.phone = contact
+      if (altContact.includes('@')) payload.email = altContact
+    }
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Error al registrarse')
+        setIsLoading(false)
+        return
+      }
+
+      setUser(data.user)
+      const target =
+        redirectTo === 'onboarding' && data.user.role !== 'seller'
+          ? '/map'
+          : redirectTo === 'dashboard'
+          ? '/dashboard'
+          : redirectTo === 'onboarding'
+          ? '/onboarding'
+          : '/map'
+      router.push(target)
+    } catch {
+      setError('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Role selector */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setSelectedRole('buyer')}
+          className={`p-3 rounded-xl border-2 text-center transition-all ${
+            selectedRole === 'buyer'
+              ? 'border-primary bg-orange-50'
+              : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <div className="text-2xl mb-1">🛒</div>
+          <div className="text-sm font-semibold text-gray-800">Comprador</div>
+          <div className="text-xs text-gray-500">Buscar y pedir</div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedRole('seller')}
+          className={`p-3 rounded-xl border-2 text-center transition-all ${
+            selectedRole === 'seller'
+              ? 'border-primary bg-orange-50'
+              : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <div className="text-2xl mb-1">📍</div>
+          <div className="text-sm font-semibold text-gray-800">Vendedor</div>
+          <div className="text-xs text-gray-500">Aparecer en el mapa</div>
+        </button>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">Nombre completo</label>
+        <input
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Juan Pérez"
+          disabled={isLoading}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">Email o teléfono</label>
+        <input
+          type="text"
+          inputMode={contactInputMode}
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          placeholder="tu@email.com o 300 123 4567"
+          disabled={isLoading}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+        />
+        <p className="text-xs text-gray-500 mt-1">Necesitas al menos uno.</p>
+      </div>
+
+      {contact && (
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1 block">
+            {isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
+          </label>
+          <input
+            type="text"
+            inputMode={isContactEmail ? 'tel' : 'email'}
+            autoComplete={isContactEmail ? 'tel' : 'email'}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={altContact}
+            onChange={(e) => setAltContact(e.target.value)}
+            placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
+            disabled={isLoading}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+          />
+        </div>
+      )}
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">Ciudad</label>
+        <CityInput
+          value={cityId}
+          onChange={setCityId}
+          disabled={isLoading}
+          placeholder="Busca tu ciudad..."
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">Contraseña</label>
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={regPassword}
+            onChange={(e) => setRegPassword(e.target.value)}
+            placeholder="Mínimo 8 caracteres"
+            disabled={isLoading}
+            autoComplete="new-password"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
+      )}
+
+      <div className="space-y-1 pt-2">
+        <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 w-5 h-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
+          />
+          <span>
+            Acepto los{' '}
+            <Link href="/terminos" className="text-primary-700 hover:underline" target="_blank">
+              Términos de Servicio
+            </Link>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">
+          <input
+            type="checkbox"
+            checked={acceptedPrivacy}
+            onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+            className="mt-0.5 w-5 h-5 shrink-0 rounded border-gray-300 text-primary-700 focus:ring-primary"
+          />
+          <span>
+            Acepto la{' '}
+            <Link href="/privacidad" className="text-primary-700 hover:underline" target="_blank">
+              Política de Tratamiento de Datos Personales
+            </Link>{' '}
+            (Ley 1581/2012)
+          </span>
+        </label>
+      </div>
+
+      {!acceptedTerms || !acceptedPrivacy ? (
+        <p className="text-xs text-gray-500">Acepta los Términos y la Política para continuar.</p>
+      ) : null}
+
+      <Button type="submit" className="w-full" size="lg" isLoading={isLoading} disabled={isLoading}>
+        {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+      </Button>
+    </form>
+  )
+}

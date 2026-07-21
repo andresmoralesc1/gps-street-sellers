@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import jwt from 'jsonwebtoken'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 
 /**
  * POST /api/auth/forgot-password
@@ -17,9 +18,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
  * Brevo. The link points at /reset-password?token=...
  */
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  const ip = getClientIp(req)
 
   // Rate limit tighter than login: forgot-password emails are a phishing vector.
   // 5 requests per IP per hour is enough for legitimate use, blocks abuse.

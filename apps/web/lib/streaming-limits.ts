@@ -8,6 +8,8 @@
 // it just means a misbehaving client gets a fresh budget of MAX on each
 // reload, which is still bounded.
 
+import { getClientIp } from './trusted-ip'
+
 const MAX_CONCURRENT_PER_IP = 3
 const MAX_TOTAL_CONCURRENT = 200
 
@@ -24,10 +26,7 @@ export interface StreamTicket {
  * Returns null if the caller is over budget.
  */
 export function acquireStreamSlot(req: Request): StreamTicket | null {
-  const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown'
+  const ip = getClientIp(req as any)
 
   if (totalConcurrent >= MAX_TOTAL_CONCURRENT) return null
 

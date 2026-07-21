@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 
 
 /**
@@ -15,9 +16,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
  * replaces the previous keys instead of leaking rows.
  */
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  const ip = getClientIp(req)
   const { allowed, retryAfter } = await checkRateLimit(ip, 'push_subscribe', 10, 60 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(
@@ -73,9 +72,7 @@ export async function POST(req: NextRequest) {
  * Body: { endpoint: string }
  */
 export async function DELETE(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  const ip = getClientIp(req)
   const { allowed, retryAfter } = await checkRateLimit(ip, 'push_subscribe', 10, 60 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(

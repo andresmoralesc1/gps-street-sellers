@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 import { isEmail, normalizeEmail, normalizePhone } from '@/lib/auth-helpers'
 
 // Defense against user-enumeration via response timing:
@@ -19,9 +20,7 @@ function getDummyHash(): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  const ip = getClientIp(req)
   const { allowed, remaining, retryAfter } = await checkRateLimit(ip, 'login', 10, 15 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(

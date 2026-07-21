@@ -3,15 +3,14 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 
 
 // GET /api/notifications — list user notifications
 export async function GET(req: NextRequest) {
   try {
     // Rate limit: 60 reads/min per IP — blocks enumeration/exfiltration.
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || req.headers.get('x-real-ip')
-      || 'unknown'
+    const ip = getClientIp(req)
     const { allowed, retryAfter } = await checkRateLimit(ip, 'notifications_read', 60, 60 * 1000)
     if (!allowed) {
       return NextResponse.json(

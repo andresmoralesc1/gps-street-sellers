@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 import pool from '@/lib/db'
 
 /**
@@ -71,11 +72,7 @@ export async function POST(request: NextRequest) {
   // 2.5. Rate limit by IP — 20/hour. Public endpoint per Ley 1581/2012,
   // but unauthenticated callers could otherwise pollute consent_logs.
   // For authenticated callers this also blocks programmatic abuse.
-  const rlIp =
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  const { allowed, retryAfter } = await checkRateLimit(rlIp, 'consent', 20, 60 * 60 * 1000)
+  const { allowed, retryAfter } = await checkRateLimit(getClientIp(request), 'consent', 20, 60 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(
       { error: 'Demasiados intentos. Intenta más tarde.', retryAfter },
@@ -96,10 +93,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 3. Capture metadata.
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    request.headers.get('x-real-ip') ||
-    null
+  const ip = getClientIp(request) === 'unknown' ? null : getClientIp(request)
   const userAgent = request.headers.get('user-agent') || null
 
   // 4. Insert. ON CONFLICT DO NOTHING — re-submitting the same consent

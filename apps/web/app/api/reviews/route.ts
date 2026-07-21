@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 
 
 // POST /api/reviews — submit a review (buyer only)
@@ -10,9 +11,7 @@ export async function POST(req: NextRequest) {
   // Rate limit by IP (defense in depth — auth check happens next).
   // 10 reviews / hour per IP prevents scripted review bombing even
   // if a user authenticates with many accounts.
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  const ip = getClientIp(req)
   const { allowed, retryAfter } = await checkRateLimit(ip, 'reviews', 10, 60 * 60 * 1000)
   if (!allowed) {
     return NextResponse.json(

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 
 // Top-50 most common passwords — must match the list in register/route.ts.
 // ponytail: duplicate list is intentional to keep reset flow standalone
@@ -31,9 +32,7 @@ const COMMON_PASSWORDS = new Set([
  * everywhere, including the attacker who initiated the reset.
  */
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  const ip = getClientIp(req)
 
   const { allowed, retryAfter } = await checkRateLimit(ip, 'reset_password', 10, 60 * 60 * 1000)
   if (!allowed) {

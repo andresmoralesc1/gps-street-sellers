@@ -9,11 +9,27 @@
  */
 
 import pool from './db'
+import { getClientIp } from './trusted-ip'
 
 interface RateLimitResult {
   allowed: boolean
   remaining: number
   retryAfter?: number
+}
+
+/**
+ * Convenience wrapper that resolves the client IP from a NextRequest
+ * (using the trusted-proxy logic) and then calls checkRateLimit.
+ * Callers that already have a string IP can still call checkRateLimit
+ * directly with the `ip` argument.
+ */
+export async function checkRateLimitFromRequest(
+  req: { headers: Headers },
+  bucket: string,
+  maxAttempts: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  return checkRateLimit(getClientIp(req as any), bucket, maxAttempts, windowMs)
 }
 
 export async function checkRateLimit(

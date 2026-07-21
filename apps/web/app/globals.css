@@ -114,7 +114,10 @@
     .animate-progress-shrink,
     .animate-shake-x,
     .animate-card-expand,
-    .animate-pulse-soft {
+    .animate-pulse-soft,
+    .animate-fab-pop-in,
+    .animate-fab-pulse-ring,
+    .animate-fab-stagger-in {
       animation: none !important;
       transition: none !important;
     }

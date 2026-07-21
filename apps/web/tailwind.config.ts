@@ -77,6 +77,14 @@ const config: Config = {
         'progress-shrink': 'progressShrink var(--toast-duration,3.5s) linear forwards',
         'shake-x': 'shakeX 0.45s cubic-bezier(0.36,0.07,0.19,0.97)',
         'card-expand': 'cardExpand 0.35s cubic-bezier(0.4,0,0.2,1) forwards',
+
+        // FAB microinteractions — delayed entrance + idle pulse-ring
+        // (subtle, ~6s interval) so the button feels alive without nagging.
+        'fab-pop-in': 'fabPopIn 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.5s both',
+        'fab-pulse-ring': 'fabPulseRing 2.4s cubic-bezier(0.4,0,0.6,1) infinite',
+        // Stagger helper — applied via inline style `animationDelay` for
+        // each action chip so they cascade in when the menu expands.
+        'fab-stagger-in': 'fabStaggerIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
       },
       keyframes: {
         fadeIn: {
@@ -154,6 +162,31 @@ const config: Config = {
         cardExpand: {
           '0%': { gridTemplateRows: '0fr', opacity: '0' },
           '100%': { gridTemplateRows: '1fr', opacity: '1' },
+        },
+
+        // FAB delayed entrance — pops in from below with a slight overshoot
+        // (cubic-bezier with bounce) AFTER 500ms so the page content
+        // settles first and the FAB doesn't fight the initial paint.
+        fabPopIn: {
+          '0%':   { opacity: '0', transform: 'translateY(20px) scale(0.7)' },
+          '60%':  { opacity: '1', transform: 'translateY(-3px) scale(1.05)' },
+          '100%': { opacity: '1', transform: 'translateY(0)    scale(1)' },
+        },
+        // Idle halo behind the FAB — concentric ring that grows & fades.
+        // Goes behind the button (z-index lower) so it reads as a soft
+        // pulse, not a blinking alarm. Synced to a 2.4s cycle.
+        fabPulseRing: {
+          '0%':   { transform: 'scale(1)',   opacity: '0.45' },
+          '70%':  { transform: 'scale(1.9)', opacity: '0' },
+          '100%': { transform: 'scale(1.9)', opacity: '0' },
+        },
+        // Single action chip — fade + slide + slight overshoot. The
+        // actual stagger (per-item delay) is set inline via style so we
+        // don't need N animation classes for N actions.
+        fabStaggerIn: {
+          '0%':   { opacity: '0', transform: 'translateY(6px) scale(0.85)' },
+          '60%':  { opacity: '1', transform: 'translateY(-1px) scale(1.04)' },
+          '100%': { opacity: '1', transform: 'translateY(0)    scale(1)' },
         },
       },
     },

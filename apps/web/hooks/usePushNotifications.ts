@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { clientLog } from '@/lib/client-logger'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
 
@@ -28,12 +29,12 @@ export function usePushNotifications() {
 
   const subscribeToPush = async () => {
     if (!('serviceWorker' in navigator)) {
-      console.warn('Service workers not supported')
+      clientLog.warn('Service workers not supported')
       return
     }
 
     if (!VAPID_PUBLIC_KEY) {
-      console.warn('VAPID_PUBLIC_KEY not configured')
+      clientLog.warn('VAPID_PUBLIC_KEY not configured')
       return
     }
 

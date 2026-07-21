@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { clientLog } from '@/lib/client-logger'
 
 export interface VendorLocationUpdate {
   vendorId: string
@@ -43,7 +44,7 @@ export function useVendorStream(
     source.onerror = () => {
       // EventSource auto-reconnects. We just log; closing the source
       // would prevent reconnect per spec.
-      console.warn('[stream] SSE connection error, will auto-reconnect')
+      clientLog.warn('[stream] SSE connection error, will auto-reconnect')
     }
 
     return () => {
@@ -80,12 +81,12 @@ export function useVendorLocationBroadcaster(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude: lat, longitude: lng, isActive: true }),
         keepalive: true,
-      }).catch((err) => console.warn('[broadcaster] PUT failed:', err))
+      }).catch((err) => clientLog.warn('[broadcaster] PUT failed:', err))
     }
 
     watchId = navigator.geolocation.watchPosition(
       (pos) => send(pos.coords.latitude, pos.coords.longitude),
-      (err) => console.warn('[broadcaster] geolocation error:', err.message),
+      (err) => clientLog.warn('[broadcaster] geolocation error:', err.message),
       { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 }
     )
 

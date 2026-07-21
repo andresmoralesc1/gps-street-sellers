@@ -167,7 +167,10 @@ export function SellerDashboard({
         name: statsData.vendorName ?? 'Tu tienda',
         description: statsData.description ?? '',
         category: statsData.category ?? 'otros',
-        photoUrl: vendorPhotoUrl,
+        // QSC-1: prefer the fresh photo from the stats endpoint so the
+        // checklist re-evaluates after the seller updates their photo in
+        // /profile/edit (vendorPhotoUrl prop is stale in that flow).
+        photoUrl: statsData.photoUrl ?? vendorPhotoUrl ?? initialVendorPhotoUrl ?? null,
         rating,
         review_count: statsData.reviewCount,
       })

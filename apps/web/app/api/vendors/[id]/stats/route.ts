@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
     //    We fold the rating lookup into the same query that already hits the
     //    vendors table, saving one round-trip.
     const ownerCheck = await pool.query(
-      `SELECT id, name, description, category, city_id, rating, review_count
+      `SELECT id, name, description, category, city_id, rating, review_count, photo_url
        FROM vendors
        WHERE id = $1
          AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)`,
@@ -105,6 +105,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       vendorName: vendor.name,
       description: vendor.description,
       category: vendor.category,
+      photoUrl: vendor.photo_url,
       totalOrders: Number(ordersResult.rows[0].total),
       viewsToday: Number(viewsTodayResult.rows[0].total),
       weeklyViews: Number(weeklyViewsResult.rows[0].total),

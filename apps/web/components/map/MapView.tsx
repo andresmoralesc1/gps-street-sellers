@@ -73,9 +73,17 @@ function LeafletTouchTargetOverride() {
 }
 
 // Pans the map so the selected vendor stays visible above the floating card.
-// `pixelOffsetBy` is the height in pixels the floating card occupies at the
+// `bottomOffsetPx` is the height in pixels the floating card occupies at the
 // bottom of the viewport — we pan up by that amount so the marker isn't
 // hidden under the card.
+//
+// Upgraded 2026-07-21 from panTo → flyTo so the user sees the spatial
+// relationship between vendors (panTo just slides; flyTo animates both
+// pan AND zoom, giving a sense of "the map is flying to the vendor").
+// `easeLinearity: 0.25` adds a tiny ease-out so the motion feels organic
+// instead of mechanically linear. Zoom range `[currentZoom, 16]` zooms
+// in slightly on selection, then if the user pans away it stays where
+// they left it (flyTo doesn't auto-recenter like setView would).
 function MapPanToVendor({
   vendor,
   bottomOffsetPx,
@@ -90,7 +98,12 @@ function MapPanToVendor({
     // Move the vendor marker up by the card height + small breathing room.
     const targetPoint = L.point(point.x, point.y - bottomOffsetPx)
     const targetLatLng = map.containerPointToLatLng(targetPoint)
-    map.panTo(targetLatLng, { animate: true, duration: 0.4 })
+    const targetZoom = Math.max(map.getZoom(), 15)
+    map.flyTo(targetLatLng, targetZoom, {
+      animate: true,
+      duration: 0.8,
+      easeLinearity: 0.25,
+    })
   }, [map, vendor, bottomOffsetPx])
   return null
 }
@@ -437,8 +450,6 @@ export function MapView() {
             }
             const emoji = catMap[cat] || '📦'
             const catColor = getCategoryInfo(cat).color
-            // Sponsored vendors get a gold ring + star badge to differentiate
-            // from organic placement. Same icon, different border treatment.
             const sponsored = vendor.isSponsored
             // Show a small "Cerrado" overlay when business hours say we're closed.
             // The map intentionally shows all vendors with location; this badge
@@ -447,6 +458,16 @@ export function MapView() {
             const showClosedBadge = vendor.isOpen === false
             const ringColor = sponsored ? '#F59E0B' : 'white'
             const ringWidth = sponsored ? 4 : 3
+            // Pulse ring for the currently selected vendor. We render it
+            // as an absolutely-positioned div BEHIND the marker (z-index
+            // -1 inside the icon's wrapper) so it doesn't displace the
+            // pin itself. The ring uses the same primary orange so it
+            // reads as "this is the one you tapped" without competing
+            // with the category color of the icon.
+            const isSelected = selectedVendor?.id === vendor.id
+            const pulseRing = isSelected
+              ? '<div class="vendor-marker-pulse" style="position:absolute;inset:-6px;border-radius:50%;background:rgba(194,65,12,0.35);animation:marker-pulse-ring 1.4s ease-in-out infinite;pointer-events:none;"></div>'
+              : ''
             const markerIcon = new L.DivIcon({
               html: `<div style="
                 background: ${catColor};
@@ -465,7 +486,7 @@ export function MapView() {
                 sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
               }${
                 showClosedBadge ? '<span style="position:absolute;bottom:-4px;left:-4px;background:#6B7280;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);color:white;font-weight:600;">⏻</span>' : ''
-              }</div>`,
+              }${pulseRing}</div>`,
               className: 'vendor-category-marker',
               iconSize: [42, 42],
               iconAnchor: [21, 42],

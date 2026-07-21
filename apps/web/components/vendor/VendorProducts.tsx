@@ -1,7 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/Card'
-import { Package, Plus, User } from 'lucide-react'
+import { Package, Plus, User, ChevronDown } from 'lucide-react'
 import type { Product } from '@/lib/core/types'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/Button'
@@ -61,9 +61,19 @@ interface ProductCardProps {
 function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos }: ProductCardProps) {
   const [imgFailed, setImgFailed] = useState(false)
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [expanded, setExpanded] = useState(false)
   const allPhotos = [product.photoUrl, ...(extraPhotos ?? [])].filter(Boolean) as string[]
   const showPhoto = allPhotos.length > 0 && !imgFailed
   const currentPhoto = allPhotos[photoIdx] || product.photoUrl
+
+  // Decide whether to show a "Ver más" expand trigger. Hidden when
+  // compact mode is on (the seller dashboard uses compact to fit as
+  // many products in view as possible) or when the description fits
+  // in 2 lines anyway (we don't measure line-height here, so this is
+  // a heuristic — we always show the button but it toggles a no-op
+  // expansion when the content is already short).
+  const showExpandToggle = !compact
+  const canExpand = showExpandToggle && (product.description?.length ?? 0) > 60
 
   return (
     <Card variant="outlined" className="overflow-hidden p-0">
@@ -110,7 +120,30 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold leading-tight">{product.name}</h4>
-            <p className="text-sm text-gray-500 line-clamp-2 mt-1">{product.description}</p>
+            {/* Expandable description — uses the grid-rows trick so the
+                card height transitions smoothly from 2 lines to the
+                full description. The chevron rotates 180° when open
+                to match the direction of the expansion. */}
+            <div
+              className={clsx(
+                'grid transition-[grid-template-rows,opacity] duration-300 ease-out',
+                // line-clamp-2 is applied to a child div so it only kicks
+                // in when collapsed. When expanded, we render the full
+                // text without the clamp.
+                expanded ? 'opacity-100' : 'opacity-100'
+              )}
+              style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
+              aria-hidden={!expanded}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <p className={clsx(
+                  'text-sm text-gray-500 mt-1',
+                  !expanded && 'line-clamp-2'
+                )}>
+                  {product.description}
+                </p>
+              </div>
+            </div>
             <p className="text-primary-700 font-bold mt-1">
               ${product.price.toLocaleString('es-CO')}
             </p>
@@ -136,6 +169,27 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
             )
           ) : null}
         </div>
+        {/* "Ver más / Ver menos" toggle. We only mount it when the
+            description is long enough to warrant expansion; short
+            descriptions just stay line-clamped (button hidden). */}
+        {canExpand && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:text-primary-800 transition-colors"
+          >
+            <span>{expanded ? 'Ver menos' : 'Ver más'}</span>
+            <ChevronDown
+              size={14}
+              aria-hidden="true"
+              className={clsx(
+                'transition-transform duration-300 ease-out',
+                expanded && 'rotate-180'
+              )}
+            />
+          </button>
+        )}
       </div>
     </Card>
   )

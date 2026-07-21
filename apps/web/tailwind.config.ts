@@ -61,9 +61,22 @@ const config: Config = {
         '3xl': '1.5rem',
       },
       animation: {
+        // Existing — kept
         'fade-in': 'fadeIn 0.3s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+
+        // NEW — microinteractions batch (2026-07-21)
+        'shimmer': 'shimmer 1.6s linear infinite',
+        'heart-pop': 'heartPop 0.45s cubic-bezier(0.34,1.56,0.64,1)',
+        'cart-bounce': 'cartBounce 0.55s ease-out',
+        'badge-pop': 'badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+        'marker-pulse': 'markerPulse 1.4s ease-in-out infinite',
+        'ripple': 'ripple 0.65s linear',
+        'fly-out': 'flyOut 0.55s cubic-bezier(0.55,0.06,0.68,0.19) forwards',
+        'progress-shrink': 'progressShrink var(--toast-duration,3.5s) linear forwards',
+        'shake-x': 'shakeX 0.45s cubic-bezier(0.36,0.07,0.19,0.97)',
+        'card-expand': 'cardExpand 0.35s cubic-bezier(0.4,0,0.2,1) forwards',
       },
       keyframes: {
         fadeIn: {
@@ -77,6 +90,70 @@ const config: Config = {
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.7' },
+        },
+
+        // NEW — microinteractions batch (2026-07-21)
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        heartPop: {
+          '0%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(1.4)' },
+          '70%': { transform: 'scale(0.92)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        cartBounce: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-12deg)' },
+          '50%': { transform: 'rotate(8deg)' },
+          '75%': { transform: 'rotate(-4deg)' },
+        },
+        badgePop: {
+          '0%': { transform: 'scale(0.6)', opacity: '0' },
+          '60%': { transform: 'scale(1.2)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        // Soft ring pulse for the selected Leaflet marker so the user
+        // can locate it on the map after the fly-to.
+        markerPulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
+          '50%': { transform: 'scale(1.6)', opacity: '0' },
+        },
+        // Click ripple — concentric circle expanding from the click point.
+        ripple: {
+          '0%': { transform: 'scale(0)', opacity: '0.55' },
+          '100%': { transform: 'scale(2.4)', opacity: '0' },
+        },
+        // Paper-plane flying away to the top-right (where WhatsApp icon
+        // sits in the UI). Combined with the icon-color flash it gives
+        // clear feedback without interrupting the navigation.
+        flyOut: {
+          '0%': { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: '1' },
+          '70%': { opacity: '1' },
+          '100%': { transform: 'translate(60px,-80px) rotate(20deg) scale(0.4)', opacity: '0' },
+        },
+        // Toast progress bar — shrinks width linearly over the toast
+        // lifetime. `toast-duration` is set inline via a CSS var on each
+        // toast root so the same animation works for any duration.
+        progressShrink: {
+          '0%': { transform: 'scaleX(1)' },
+          '100%': { transform: 'scaleX(0)' },
+        },
+        // Horizontal shake for error toasts — short and crisp.
+        shakeX: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%': { transform: 'translateX(-6px)' },
+          '40%': { transform: 'translateX(6px)' },
+          '60%': { transform: 'translateX(-4px)' },
+          '80%': { transform: 'translateX(4px)' },
+        },
+        // Product card expand — height grows from collapsed to auto.
+        // Uses grid-template-rows trick (0fr → 1fr) so the height
+        // transitions to actual content height, not a fixed value.
+        cardExpand: {
+          '0%': { gridTemplateRows: '0fr', opacity: '0' },
+          '100%': { gridTemplateRows: '1fr', opacity: '1' },
         },
       },
     },

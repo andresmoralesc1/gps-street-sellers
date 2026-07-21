@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Heart, Bell, ChevronLeft, ShoppingCart, MessageCircle, Star, User, Phone, Navigation } from 'lucide-react'
+import { Heart, Bell, ChevronLeft, ShoppingCart, Star, User, Phone, Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { WhatsAppButton } from '@/components/ui/WhatsAppButton'
 import { toast } from '@/components/ui/Toast'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
@@ -256,12 +257,13 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     }
   }
 
-  const handleWhatsAppDirect = () => {
-    if (!vendor?.phone) return
-    const text = `¡Hola! Quiero saber más sobre tus productos en BarrioTech`
-    const waUrl = `https://wa.me/${vendor.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`
-    window.open(waUrl, '_blank')
-  }
+  // Same URL as the old handleWhatsAppDirect — pre-computed so the
+  // <WhatsAppButton> component can use it as its `href` directly
+  // (the button handles its own click event for the ripple/fly-out
+  // animation, so we don't need the imperative window.open path).
+  const whatsappUrl = vendor?.phone
+    ? `https://wa.me/${vendor.phone.replace(/\D/g, '')}?text=${encodeURIComponent('¡Hola! Quiero saber más sobre tus productos en BarrioTech')}`
+    : null
 
   if (!vendor) {
     return (
@@ -395,15 +397,12 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
                   <span>Llamar</span>
                 </a>
               )}
-              {vendor.phone && (
-                <button
-                  type="button"
-                  onClick={handleWhatsAppDirect}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl transition-colors md:py-2.5"
-                >
-                  <MessageCircle size={18} />
-                  <span>WhatsApp</span>
-                </button>
+              {vendor.phone && whatsappUrl && (
+                <WhatsAppButton
+                  href={whatsappUrl}
+                  className="w-full md:w-auto md:py-2.5"
+                  label="WhatsApp"
+                />
               )}
               {vendor.latitude && vendor.longitude && (
                 <a

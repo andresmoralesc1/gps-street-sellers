@@ -18,6 +18,8 @@ interface ToastItem {
   title: string
   description?: string
   action?: ToastAction
+  /** Auto-dismiss after this many ms. Default 3500. */
+  duration?: number
 }
 
 // Module-level event bus — no provider needed because toasts are global.
@@ -42,6 +44,25 @@ const COLORS: Record<ToastKind, string> = {
   warning: 'border-amber-400 bg-amber-50 text-amber-800',
 }
 
+// Progress-bar colors are paired with the toast kind so it reads as a
+// single visual object. Kept independent of the main border so they
+// don't visually compete on busy screens.
+const PROGRESS_COLORS: Record<ToastKind, string> = {
+  success: 'bg-primary',
+  error: 'bg-accent',
+  info: 'bg-stone-400',
+  warning: 'bg-amber-400',
+}
+
+// Desktop: slide in from the top-right (kept from the original
+// implementation). Mobile (<640px): slide up from the bottom — the
+// existing top-right placement fights with the iOS status bar on small
+// viewports and obscures content more than it helps.
+const POSITION_CLASSES =
+  'fixed z-[100] flex flex-col gap-2 pointer-events-none ' +
+  'top-20 right-4 ' +
+  'max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:right-0 max-sm:px-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+
 export function ToastContainer() {
   const [items, setItems] = useState<Array<ToastItem & { entering: boolean }>>([])
   // Track dismiss timers so we can clear them when the user manually closes
@@ -61,9 +82,10 @@ export function ToastContainer() {
 
     const handler = (t: Omit<ToastItem, 'id'>) => {
       const id = nextId++
-      setItems((prev) => [...prev, { ...t, id, entering: true }])
-      // Auto-dismiss after 3.5s
-      const timer = setTimeout(() => dismiss(id), 3500)
+      const duration = t.duration ?? 3500
+      setItems((prev) => [...prev, { ...t, id, duration, entering: true }])
+      // Auto-dismiss after the configured duration.
+      const timer = setTimeout(() => dismiss(id), duration)
       timersRef.current.set(id, timer)
     }
     listeners.add(handler)
@@ -88,7 +110,7 @@ export function ToastContainer() {
     <div
       aria-live="polite"
       aria-atomic="true"
-      className="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none"
+      className={POSITION_CLASSES}
     >
       {items.map((it) => {
         const Icon = ICONS[it.kind]
@@ -96,9 +118,20 @@ export function ToastContainer() {
           <div
             key={it.id}
             role="status"
+            // CSS var drives the progress-bar animation duration so a 5s
+            // toast has a 5s bar, a 2s toast has a 2s bar — same animation,
+            // parameterized runtime.
+            style={{ ['--toast-duration' as string]: `${it.duration ?? 3500}ms` }}
             className={clsx(
-              'pointer-events-auto flex items-start gap-3 px-4 py-3 pr-10 rounded-2xl border-2 shadow-card-hover min-w-[260px] max-w-sm relative',
+              'pointer-events-auto flex items-start gap-3 px-4 py-3 pr-10 rounded-2xl border-2 shadow-card-hover min-w-[260px] max-w-sm relative overflow-hidden',
+              // Enter on desktop: slide-down from top-right. On mobile:
+              // slide-up from bottom. The two animations are similar but
+              // distinct enough that the toast feels native to each
+              // viewport.
               'animate-slide-up',
+              // Error toasts shake to grab attention — same keyframes
+              // used by forms on submission errors.
+              it.kind === 'error' && 'animate-shake-x',
               COLORS[it.kind]
             )}
           >
@@ -124,6 +157,18 @@ export function ToastContainer() {
             >
               <X size={14} aria-hidden="true" />
             </button>
+            {/* Progress bar — runs over the configured duration, shrinks
+                left-to-right. transform: scaleX is composited by the GPU
+                so the animation stays smooth even on low-end devices. The
+                `origin-left` keeps the right edge fixed as it shrinks so
+                it reads as "time running out", not "loading in". */}
+            <span
+              aria-hidden="true"
+              className={clsx(
+                'absolute bottom-0 left-0 h-0.5 w-full origin-left animate-progress-shrink',
+                PROGRESS_COLORS[it.kind]
+              )}
+            />
           </div>
         )
       })}

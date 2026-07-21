@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { Plus, X, Image as ImageIcon, Loader2 } from 'lucide-react'
-import { useToast } from './Toast'
+import { toast } from '@/components/ui/Toast'
 
 /**
  * N12 — Multi-photo uploader (URL-based, max 6 photos).
@@ -42,7 +42,6 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmDeleting, setConfirmDeleting] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
-  const { showToast } = useToast()
   const fetchedRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -110,12 +109,12 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
         setPhotos(next)
         onChange?.(next)
         setNewUrl('')
-        showToast('Foto agregada ✓', 'success')
+        toast({ title: 'Foto agregada ✓', kind: 'success' })
       } else {
-        showToast(data.error || 'Error al agregar foto', 'error')
+        toast({ title: data.error || 'Error al agregar foto', kind: 'error' })
       }
     } catch {
-      showToast('Error de conexión', 'error')
+      toast({ title: 'Error de conexión', kind: 'error' })
     } finally {
       setAdding(false)
     }
@@ -139,7 +138,7 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
       })
       const upData = await upRes.json().catch(() => ({}))
       if (!upRes.ok) {
-        showToast(upData.error || 'Error al subir el archivo', 'error')
+        toast({ title: upData.error || 'Error al subir el archivo', kind: 'error' })
         return
       }
       const url: string = upData.url
@@ -151,15 +150,15 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
       })
       const regData = await regRes.json().catch(() => ({}))
       if (!regRes.ok) {
-        showToast(regData.error || 'Error al registrar la foto', 'error')
+        toast({ title: regData.error || 'Error al registrar la foto', kind: 'error' })
         return
       }
       const next = [...photos, regData.photo]
       setPhotos(next)
       onChange?.(next)
-      showToast('Foto agregada ✓', 'success')
+      toast({ title: 'Foto agregada ✓', kind: 'success' })
     } catch {
-      showToast('Error de conexión', 'error')
+      toast({ title: 'Error de conexión', kind: 'error' })
     } finally {
       setUploading(false)
       // Reset input so picking the same file again re-triggers onChange.
@@ -183,7 +182,7 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
         const next = photos.filter((p) => p.id !== photoId)
         setPhotos(next)
         onChange?.(next)
-        showToast('Foto eliminada', 'info')
+        toast({ title: 'Foto eliminada', kind: 'info' })
         setConfirmDeleteId(null)
       } else {
         const data = await res.json().catch(() => ({}))
@@ -237,14 +236,14 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
         setPhotos(photos)
         onChange?.(photos)
         const data = await res.json().catch(() => ({}))
-        showToast(data.error || 'No se pudo reordenar', 'error')
+        toast({ title: data.error || 'No se pudo reordenar', kind: 'error' })
       } else {
-        showToast('Orden actualizado ✓', 'success')
+        toast({ title: 'Orden actualizado ✓', kind: 'success' })
       }
     } catch {
       setPhotos(photos)
       onChange?.(photos)
-      showToast('Error de conexión', 'error')
+      toast({ title: 'Error de conexión', kind: 'error' })
     } finally {
       setReordering(false)
     }

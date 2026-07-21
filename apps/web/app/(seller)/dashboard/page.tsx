@@ -12,7 +12,7 @@ import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { ConnectivityIndicator } from '@/components/seller/ConnectivityIndicator'
 import { FloatingActionButton } from '@/components/seller/FloatingActionButton'
 import { CopyPublicLink } from '@/components/seller/CopyPublicLink'
-import { ConfirmToast, useToast } from '@/components/seller/Toast'
+import { toast as notify } from '@/components/ui/Toast'
 import { VendorVisibility } from '@/components/seller/VendorVisibility'
 import { WhatsAppCatalog } from '@/components/seller/WhatsAppCatalog'
 import { useStore } from '@/store/useStore'
@@ -91,8 +91,10 @@ function DashboardContent() {
   const [locationError, setLocationError] = useState('')
   const [locationSuccess, setLocationSuccess] = useState(false)
 
-  // N5: toast feedback
-  const { toast, showToast, dismiss } = useToast()
+  // N5: toast feedback — migrated 2026-07-21 from the local
+  // useToast() hook to the global event-bus toast() from
+  // components/ui/Toast. The global container is rendered by
+  // app/layout.tsx, so no per-page toast UI is needed.
 
   // B6 fix: hydration flag so we don't read store before Zustand hydrates.
   const [hasHydrated, setHasHydrated] = useState(false)
@@ -238,7 +240,7 @@ function DashboardContent() {
         setLocationSuccess(true)
         setLocationError('')
         // N5: confirm toast
-        showToast('Ubicación actualizada ✓', 'success')
+        notify({ title: 'Ubicación actualizada ✓', kind: 'success' })
         // B7 fix: refresh local vendorData with new coords to avoid full re-fetch.
         setVendorData((v: any) => v ? { ...v, latitude, longitude } : v)
       }
@@ -420,7 +422,7 @@ function DashboardContent() {
                     setVendorData((v: any) => v ? { ...v, latitude: lat, longitude: lng } : v)
                     setLocationSuccess(true)
                     setLocationError('')
-                    showToast('Ubicación actualizada ✓', 'success')
+                    notify({ title: 'Ubicación actualizada ✓', kind: 'success' })
                   }}
                 />
               </Card>
@@ -443,7 +445,7 @@ function DashboardContent() {
                 onOrderAction={async (action: string, orderId?: string) => {
                   if (action === 'refresh') {
                     fetchDashboardData()
-                    showToast('Actualizando pedidos...', 'info')
+                    notify({ title: 'Actualizando pedidos...', kind: 'info' })
                     return
                   }
                   if (action === 'mark_delivered' && orderId) {
@@ -457,14 +459,14 @@ function DashboardContent() {
                         body: JSON.stringify({ status: 'completed' }),
                       })
                       if (res.ok) {
-                        showToast('Pedido marcado como entregado', 'success')
+                        notify({ title: 'Pedido marcado como entregado', kind: 'success' })
                         await fetchDashboardData()
                       } else {
                         const data = await res.json().catch(() => ({}))
-                        showToast(data.error || 'No se pudo actualizar el pedido', 'error')
+                        notify({ title: data.error || 'No se pudo actualizar el pedido', kind: 'error' })
                       }
                     } catch {
-                      showToast('Error de conexión', 'error')
+                      notify({ title: 'Error de conexión', kind: 'error' })
                     }
                   }
                 }}
@@ -513,8 +515,9 @@ function DashboardContent() {
           />
         )}
 
-        {/* N5: toast */}
-        {toast && <ConfirmToast toast={toast} onDismiss={dismiss} />}
+        {/* Toast UI is rendered globally by app/layout.tsx (ToastContainer).
+            Submitting a toast via the `notify()` import above pushes the item
+            onto the global queue — no per-page UI needed here. */}
 
         {/* Bottom Nav */}
         {/* B10 fix: aria-current on active link. */}

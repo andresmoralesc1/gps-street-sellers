@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Power, MapPin, Bike } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
-import { useToast } from './Toast'
+import { toast } from '@/components/ui/Toast'
 import { useStore } from '@/store/useStore'
 
 /**
@@ -69,7 +69,7 @@ export function VendorVisibility({
     initialStationType ?? 'mobile'
   )
   const [saving, setSaving] = useState(false)
-  const { showToast } = useToast()
+  
   const setUserLocation = useStore((s) => s.setUserLocation)
   const setSellerActive = useStore((s) => s.setSellerActive)
 
@@ -86,14 +86,14 @@ export function VendorVisibility({
         }
       )
       if (res.ok) {
-        showToast('Guardado ✓', 'success')
+        toast({ title: 'Guardado ✓', kind: 'success' })
         return true
       }
       const err = await res.json().catch(() => ({}))
-      showToast(err.error || 'Error al guardar', 'error')
+      toast({ title: err.error || 'Error al guardar', kind: 'error' })
       return false
     } catch {
-      showToast('Error de conexión', 'error')
+      toast({ title: 'Error de conexión', kind: 'error' })
       return false
     } finally {
       setSaving(false)

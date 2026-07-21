@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { getCategoryInfo } from '@/lib/core/constants'
 import type { VendorCategory } from '@/lib/core/types'
-import { useToast } from './Toast'
+import { toast } from '@/components/ui/Toast'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -94,7 +94,6 @@ export function SellerDashboard({
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const { showToast } = useToast()
 
   const loadAll = async () => {
     setLoading(true)
@@ -180,7 +179,7 @@ export function SellerDashboard({
       if (newest && !seen.includes(newest.id)) {
         const isFirstLoad = seen.length === 0
         if (!isFirstLoad && newest.status === 'pending') {
-          showToast(`🔔 Nuevo pedido de ${newest.buyer_name}`, 'info')
+          toast({ title: `🔔 Nuevo pedido de ${newest.buyer_name}`, kind: 'info' })
         }
         const newSeen = [newest.id, ...seen].slice(0, 50)
         sessionStorage.setItem('seen_order_ids', JSON.stringify(newSeen))
@@ -188,7 +187,7 @@ export function SellerDashboard({
     } catch {
       // sessionStorage might be unavailable
     }
-  }, [orders, showToast])
+  }, [orders])
 
   if (loadError && !vendor) {
     return (

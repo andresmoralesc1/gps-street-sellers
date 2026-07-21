@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Copy, Check, Link2, Share2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
-import { useToast } from './Toast'
+import { toast } from '@/components/ui/Toast'
 
 /**
  * N6 — Copy public vendor link.
@@ -15,7 +15,6 @@ interface CopyPublicLinkProps {
 
 export function CopyPublicLink({ vendorSlug }: CopyPublicLinkProps) {
   const [copied, setCopied] = useState(false)
-  const { showToast } = useToast()
 
   const publicUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/vendedor/${vendorSlug}`
@@ -25,13 +24,13 @@ export function CopyPublicLink({ vendorSlug }: CopyPublicLinkProps) {
     try {
       await navigator.clipboard.writeText(publicUrl)
       setCopied(true)
-      showToast('Link copiado ✓', 'success')
+      toast({ title: 'Link copiado ✓', kind: 'success' })
       const t = setTimeout(() => setCopied(false), 2000)
       // Cleanup: clear the timer if the component unmounts before it fires,
       // so we don't call setCopied on an unmounted component.
       return () => clearTimeout(t)
     } catch {
-      showToast('No se pudo copiar', 'error')
+      toast({ title: 'No se pudo copiar', kind: 'error' })
     }
   }
 

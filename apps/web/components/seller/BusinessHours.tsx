@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Clock } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
-import { useToast } from './Toast'
+import { toast } from '@/components/ui/Toast'
 
 /**
  * N11 — Business hours.
@@ -33,7 +33,6 @@ export function BusinessHours({ vendorId }: BusinessHoursProps) {
   const [days, setDays] = useState<DayKey[]>(['mon', 'tue', 'wed', 'thu', 'fri', 'sat'])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const { showToast } = useToast()
 
   useEffect(() => {
     fetch(`/api/vendors/${vendorId}/business-hours`, { credentials: 'include' })
@@ -66,13 +65,13 @@ export function BusinessHours({ vendorId }: BusinessHoursProps) {
         body: JSON.stringify({ enabled, start, end, days }),
       })
       if (res.ok) {
-        showToast('Horario guardado ✓', 'success')
+        toast({ title: 'Horario guardado ✓', kind: 'success' })
       } else {
         const err = await res.json().catch(() => ({}))
-        showToast(err.error || 'Error al guardar', 'error')
+        toast({ title: err.error || 'Error al guardar', kind: 'error' })
       }
     } catch {
-      showToast('Error de conexión', 'error')
+      toast({ title: 'Error de conexión', kind: 'error' })
     } finally {
       setSaving(false)
     }

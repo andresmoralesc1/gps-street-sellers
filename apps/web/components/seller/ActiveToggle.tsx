@@ -3,6 +3,7 @@
 import { clsx } from 'clsx'
 import { useStore } from '@/store/useStore'
 import { useEffect, useRef } from 'react'
+import { clientLog } from '@/lib/client-logger'
 
 interface ActiveToggleProps {
   vendorId: string
@@ -70,7 +71,8 @@ export function ActiveToggle({ vendorId }: ActiveToggleProps) {
         latitude: userLocation?.lat,
         longitude: userLocation?.lng,
       }),
-    }).catch(console.error)
+    // B-009-like: use clientLog instead of console.error.
+    }).catch((err) => clientLog.error('ActiveToggle fetch error:', err))
   }, [isActive, vendorId, userLocation])
 
   return (

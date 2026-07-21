@@ -16,6 +16,7 @@ import { toast as notify } from '@/components/ui/Toast'
 import { VendorVisibility } from '@/components/seller/VendorVisibility'
 import { WhatsAppCatalog } from '@/components/seller/WhatsAppCatalog'
 import { useStore } from '@/store/useStore'
+import { clientLog } from '@/lib/client-logger'
 
 // Heavy / map-bound / WS-bound components — dynamic-imported with ssr:false
 // so a failure inside any of them doesn't take down the whole dashboard.
@@ -166,7 +167,8 @@ export function DashboardContent() {
         setProducts(productsData.products ?? [])
       }
     } catch (err) {
-      console.error('Dashboard load error:', err)
+      // B-009 fix: use clientLog instead of console.error.
+      clientLog.error('Dashboard load error:', err)
       setLoadError('Error de conexión. Verifica tu internet.')
     } finally {
       if (!cancelledRef.current) setLoading(false)

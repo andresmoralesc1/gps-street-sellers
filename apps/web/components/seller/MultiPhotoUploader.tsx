@@ -267,7 +267,9 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
             aria-label={`Foto ${photo.position + 1}: arrastrable para reordenar`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.url} alt="" className="w-full h-full object-cover pointer-events-none" />
+            {/* B-030 fix: alt was empty (decorative). These are product photos
+                (informative), so screen readers should hear position info. */}
+            <img src={photo.url} alt={`Foto ${photo.position + 1}`} className="w-full h-full object-cover pointer-events-none" />
             <button
               type="button"
               onClick={(e) => {

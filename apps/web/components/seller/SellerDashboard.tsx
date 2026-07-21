@@ -16,6 +16,7 @@ import { toast } from '@/components/ui/Toast'
 import { ChecklistItem } from '@/components/seller/ChecklistItem'
 import { OrderRow, type Order } from '@/components/seller/OrderRow'
 import { formatPrice } from '@/lib/format'
+import { clientLog } from '@/lib/client-logger'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -176,7 +177,9 @@ export function SellerDashboard({
         review_count: statsData.reviewCount,
       })
     } catch (err) {
-      console.error('SellerDashboard load error:', err)
+      // B-003 fix: use clientLog instead of console.error so we don't
+      // pollute the seller's DevTools in dev mode.
+      clientLog.error('SellerDashboard load error:', err)
       setLoadError('Error de conexión')
     } finally {
       setLoading(false)
@@ -387,7 +390,9 @@ export function SellerDashboard({
             <h2 className="text-xl font-bold flex items-center gap-2">
               {vendor.name}
               {vendor.isVerified && (
-                <span title="Vendedor verificado">✅</span>
+                // B-006 fix: role="img" + aria-label so screen readers
+                // announce "Vendedor verificado" instead of just "✅".
+                <span role="img" aria-label="Vendedor verificado">✅</span>
               )}
             </h2>
             <Badge variant="primary">{category?.label ?? vendor.category}</Badge>

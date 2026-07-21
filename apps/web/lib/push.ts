@@ -131,8 +131,12 @@ export async function sendPushToUser(
       deadIds.push(sub.id)
       removed++
     } else {
-      // Transient — log but keep the subscription.
-      console.error(`[push] send failed for ${sub.endpoint.slice(0, 60)}...:`, err.message || err)
+      // Transient — log but keep the subscription. Don't log the endpoint in prod
+// (privacy: subscription endpoints can correlate back to the user's device).
+logger.error(
+        { err: serializeErr(err), subId: sub.id, statusCode },
+        '[push] send failed (transient); keeping subscription'
+      )
     }
   })
 

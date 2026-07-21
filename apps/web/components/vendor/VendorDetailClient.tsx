@@ -16,6 +16,29 @@ import type { Vendor, Product, Review } from '@/lib/core/types'
 import { isUuid } from '@/lib/core/utils/slug'
 import { formatBusinessHoursShort } from '@/lib/business-hours'
 
+// Raw shapes returned by GET /api/vendors/[id] — backend uses snake_case,
+// component normalizes to camelCase Product/Review below.
+interface RawProduct {
+  id: string
+  vendor_id: string
+  name: string
+  description?: string | null
+  photo_url?: string | null
+  price: string | number
+}
+interface RawReview {
+  id: string
+  vendor_id: string
+  author_name: string
+  rating: number
+  comment: string
+  created_at: string
+}
+interface RawPhotoResult {
+  productId: string
+  photos: { url: string }[]
+}
+
 interface Props {
   /**
    * Always a UUID. The server resolves both UUID and slug URLs to the canonical
@@ -32,7 +55,7 @@ interface Props {
 
 export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
   const router = useRouter()
-  const [vendor, setVendor] = useState<any>(null)
+  const [vendor, setVendor] = useState<Vendor | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [isCheckingOut, setIsCheckingOut] = useState(false)
@@ -95,17 +118,17 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
         }
         setVendor(data.vendor)
         setProducts(
-          (data.products || []).map((p: any) => ({
+(data.products as RawProduct[] || []).map((p) => ({
             id: p.id,
             vendorId: p.vendor_id,
             name: p.name,
             description: p.description || '',
             photoUrl: p.photo_url || '',
-            price: parseFloat(p.price),
+            price: parseFloat(p.price as string),
           }))
         )
         setReviews(
-          (data.reviews || []).map((r: any) => ({
+          (data.reviews as RawReview[] || []).map((r) => ({
             id: r.id,
             vendorId: r.vendor_id,
             customerId: r.author_name,
@@ -116,20 +139,20 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
         )
         // N12: fetch extra photos for each product
         return Promise.all(
-          (data.products || []).map((p: any) =>
+          (data.products as RawProduct[] || []).map((p) =>
             fetch(`/api/products/${p.id}/photos`)
-              .then((r) => r.ok ? r.json() : { photos: [] })
+              .then((r) => r.ok ? r.json() as Promise<{ photos: { url: string }[] }> : { photos: [] })
               .then((pd) => ({ productId: p.id, photos: pd.photos || [] }))
               .catch(() => ({ productId: p.id, photos: [] }))
           )
         )
       })
-      .then((photoResults: any) => {
+      .then((photoResults: RawPhotoResult[] | undefined) => {
         if (!Array.isArray(photoResults)) return
         const map: Record<string, string[]> = {}
-        for (const r of photoResults) {
-          map[r.productId] = r.photos.map((p: any) => p.url)
-        }
+        photoResults.forEach((r) => {
+          map[r.productId] = r.photos.map((p) => p.url)
+        })
         setProductPhotos(map)
       })
       .catch(() => router.push('/map'))
@@ -145,6 +168,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
       return
     }
     const wasFavorite = isFavorite
+    if (!vendor) return
     if (isFavorite) {
       removeFavorite(vendorId)
     } else {
@@ -232,9 +256,9 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
         setReviewText('')
         setReviewRating(5)
         // Refresh reviews
-        const data = await fetch(`/api/vendors/${vendorId}`).then((r) => r.json())
+        const data: { reviews?: RawReview[] } = await fetch(`/api/vendors/${vendorId}`).then((r) => r.json())
         setReviews(
-          (data.reviews || []).map((r: any) => ({
+          (data.reviews || []).map((r) => ({
             id: r.id,
             vendorId: r.vendor_id,
             customerId: r.author_name,
@@ -283,7 +307,7 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     photoUrl: vendor.photoUrl || '',
     isActive: vendor.isActive,
     isVerified: vendor.isVerified || false,
-    ratingAvg: parseFloat(vendor.rating) || 0,
+    ratingAvg: typeof vendor.ratingAvg === 'string' ? parseFloat(vendor.ratingAvg) : vendor.ratingAvg || 0,
     reviewCount: vendor.reviewCount ?? 0,
     createdAt: vendor.createdAt,
     vehicleType: vendor.vehicleType,

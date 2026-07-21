@@ -45,6 +45,29 @@ const ManualLocationPicker = dynamic(() => import('@/components/seller/ManualLoc
   loading: () => <div className="h-56 rounded-lg bg-gray-100 animate-pulse" />,
 })
 
+// View-model for the active vendor in this dashboard. Fields are a mix of
+// snake_case (from /api/vendors/me) and camelCase (the seller components we
+// pass data into). Only the fields this page actually reads are listed.
+interface VendorData {
+  id: string
+  name?: string
+  description?: string
+  // photo_url is the raw API field; photoUrl is used by some child components.
+  photo_url?: string | null
+  photoUrl?: string | null
+  category?: string
+  isActive?: boolean
+  stationType?: 'fixed' | 'mobile'
+  latitude?: number
+  longitude?: number
+  cityId?: string | null
+  slug?: string
+  geoMode?: 'precise' | 'battery'
+  geoZoneLat?: number | null
+  geoZoneLng?: number | null
+  geoZoneRadiusM?: number | null
+}
+
 interface Product {
   id: string
   name: string
@@ -79,9 +102,9 @@ function DashboardContent() {
   const searchParams = useSearchParams()
   const user = useStore((s) => s.user)
   const logout = useStore((s) => s.logout)
-  const [vendors, setVendors] = useState<any[]>([])
+  const [vendors, setVendors] = useState<VendorData[]>([])
   const [vendorId, setVendorId] = useState<string | null>(null)
-  const [vendorData, setVendorData] = useState<any>(null)
+  const [vendorData, setVendorData] = useState<VendorData | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -90,11 +113,6 @@ function DashboardContent() {
   const [sharingLocation, setSharingLocation] = useState(false)
   const [locationError, setLocationError] = useState('')
   const [locationSuccess, setLocationSuccess] = useState(false)
-
-  // N5: toast feedback — migrated 2026-07-21 from the local
-  // useToast() hook to the global event-bus toast() from
-  // components/ui/Toast. The global container is rendered by
-  // app/layout.tsx, so no per-page toast UI is needed.
 
   // B6 fix: hydration flag so we don't read store before Zustand hydrates.
   const [hasHydrated, setHasHydrated] = useState(false)
@@ -124,7 +142,7 @@ function DashboardContent() {
       }
       const data = await meRes.json()
       // N16: vendors array (new) or vendor (legacy)
-      const list = data.vendors ?? (data.vendor ? [data.vendor] : [])
+      const list = (data.vendors ?? (data.vendor ? [data.vendor] : [])) as VendorData[]
       if (list.length === 0) {
         router.push('/onboarding')
         return
@@ -135,13 +153,13 @@ function DashboardContent() {
       let activeVendor = list[0]
       const wantedId = specificVendorId ?? searchParams.get('vendor')
       if (wantedId) {
-        const found = list.find((v: any) => v.id === wantedId)
+        const found = list.find((v) => v.id === wantedId)
         if (found) activeVendor = found
       } else {
         try {
           const persisted = localStorage.getItem('active_vendor_id')
           if (persisted) {
-            const found = list.find((v: any) => v.id === persisted)
+            const found = list.find((v) => v.id === persisted)
             if (found) activeVendor = found
           }
         } catch {}
@@ -239,10 +257,9 @@ function DashboardContent() {
       } else {
         setLocationSuccess(true)
         setLocationError('')
-        // N5: confirm toast
         notify({ title: 'Ubicación actualizada ✓', kind: 'success' })
         // B7 fix: refresh local vendorData with new coords to avoid full re-fetch.
-        setVendorData((v: any) => v ? { ...v, latitude, longitude } : v)
+        setVendorData((v) => v ? { ...v, latitude, longitude } : v)
       }
     } catch {
       setLocationError('Error de conexión')
@@ -314,7 +331,14 @@ function DashboardContent() {
               {/* N16: Vendor switcher (only shows if user has multiple) */}
               {vendors.length > 0 && (
                 <VendorSwitcher
-                  vendors={vendors}
+                  vendors={vendors.map((v) => ({
+                    id: v.id,
+                    name: v.name ?? '',
+                    category: v.category ?? 'otros',
+                    photoUrl: v.photoUrl ?? v.photo_url ?? null,
+                    isActive: v.isActive,
+                    slug: v.slug,
+                  }))}
                   currentVendorId={vendorId}
                   onSwitch={(id) => fetchDashboardData(id)}
                 />
@@ -408,7 +432,7 @@ function DashboardContent() {
                         The visual size stays text-sm to match the other cards. */}
                     <h2 className="font-semibold text-gray-800 text-sm">Tu ubicación en el mapa</h2>
                     <p className="text-gray-500 text-xs mt-0.5">
-                      {vendorData?.latitude
+                      {vendorData?.latitude != null && vendorData?.longitude != null
                         ? `Activa — lat ${vendorData.latitude.toFixed(4)}, lng ${vendorData.longitude.toFixed(4)}`
                         : 'No has compartido tu ubicación todavía'}
                     </p>
@@ -419,7 +443,7 @@ function DashboardContent() {
                   initialLng={vendorData?.longitude ?? null}
                   initialCityId={vendorData?.cityId ?? null}
                   onSaved={(lat, lng) => {
-                    setVendorData((v: any) => v ? { ...v, latitude: lat, longitude: lng } : v)
+                    setVendorData((v) => v ? { ...v, latitude: lat, longitude: lng } : v)
                     setLocationSuccess(true)
                     setLocationError('')
                     notify({ title: 'Ubicación actualizada ✓', kind: 'success' })

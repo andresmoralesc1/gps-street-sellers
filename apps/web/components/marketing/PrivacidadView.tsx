@@ -1,7 +1,4 @@
-'use client'
-
 import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
 
 const POLICY_VERSION = 'v1.0'
 const POLICY_EFFECTIVE = '28 de junio de 2026'
@@ -437,8 +434,11 @@ export function PrivacidadView() {
         </div>
 
         <div className="mt-10 text-center">
-          <Link href="/">
-            <Button variant="outline">Volver al inicio</Button>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Volver al inicio
           </Link>
         </div>
       </div>

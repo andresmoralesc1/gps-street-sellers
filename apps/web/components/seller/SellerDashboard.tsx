@@ -25,7 +25,8 @@ const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
 
 interface SellerDashboardProps {
   vendorId: string
-  products?: any[]
+  // Raw products from the parent's stats endpoint (snake_case fields).
+  products?: ProductRow[]
   productCount?: number
   vendorPhotoUrl?: string | null
   // Optional initial vendor fields from the parent (avoids the round-trip
@@ -34,6 +35,35 @@ interface SellerDashboardProps {
   initialVendorDescription?: string
   initialVendorPhotoUrl?: string | null
   onOrderAction?: (action: string, orderId?: string) => void
+}
+
+// Local row shape for the products passed in via SellerDashboardProps. Mirrors
+// the raw row returned by GET /api/vendors/[id]/stats (snake_case) — only the
+// fields the dashboard reads are typed.
+interface ProductRow {
+  id: string
+  name: string
+  photo_url?: string | null
+  price?: number | string
+  description?: string | null
+}
+
+// Local view-model for the vendor info card. The dashboard merges fields from
+// the parent's initial props and the /stats endpoint, which use slightly
+// different shapes (photoUrl vs review_count), so we normalize here.
+interface VendorSummary {
+  id: string
+  name: string
+  description: string
+  category: VendorCategory
+  photoUrl?: string | null
+  isVerified?: boolean
+  latitude?: number
+  phone?: string
+  rating?: number
+  // stats endpoint returns review_count; kept for downstream consumers that
+  // may read it. Not rendered by this component.
+  review_count?: number
 }
 
 interface VendorStats {
@@ -74,7 +104,7 @@ export function SellerDashboard({
   initialVendorPhotoUrl,
   onOrderAction,
 }: SellerDashboardProps) {
-  const [vendor, setVendor] = useState<any>(initialVendorName
+  const [vendor, setVendor] = useState<VendorSummary | null>(initialVendorName
     ? {
         id: vendorId,
         name: initialVendorName,
@@ -446,7 +476,7 @@ export function SellerDashboard({
             <span className="text-sm text-gray-500">{productCount} en total</span>
           </div>
           <div className="space-y-2">
-            {products.slice(0, 3).map((product: any) => (
+            {products.slice(0, 3).map((product) => (
               <div key={product.id} className="flex items-center gap-3 py-2 border-b last:border-0">
                 {product.photo_url ? (
                   <img
@@ -462,7 +492,7 @@ export function SellerDashboard({
                 <div className="flex-1">
                   <p className="font-medium text-sm">{product.name}</p>
                   <p className="text-primary text-sm font-bold">
-                    ${product.price.toLocaleString('es-CO')}
+                    ${typeof product.price === 'string' ? parseFloat(product.price) : product.price?.toLocaleString('es-CO') ?? '—'}
                   </p>
                 </div>
               </div>

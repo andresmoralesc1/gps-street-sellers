@@ -63,8 +63,8 @@ export function InversionistasView() {
       }
       setStatus('sent')
       setForm({ name: '', email: '', reason: 'Inversor' })
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error de conexión')
       setStatus('error')
     }
   }

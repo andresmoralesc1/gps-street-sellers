@@ -26,9 +26,9 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
 
     const v = vendorRes.rows[0]
 
-    // products table doesn't have is_available/is_active — products are
-    // public-by-default once the vendor is active. Owner can soft-delete via
-    // a separate flag (TODO if needed).
+    // Note: products are hard-deleted via DELETE /api/products/[id]; the
+// products table has no soft-delete flag. Catalog returns all rows for
+// the requested vendor; deleted products simply don't exist anymore.
     const productsRes = await pool.query(
       `SELECT p.id, p.name, p.description, p.price, p.photo_url,
               COALESCE(

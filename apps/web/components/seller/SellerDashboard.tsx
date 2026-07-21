@@ -15,6 +15,7 @@ import type { VendorCategory } from '@/lib/core/types'
 import { toast } from '@/components/ui/Toast'
 import { ChecklistItem } from '@/components/seller/ChecklistItem'
 import { OrderRow, type Order } from '@/components/seller/OrderRow'
+import { formatPrice } from '@/lib/format'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -184,8 +185,12 @@ export function SellerDashboard({
 
   useEffect(() => {
     loadAll()
-    // N4: poll every 30s for new orders.
-    const interval = setInterval(loadAll, 30000)
+    // N4: poll every 30s for new orders. B-002 fix: skip the tick when
+    // the tab is hidden — saves DB queries + battery when the seller
+    // backgrounds the dashboard.
+    const interval = setInterval(() => {
+      if (!document.hidden) loadAll()
+    }, 30000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId])
@@ -437,7 +442,9 @@ export function SellerDashboard({
                 <div className="flex-1">
                   <p className="font-medium text-sm">{product.name}</p>
                   <p className="text-primary text-sm font-bold">
-                    ${typeof product.price === 'string' ? parseFloat(product.price) : product.price?.toLocaleString('es-CO') ?? '—'}
+                    {/* B-005 fix: always render with .toLocaleString so 1500 and
+                        1.500 don't show inconsistently across string/number. */}
+                    {formatPrice(product.price)}
                   </p>
                 </div>
               </div>

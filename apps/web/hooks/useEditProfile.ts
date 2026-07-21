@@ -46,6 +46,18 @@ export function useEditProfile() {
     async function loadProfile() {
       try {
         const meRes = await fetch('/api/vendors/me', { credentials: 'include' })
+        if (!meRes.ok) {
+          // B-024 fix: 401 = session expired → bounce to login. Other
+          // errors surface as the generic error message; previously we
+          // parsed an HTML error page as JSON and left loading=true forever.
+          if (meRes.status === 401) {
+            router.push('/login')
+          } else {
+            setError('No pudimos cargar tu perfil')
+          }
+          if (!cancelled) setLoading(false)
+          return
+        }
         const meData = await meRes.json()
         const list = meData.vendors ?? (meData.vendor ? [meData.vendor] : [])
         const firstVendor = list[0]
@@ -65,6 +77,14 @@ export function useEditProfile() {
         const vendorRes = await fetch(`/api/vendors/${firstVendor.id}`, {
           credentials: 'include',
         })
+        // B-025 fix: same pattern — don't r.json() a non-OK response.
+        if (!vendorRes.ok) {
+          if (!cancelled) {
+            setError('No pudimos cargar los datos del vendedor')
+            setLoading(false)
+          }
+          return
+        }
         const vendorData = await vendorRes.json()
         if (cancelled) return
         if (vendorData?.vendor) {

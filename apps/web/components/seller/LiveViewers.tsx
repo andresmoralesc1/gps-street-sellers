@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Eye } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -17,6 +17,11 @@ export function LiveViewers({ vendorId }: LiveViewersProps) {
   const [count, setCount] = useState<number | null>(null)
   const [connected, setConnected] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
+  // B-034 fix: cancel guard. EventSource fires `onerror` when the browser
+  // auto-reconnects AND when we call .close() ourselves during unmount,
+  // which would call setReconnecting on an unmounted component.
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   useEffect(() => {
     const es = new EventSource(`/api/vendors/${vendorId}/live-viewers`, {
@@ -24,6 +29,7 @@ export function LiveViewers({ vendorId }: LiveViewersProps) {
     })
 
     es.addEventListener('viewer_count', (e: MessageEvent) => {
+      if (!mountedRef.current) return
       try {
         const data = JSON.parse(e.data)
         setCount(data.count)
@@ -35,6 +41,7 @@ export function LiveViewers({ vendorId }: LiveViewersProps) {
     })
 
     es.onerror = () => {
+      if (!mountedRef.current) return
       // The browser auto-reconnects EventSource after a brief delay. Show
       // a "reconnecting" pill so the seller doesn't see a stale count
       // that suggests zero viewers when the connection is actually
@@ -44,6 +51,7 @@ export function LiveViewers({ vendorId }: LiveViewersProps) {
     }
 
     es.onopen = () => {
+      if (!mountedRef.current) return
       setConnected(true)
       setReconnecting(false)
     }

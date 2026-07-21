@@ -126,9 +126,19 @@ export function useProductsPage(): UseProductsPage {
 
     let cancelled = false
     fetch('/api/vendors/me', { credentials: 'include' })
-      .then((r) => r.json())
+      // B-032 fix: 401 = session expired. Other errors surface a generic
+      // message. Previously r.json() could parse an HTML error page and
+      // leave loading=true forever.
+      .then(async (r) => {
+        if (!r.ok) {
+          if (r.status === 401) router.push('/login')
+          if (!cancelled) setLoading(false)
+          return null
+        }
+        return r.json()
+      })
       .then((data) => {
-        if (cancelled) return
+        if (cancelled || !data) return
         const list = data.vendors ?? (data.vendor ? [data.vendor] : [])
         const firstVendor = list[0]
         if (!firstVendor) {

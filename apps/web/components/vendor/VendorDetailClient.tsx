@@ -1,43 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Heart, Bell, ChevronLeft, ShoppingCart, Star, User, Phone, Navigation } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { WhatsAppButton } from '@/components/ui/WhatsAppButton'
-import { toast } from '@/components/ui/Toast'
 import { VendorProfile } from '@/components/vendor/VendorProfile'
 import { VendorProducts } from '@/components/vendor/VendorProducts'
 import { VendorReviews } from '@/components/vendor/VendorReviews'
 import { VendorLocationMap } from '@/components/vendor/VendorLocationMap'
 import { CartDrawer } from '@/components/cart/CartDrawer'
-import { useStore } from '@/store/useStore'
-import type { Vendor, Product, Review } from '@/lib/core/types'
-import { isUuid } from '@/lib/core/utils/slug'
-import { formatBusinessHoursShort } from '@/lib/business-hours'
-
-// Raw shapes returned by GET /api/vendors/[id] — backend uses snake_case,
-// component normalizes to camelCase Product/Review below.
-interface RawProduct {
-  id: string
-  vendor_id: string
-  name: string
-  description?: string | null
-  photo_url?: string | null
-  price: string | number
-}
-interface RawReview {
-  id: string
-  vendor_id: string
-  author_name: string
-  rating: number
-  comment: string
-  created_at: string
-}
-interface RawPhotoResult {
-  productId: string
-  photos: { url: string }[]
-}
+import { VendorDetailHeader } from '@/components/vendor/VendorDetailHeader'
+import { VendorStatusBadges } from '@/components/vendor/VendorStatusBadges'
+import { VendorContactActions } from '@/components/vendor/VendorContactActions'
+import { VendorReviewForm } from '@/components/vendor/VendorReviewForm'
+import { VendorNotificationCta } from '@/components/vendor/VendorNotificationCta'
+import { useVendorDetail } from '@/hooks/useVendorDetail'
+import type { Vendor } from '@/lib/core/types'
 
 interface Props {
   /**
@@ -53,241 +28,49 @@ interface Props {
   vendorSlug?: string
 }
 
+/**
+ * Composer for the /vendor/[id] buyer page. All state + side effects
+ * live in `useVendorDetail`; this component is responsible for
+ * layout + composing the focused section components.
+ *
+ * Sections, in render order:
+ *   1. Header — back / vendor name / favorite / cart
+ *   2. Profile — avatar + bio + meta
+ *   3. Status badges — open / closed / station type / hours
+ *   4. Mini-map — current vendor location (if lat/lng)
+ *   5. Contact actions — call / WhatsApp / directions
+ *   6. Products grid — with add-to-cart
+ *   7. Review form (buyers only)
+ *   8. Reviews list
+ *   9. Notification CTA card
+ */
 export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
   const router = useRouter()
-  const [vendor, setVendor] = useState<Vendor | null>(null)
-  const [products, setProducts] = useState<Product[]>([])
-  const [reviews, setReviews] = useState<Review[]>([])
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
-  const [checkoutError, setCheckoutError] = useState('')
-  const [reviewText, setReviewText] = useState('')
-  const [reviewRating, setReviewRating] = useState(5)
-  const [submittingReview, setSubmittingReview] = useState(false)
-  const [reviewSuccess, setReviewSuccess] = useState(false)
-  const [reviewError, setReviewError] = useState('')
-
-  const favoriteIds = useStore((s) => s.favoriteIds)
-  const addFavorite = useStore((s) => s.addFavorite)
-  const removeFavorite = useStore((s) => s.removeFavorite)
-  const addToCart = useStore((s) => s.addToCart)
-  const cart = useStore((s) => s.cart)
-  const setCartOpen = useStore((s) => s.setCartOpen)
-  const clearCart = useStore((s) => s.clearCart)
-  const user = useStore((s) => s.user)
-
-  // Micro-interaction states — heart pop + cart badge bounce on add
-  const [heartPop, setHeartPop] = useState(false)
-  const [cartBounce, setCartBounce] = useState(false)
-  // N12: extra product photos (carousel).
-  const [productPhotos, setProductPhotos] = useState<Record<string, string[]>>({})
-  const triggerHeartPop = () => {
-    setHeartPop(true)
-    window.setTimeout(() => setHeartPop(false), 400)
-  }
-  const triggerCartBounce = () => {
-    setCartBounce(true)
-    window.setTimeout(() => setCartBounce(false), 500)
-  }
-
-  const isFavorite = favoriteIds.includes(vendorId)
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
-
-  useEffect(() => {
-    // If the URL was a UUID and we now know the canonical slug, redirect
-    // once so the URL is human-friendly. Skip if:
-    //   - URL already has the slug (avoid infinite loop)
-    //   - URL is the public /vendedor/[slug] route (must stay canonical-public)
-    //   - we don't have the slug yet
-    if (
-      vendorSlug &&
-      isUuid(vendorId) &&
-      vendorSlug !== vendorId &&
-      typeof window !== 'undefined' &&
-      !window.location.pathname.startsWith('/vendedor/')
-    ) {
-      router.replace(`/vendor/${vendorSlug}`)
-      return
-    }
-
-    fetch(`/api/vendors/${vendorId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          router.push('/map')
-          return
-        }
-        setVendor(data.vendor)
-        setProducts(
-(data.products as RawProduct[] || []).map((p) => ({
-            id: p.id,
-            vendorId: p.vendor_id,
-            name: p.name,
-            description: p.description || '',
-            photoUrl: p.photo_url || '',
-            price: parseFloat(p.price as string),
-          }))
-        )
-        setReviews(
-          (data.reviews as RawReview[] || []).map((r) => ({
-            id: r.id,
-            vendorId: r.vendor_id,
-            customerId: r.author_name,
-            rating: r.rating,
-            comment: r.comment,
-            createdAt: r.created_at,
-          }))
-        )
-        // N12: fetch extra photos for each product
-        return Promise.all(
-          (data.products as RawProduct[] || []).map((p) =>
-            fetch(`/api/products/${p.id}/photos`)
-              .then((r) => r.ok ? r.json() as Promise<{ photos: { url: string }[] }> : { photos: [] })
-              .then((pd) => ({ productId: p.id, photos: pd.photos || [] }))
-              .catch(() => ({ productId: p.id, photos: [] }))
-          )
-        )
-      })
-      .then((photoResults: RawPhotoResult[] | undefined) => {
-        if (!Array.isArray(photoResults)) return
-        const map: Record<string, string[]> = {}
-        photoResults.forEach((r) => {
-          map[r.productId] = r.photos.map((p) => p.url)
-        })
-        setProductPhotos(map)
-      })
-      .catch(() => router.push('/map'))
-  }, [vendorId, router])
-
-  const toggleFavorite = async () => {
-    if (!user) {
-      // Don't kick the user out to /register — show an inline prompt.
-      const shouldLogin = window.confirm('Inicia sesión para guardar favoritos. ¿Ir a login?')
-      if (shouldLogin) {
-        router.push('/login?redirect=' + encodeURIComponent(window.location.pathname))
-      }
-      return
-    }
-    const wasFavorite = isFavorite
-    if (!vendor) return
-    if (isFavorite) {
-      removeFavorite(vendorId)
-    } else {
-      addFavorite(vendorId)
-    }
-    triggerHeartPop()
-    try {
-      const res = await fetch(
-        isFavorite
-          ? `/api/favorites?vendorId=${vendorId}`
-          : '/api/favorites',
-        {
-          method: isFavorite ? 'DELETE' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: isFavorite ? undefined : JSON.stringify({ vendorId }),
-        }
-      )
-      if (!res.ok) throw new Error('Request failed')
-      toast({
-        kind: wasFavorite ? 'info' : 'success',
-        title: wasFavorite ? 'Eliminado de favoritos' : 'Agregado a favoritos',
-        description: vendor.name,
-      })
-    } catch {
-      // Rollback optimistic update
-      if (wasFavorite) {
-        addFavorite(vendorId)
-      } else {
-        removeFavorite(vendorId)
-      }
-      toast({ kind: 'error', title: 'No se pudo actualizar favoritos' })
-    }
-  }
-
-  const handleCheckout = async () => {
-    if (cart.length === 0) return
-    setIsCheckingOut(true)
-    setCheckoutError('')
-    try {
-      const items = cart.map((item) => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        price: item.product.price,
-      }))
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ vendorId, items }),
-      })
-      if (res.ok) {
-        clearCart()
-        setCartOpen(false)
-      } else {
-        const data = await res.json()
-        setCheckoutError(data.error || 'Error al procesar el pedido')
-      }
-    } catch {
-      setCheckoutError('Error de conexión')
-    } finally {
-      setIsCheckingOut(false)
-    }
-  }
-
-  const submitReview = async () => {
-    if (!user || reviewText.trim().length === 0) return
-    const savedText = reviewText
-    const savedRating = reviewRating
-    setSubmittingReview(true)
-    setReviewError('')
-    try {
-      const res = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          vendor_id: vendorId,
-          rating: savedRating,
-          comment: savedText.trim(),
-        }),
-      })
-      if (res.ok) {
-        setReviewSuccess(true)
-        setReviewText('')
-        setReviewRating(5)
-        // Refresh reviews
-        const data: { reviews?: RawReview[] } = await fetch(`/api/vendors/${vendorId}`).then((r) => r.json())
-        setReviews(
-          (data.reviews || []).map((r) => ({
-            id: r.id,
-            vendorId: r.vendor_id,
-            customerId: r.author_name,
-            rating: r.rating,
-            comment: r.comment,
-            createdAt: r.created_at,
-          }))
-        )
-      } else {
-        setReviewError('No se pudo enviar la reseña. Intenta de nuevo.')
-        setReviewText(savedText)
-        setReviewRating(savedRating)
-      }
-    } catch {
-      setReviewError('Error de conexión')
-      setReviewText(savedText)
-      setReviewRating(savedRating)
-    } finally {
-      setSubmittingReview(false)
-    }
-  }
-
-  // Same URL as the old handleWhatsAppDirect — pre-computed so the
-  // <WhatsAppButton> component can use it as its `href` directly
-  // (the button handles its own click event for the ripple/fly-out
-  // animation, so we don't need the imperative window.open path).
-  const whatsappUrl = vendor?.phone
-    ? `https://wa.me/${vendor.phone.replace(/\D/g, '')}?text=${encodeURIComponent('¡Hola! Quiero saber más sobre tus productos en BarrioTech')}`
-    : null
+  const {
+    vendor,
+    products,
+    reviews,
+    productPhotos,
+    isFavorite,
+    cartItemCount,
+    heartPop,
+    cartBounce,
+    isCheckingOut,
+    checkoutError,
+    reviewText,
+    reviewRating,
+    submittingReview,
+    reviewSuccess,
+    reviewError,
+    submitReview,
+    toggleFavorite,
+    handleAddToCart,
+    openCart,
+    handleCheckout,
+    setReviewText,
+    setReviewRating,
+    user,
+  } = useVendorDetail(vendorId, vendorSlug)
 
   if (!vendor) {
     return (
@@ -297,7 +80,8 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     )
   }
 
-  // Adapt vendor to component's expected shape
+  // Adapt vendor to component's expected shape (some fields are
+  // pre-parsed in the hook, some are still raw strings from the API).
   const adaptedVendor: Vendor = {
     id: vendor.id,
     userId: '',
@@ -316,86 +100,23 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
 
   return (
     <div className="min-h-screen bg-background-cream pb-20">
-      <header className="bg-white shadow-sm p-4 flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()} aria-label="Volver">
-          <ChevronLeft size={20} aria-hidden="true" />
-        </Button>
-        <h1 className="text-lg font-bold">{vendor.name}</h1>
-        <button
-          onClick={toggleFavorite}
-          className="ml-auto p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
-          aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-          aria-pressed={isFavorite}
-        >
-          <Heart
-            size={28}
-            className={
-              (isFavorite ? 'fill-accent text-accent' : 'text-gray-400') +
-              ' transition-transform duration-300' +
-              (heartPop ? ' animate-heart-pop' : '')
-            }
-            aria-hidden="true"
-          />
-        </button>
-        <button
-          onClick={() => setCartOpen(true)}
-          className="relative p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
-          aria-label={`Abrir carrito${cartItemCount > 0 ? `, ${cartItemCount} ${cartItemCount === 1 ? 'producto' : 'productos'}` : ''}`}
-        >
-          <ShoppingCart
-            size={28}
-            className={'text-gray-600 transition-transform duration-300' + (cartBounce ? ' animate-cart-bounce' : '')}
-            aria-hidden="true"
-          />
-          {cartItemCount > 0 && (
-            <span
-              key={cartItemCount}
-              className={
-                'absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center' +
-                (cartBounce ? ' animate-badge-pop' : '')
-              }
-            >
-              {cartItemCount}
-            </span>
-          )}
-        </button>
-      </header>
+      <VendorDetailHeader
+        vendorName={vendor.name}
+        vendorId={vendor.id}
+        isFavorite={isFavorite}
+        cartItemCount={cartItemCount}
+        heartPop={heartPop}
+        cartBounce={cartBounce}
+        onBack={() => router.back()}
+        onToggleFavorite={toggleFavorite}
+        onOpenCart={openCart}
+      />
 
       <div className="p-4 space-y-6 max-w-5xl mx-auto md:p-6 md:space-y-8">
         <VendorProfile vendor={adaptedVendor} />
 
-        {/* Visibility badge — tells the buyer whether the vendor is reachable right now.
-            Closed right now? We show the next open window so they don't bounce.
-            station_type tells them if the vendor is "me muevo" or "puesto fijo". */}
-        <div className="flex flex-wrap items-center gap-2">
-          {vendor.isOpen !== undefined && (
-            <span
-              className={
-                'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ' +
-                (vendor.isOpen
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-200 text-gray-700')
-              }
-              aria-label={vendor.isOpen ? 'Abierto ahora' : 'Cerrado ahora'}
-            >
-              <span className={'w-1.5 h-1.5 rounded-full ' + (vendor.isOpen ? 'bg-green-600' : 'bg-gray-500')} />
-              {vendor.isOpen ? 'Abierto ahora' : 'Cerrado'}
-            </span>
-          )}
-          {vendor.stationType && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-700">
-              {vendor.stationType === 'fixed' ? '📍 Puesto fijo' : '🛵 Se mueve por la ciudad'}
-            </span>
-          )}
-          {vendor.businessHours && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-50 text-stone-600">
-              🕐 {formatBusinessHoursShort(vendor.businessHours)}
-            </span>
-          )}
-        </div>
+        <VendorStatusBadges vendor={adaptedVendor} />
 
-        {/* Mini-mapa: ubicación en vivo del vendedor.
-            Solo se renderiza si hay lat/lng. Click → Google Maps directions. */}
         {vendor.latitude != null && vendor.longitude != null && (
           <VendorLocationMap
             lat={vendor.latitude}
@@ -406,123 +127,27 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
           />
         )}
 
-          {/* Action buttons — visible to everyone */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-gray-600 mb-3">
-              Contacta a {vendor.name}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-              {vendor.phone && (
-                <a
-                  href={`tel:${vendor.phone}`}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-xl transition-colors md:py-2.5"
-                >
-                  <Phone size={18} />
-                  <span>Llamar</span>
-                </a>
-              )}
-              {vendor.phone && whatsappUrl && (
-                <WhatsAppButton
-                  href={whatsappUrl}
-                  className="w-full md:w-auto md:py-2.5"
-                  label="WhatsApp"
-                />
-              )}
-              {vendor.latitude && vendor.longitude && (
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${vendor.latitude},${vendor.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary hover:bg-secondary-dark text-white font-medium rounded-xl transition-colors md:py-2.5"
-                >
-                  <Navigation size={18} />
-                  <span>Cómo llegar</span>
-                </a>
-              )}
-            </div>
-          </div>
+        <VendorContactActions vendor={adaptedVendor} />
 
-        <VendorProducts products={products} extraPhotos={productPhotos} onAddToCart={(p) => {
-          const existingVendorId = cart[0]?.product.vendorId
-          const switchedVendor = existingVendorId && existingVendorId !== p.vendorId
-          addToCart(p)
-          triggerCartBounce()
-          if (switchedVendor) {
-            toast({
-              kind: 'warning',
-              title: 'Carrito reemplazado',
-              description: 'Solo puedes pedir a un vendedor a la vez por WhatsApp.',
-            })
-          } else {
-            toast({ kind: 'success', title: 'Agregado al carrito', description: p.name })
-          }
-        }} user={user} />
+        <VendorProducts products={products} extraPhotos={productPhotos} onAddToCart={handleAddToCart} />
 
-        {/* Review Form */}
+        {/* Review form is for buyers only — sellers can't review their own profile. */}
         {user && user.role === 'buyer' && (
-          <div className="bg-white rounded-xl p-4 shadow-sm">
-            <h3 className="font-bold mb-3 flex items-center gap-2">
-              <Star size={18} className="text-yellow-500" />
-              Deja tu reseña
-            </h3>
-            {reviewSuccess ? (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 text-center">
-                ¡Gracias por tu reseña!
-              </div>
-            ) : (
-              <div className="space-y-3">
-              {reviewError && (
-                <p className="text-red-500 text-sm">{reviewError}</p>
-              )}
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button key={n} type="button" onClick={() => setReviewRating(n)} aria-label={`${n} ${n === 1 ? 'estrella' : 'estrellas'}`} aria-pressed={n <= reviewRating} className="text-2xl">
-                      <Star
-                        size={24}
-                        className={n <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
-                      />
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  className="w-full border rounded-xl p-3 text-sm"
-                  rows={3}
-                  placeholder="Cuéntanos tu experiencia..."
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                />
-                <Button
-                  className="w-full"
-                  size="sm"
-                  onClick={submitReview}
-                  isLoading={submittingReview}
-                  disabled={reviewText.trim().length === 0}
-                >
-                  Enviar reseña
-                </Button>
-              </div>
-            )}
-          </div>
+          <VendorReviewForm
+            reviewText={reviewText}
+            reviewRating={reviewRating}
+            reviewSuccess={reviewSuccess}
+            reviewError={reviewError}
+            submittingReview={submittingReview}
+            onTextChange={setReviewText}
+            onRatingChange={setReviewRating}
+            onSubmit={submitReview}
+          />
         )}
 
         <VendorReviews reviews={reviews} />
 
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-gray-600 text-sm mb-3">
-            Recibe una notificación cuando este vendedor esté cerca de ti
-          </p>
-          {user ? (
-            <Button variant="secondary" className="w-full flex items-center justify-center gap-2">
-              <Bell size={18} />
-              Notificarme cuando esté cerca
-            </Button>
-          ) : (
-            <Button variant="secondary" className="w-full flex items-center justify-center gap-2" onClick={() => router.push('/register')}>
-              <User size={18} />
-              Regístrate para notificarte
-            </Button>
-          )}
-        </div>
+        <VendorNotificationCta isLoggedIn={!!user} />
       </div>
 
       <CartDrawer

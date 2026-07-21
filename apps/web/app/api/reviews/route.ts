@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
     const vendorId = searchParams.get('vendorId')
 
     let query = 'SELECT * FROM reviews WHERE 1=1'
-    const params: any[] = []
+    const params: unknown[] = []
 
     if (vendorId) {
       params.push(vendorId)

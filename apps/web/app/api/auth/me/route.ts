@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest) {
     void 0
 
     const updates: string[] = []
-    const values: any[] = []
+    const values: unknown[] = []
     let paramCount = 1
 
     if (name !== undefined) {
@@ -118,12 +118,13 @@ export async function PATCH(req: NextRequest) {
         `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, name, role, phone, city_id`,
         values
       )
-    } catch (err: any) {
+    } catch (err) {
       // 23505 = unique_violation — surface which field collided so the
       // frontend can highlight the right input. Before this catch the
       // user saw a generic 500 and the endpoint looked broken.
-      if (err?.code === '23505') {
-        const constraint = err?.constraint ?? ''
+      const errObj = typeof err === 'object' && err !== null ? (err as { code?: unknown; constraint?: unknown; message?: unknown }) : null
+      if (errObj?.code === '23505') {
+        const constraint = typeof errObj.constraint === 'string' ? errObj.constraint : ''
         const field = constraint.includes('email') ? 'email'
           : constraint.includes('phone') ? 'phone'
           : 'campo'
@@ -135,7 +136,8 @@ export async function PATCH(req: NextRequest) {
       // P0001 = trigger-raised exception (see migration 020). Today only
       // users_role_immutable_guard uses it, surfacing it as 409 makes the
       // contract explicit if/when we expose role in this endpoint.
-      if (err?.code === 'P0001' && /role is immutable/i.test(err?.message ?? '')) {
+      const message = typeof errObj?.message === 'string' ? errObj.message : ''
+      if (errObj?.code === 'P0001' && /role is immutable/i.test(message)) {
         return NextResponse.json(
           { error: 'El rol de la cuenta no se puede cambiar' },
           { status: 409 }

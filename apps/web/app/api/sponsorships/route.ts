@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
   // Wrap in a transaction with the INSERT below to prevent races where two
   // simultaneous POSTs both pass the check and create two active sponsorships.
   const client = await pool.connect()
-  let insertedRow: any = null
+  let insertedRow: unknown = null
   try {
     await client.query('BEGIN')
 
@@ -180,14 +180,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se pudo crear la sponsorship' }, { status: 500 })
   }
 
+  // pg returns rows as untyped objects; narrow to a known shape before
+  // surfacing in the JSON response. `as unknown as ...` is the only safe
+  // way given pg's `any[]` row default — see lib/db.ts for the typed
+  // alternative if we ever swap drivers.
+  const row = insertedRow as {
+    id: string
+    plan: string
+    amount_cents: number
+    starts_at: string
+    ends_at: string
+    status: string
+  }
   return NextResponse.json({
     sponsorship: {
-      id: insertedRow.id,
-      plan: insertedRow.plan,
-      amountCents: Number(insertedRow.amount_cents),
-      startsAt: insertedRow.starts_at,
-      endsAt: insertedRow.ends_at,
-      status: insertedRow.status,
+      id: row.id,
+      plan: row.plan,
+      amountCents: Number(row.amount_cents),
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      status: row.status,
     },
   })
 }

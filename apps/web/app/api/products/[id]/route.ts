@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     // Build dynamic SET clause from provided fields only
     const setClauses: string[] = []
-    const params: any[] = []
+    const params: unknown[] = []
 
     if (name !== undefined) {
       if (typeof name !== 'string' || !name.trim()) {
@@ -96,10 +96,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     )
 
     return NextResponse.json({ product: result.rows[0] })
-  } catch (err: any) {
+  } catch (err) {
     logger.error(serializeErr(err), 'Products PATCH error:')
     // Surface numeric overflow cleanly so the UI can show a useful message
-    if (err?.code === '22003') {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: unknown }).code === '22003') {
       return NextResponse.json(
         { error: 'Precio demasiado grande (máx 99,999,999.99)' },
         { status: 400 }

@@ -184,7 +184,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const { name, description, category, photo_url, phone, is_active } = await req.json()
 
     const updates: string[] = []
-    const params: any[] = []
+    const params: unknown[] = []
 
     if (name !== undefined) {
       params.push(name)

@@ -50,12 +50,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Solo vendedores pueden editar su perfil' }, { status: 403 })
     }
 
-    let body: any
+    let body: unknown
     try {
       body = await req.json()
     } catch {
       return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
     }
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ error: 'Body debe ser un objeto' }, { status: 400 })
+    }
+    const bodyObj = body as Record<string, unknown>
 
     // ── Resolve which vendor we edit. Default = current active_vendor_id from
     // localStorage mirror on the client; here we just take the first vendor
@@ -89,35 +93,35 @@ export async function PATCH(req: NextRequest) {
     const params: any[] = []
     let i = 1
 
-    if (body.station_type !== undefined) {
-      if (body.station_type !== null && body.station_type !== 'fixed' && body.station_type !== 'mobile') {
+    if (bodyObj.station_type !== undefined) {
+      if (bodyObj.station_type !== null && bodyObj.station_type !== 'fixed' && bodyObj.station_type !== 'mobile') {
         return NextResponse.json({ error: 'station_type debe ser "fixed" o "mobile"' }, { status: 400 })
       }
       sets.push(`station_type = $${i++}`)
-      params.push(body.station_type)
+      params.push(bodyObj.station_type)
     }
 
-    if (body.is_active !== undefined) {
-      if (typeof body.is_active !== 'boolean') {
+    if (bodyObj.is_active !== undefined) {
+      if (typeof bodyObj.is_active !== 'boolean') {
         return NextResponse.json({ error: 'is_active debe ser booleano' }, { status: 400 })
       }
       sets.push(`is_active = $${i++}`)
-      params.push(body.is_active)
+      params.push(bodyObj.is_active)
     }
 
-    if (body.business_hours_enabled !== undefined) {
-      if (typeof body.business_hours_enabled !== 'boolean') {
+    if (bodyObj.business_hours_enabled !== undefined) {
+      if (typeof bodyObj.business_hours_enabled !== 'boolean') {
         return NextResponse.json({ error: 'business_hours_enabled debe ser booleano' }, { status: 400 })
       }
       sets.push(`business_hours_enabled = $${i++}`)
-      params.push(body.business_hours_enabled)
+      params.push(bodyObj.business_hours_enabled)
     }
 
     // For start/end/days we require consistent state: if any of the three is
     // present, all three are required (otherwise the schedule is ambiguous).
-    const hasStart = body.business_hours_start !== undefined
-    const hasEnd = body.business_hours_end !== undefined
-    const hasDays = body.business_days !== undefined
+    const hasStart = bodyObj.business_hours_start !== undefined
+    const hasEnd = bodyObj.business_hours_end !== undefined
+    const hasDays = bodyObj.business_days !== undefined
     if (hasStart || hasEnd || hasDays) {
       if (!(hasStart && hasEnd && hasDays)) {
         return NextResponse.json(
@@ -125,8 +129,8 @@ export async function PATCH(req: NextRequest) {
           { status: 400 }
         )
       }
-      const start = parseHHMM(body.business_hours_start)
-      const end = parseHHMM(body.business_hours_end)
+      const start = parseHHMM(bodyObj.business_hours_start)
+      const end = parseHHMM(bodyObj.business_hours_end)
       if (!start || !end) {
         return NextResponse.json(
           { error: 'Horario debe ser HH:MM (24h)' },
@@ -141,11 +145,11 @@ export async function PATCH(req: NextRequest) {
           { status: 400 }
         )
       }
-      if (!Array.isArray(body.business_days) || body.business_days.length === 0) {
+      if (!Array.isArray(bodyObj.business_days) || bodyObj.business_days.length === 0) {
         return NextResponse.json({ error: 'business_days debe ser un array no vacío' }, { status: 400 })
       }
       const daysClean: string[] = []
-      for (const d of body.business_days) {
+      for (const d of bodyObj.business_days) {
         if (typeof d !== 'string' || !(VALID_DAYS as readonly string[]).includes(d)) {
           return NextResponse.json(
             { error: `Día inválido: ${String(d)}. Usa: mon tue wed thu fri sat sun` },

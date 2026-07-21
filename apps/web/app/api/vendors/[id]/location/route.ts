@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
     const { latitude, longitude, isActive } = await req.json()
 
     const updates: string[] = []
-    const paramsList: any[] = []
+    const paramsList: unknown[] = []
 
     if (latitude != null && longitude != null) {
       // Validate coordinates for Colombia
@@ -59,63 +59,67 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
       parseFloat(latitude) >= -4.2 && parseFloat(latitude) <= 13.5 &&
       parseFloat(longitude) >= -79.1 && parseFloat(longitude) <= -66.9
 
-    const client = await pool.connect()
-    let updated: any = null
-    let wasActive = false
-    let vendorName = 'Vendedor'
-    try {
-      await client.query('BEGIN')
+const client = await pool.connect()
+  let updated: unknown = null
+  let wasActive = false
+  let vendorName = 'Vendedor'
+  try {
+    await client.query('BEGIN')
 
-      // Capture previous state BEFORE update.
-      const beforeRes = await client.query(
-        'SELECT is_active, name FROM vendors WHERE id = $1 FOR UPDATE',
-        [vendorId]
+    // Capture previous state BEFORE update.
+    const beforeRes = await client.query(
+      'SELECT is_active, name FROM vendors WHERE id = $1 FOR UPDATE',
+      [vendorId]
+    )
+    if (beforeRes.rows.length === 0) {
+      await client.query('ROLLBACK')
+      return NextResponse.json({ error: 'Vendor not found' }, { status: 404 })
+    }
+    wasActive = beforeRes.rows[0]?.is_active ?? false
+    vendorName = beforeRes.rows[0]?.name ?? 'Vendedor'
+
+    paramsList.push(vendorId)
+    const result = await client.query(
+      `UPDATE vendors SET ${updates.join(', ')} WHERE id = $${paramsList.length} RETURNING *`,
+      paramsList
+    )
+    updated = result.rows[0]
+
+    // pg returns untyped rows; narrow to what we actually read from it.
+    const updatedRow = updated as { is_active?: boolean } | null
+
+    // N14: record GPS snapshot for the heatmap.
+    // Only insert when the vendor is currently active to avoid logging
+    // location while the seller is offline.
+    if (wantsHistoryWrite && updatedRow?.is_active) {
+      const lat = parseFloat(latitude)
+      const lng = parseFloat(longitude)
+      await client.query(
+        `INSERT INTO vendor_location_history (vendor_id, latitude, longitude)
+         VALUES ($1, $2, $3)`,
+        [vendorId, lat, lng]
       )
-      if (beforeRes.rows.length === 0) {
-        await client.query('ROLLBACK')
-        return NextResponse.json({ error: 'Vendor not found' }, { status: 404 })
-      }
-      wasActive = beforeRes.rows[0]?.is_active ?? false
-      vendorName = beforeRes.rows[0]?.name ?? 'Vendedor'
-
-      paramsList.push(vendorId)
-      const result = await client.query(
-        `UPDATE vendors SET ${updates.join(', ')} WHERE id = $${paramsList.length} RETURNING *`,
-        paramsList
-      )
-      updated = result.rows[0]
-
-      // N14: record GPS snapshot for the heatmap.
-      // Only insert when the vendor is currently active to avoid logging
-      // location while the seller is offline.
-      if (wantsHistoryWrite && updated.is_active) {
-        const lat = parseFloat(latitude)
-        const lng = parseFloat(longitude)
-        await client.query(
-          `INSERT INTO vendor_location_history (vendor_id, latitude, longitude)
-           VALUES ($1, $2, $3)`,
-          [vendorId, lat, lng]
-        )
-      }
-
-      await client.query('COMMIT')
-    } catch (err) {
-      await client.query('ROLLBACK').catch(() => {})
-      throw err
-    } finally {
-      client.release()
     }
 
-    // Push notification when seller transitions from inactive → active.
-    // Notify every buyer who has this vendor in their favorites.
-    // Fire-and-forget so push failures don't fail the location update.
-    if (!wasActive && updated.is_active) {
-      void notifyFavoriteBuyers(vendorId, vendorName).catch((err) => {
-        logger.error(serializeErr(err), '[vendor location] push to favorites failed:')
-      })
-    }
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
 
-    return NextResponse.json({ vendor: updated })
+  // Push notification when seller transitions from inactive → active.
+  // Notify every buyer who has this vendor in their favorites.
+  // Fire-and-forget so push failures don't fail the location update.
+  const updatedRow = updated as { is_active?: boolean } | null
+  if (!wasActive && updatedRow?.is_active) {
+    void notifyFavoriteBuyers(vendorId, vendorName).catch((err) => {
+      logger.error(serializeErr(err), '[vendor location] push to favorites failed:')
+    })
+  }
+
+  return NextResponse.json({ vendor: updated })
   } catch (err) {
     logger.error(serializeErr(err), 'Vendor location PUT error:')
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

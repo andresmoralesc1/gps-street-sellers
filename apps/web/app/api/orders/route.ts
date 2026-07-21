@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       const order = orderResult.rows[0]
 
       // Build items insert using server-side prices
-      const itemsValues: any[] = []
+      const itemsValues: unknown[] = []
       const placeholders: string[] = []
       let paramIdx = 1
       for (const item of items) {

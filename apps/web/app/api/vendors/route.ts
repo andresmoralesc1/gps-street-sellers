@@ -200,15 +200,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let body: any
+    let body: unknown
     try {
       body = await req.json()
     } catch {
       return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
     }
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ error: 'Body debe ser un objeto' }, { status: 400 })
+    }
+    const bodyObj = body as Record<string, unknown>
 
     // ── Field validation ────────────────────────────────────────────────
-    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const name = typeof bodyObj.name === 'string' ? bodyObj.name.trim() : ''
     if (name.length < 1 || name.length > 80) {
       return NextResponse.json(
         { error: 'El nombre debe tener entre 1 y 80 caracteres' },
@@ -216,7 +220,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const category = typeof body.category === 'string' ? body.category.trim() : ''
+    const category = typeof bodyObj.category === 'string' ? bodyObj.category.trim() : ''
     const categoryCheck = await pool.query(
       'SELECT id FROM categories WHERE id = $1',
       [category]
@@ -228,7 +232,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const rawStationType = (body.station_type ?? body.stationType) ?? 'mobile'
+    const rawStationType = (bodyObj.station_type ?? bodyObj.stationType) ?? 'mobile'
     if (rawStationType !== 'fixed' && rawStationType !== 'mobile') {
       return NextResponse.json(
         { error: 'stationType debe ser "fixed" o "mobile"' },
@@ -238,11 +242,11 @@ export async function POST(req: NextRequest) {
     const stationType = rawStationType
 
     let description: string | null = null
-    if (body.description !== undefined && body.description !== null) {
-      if (typeof body.description !== 'string') {
+    if (bodyObj.description !== undefined && bodyObj.description !== null) {
+      if (typeof bodyObj.description !== 'string') {
         return NextResponse.json({ error: 'description debe ser texto' }, { status: 400 })
       }
-      const trimmed = body.description.trim()
+      const trimmed = bodyObj.description.trim()
       if (trimmed.length > 500) {
         return NextResponse.json(
           { error: 'description máximo 500 caracteres' },
@@ -256,7 +260,7 @@ export async function POST(req: NextRequest) {
     // Accept both snake_case (city_id) and camelCase (cityId) so callers don't
     // silently drop the field. city_id is REQUIRED by the DB constraint; we
     // validate it here instead of letting Postgres 23514 bubble up as a 500.
-    const rawCityId = (body.city_id ?? body.cityId) as unknown
+    const rawCityId = (bodyObj.city_id ?? bodyObj.cityId) as unknown
     if (rawCityId === undefined || rawCityId === null || rawCityId === '') {
       return NextResponse.json(
         { error: 'cityId es requerido' },
@@ -282,7 +286,7 @@ export async function POST(req: NextRequest) {
     cityId = rawCityId
 
     let phone: string | null = null
-    const rawPhone = body.phone ?? body.phoneNumber
+    const rawPhone = bodyObj.phone ?? bodyObj.phoneNumber
     if (rawPhone !== undefined && rawPhone !== null && rawPhone !== '') {
       if (typeof rawPhone !== 'string') {
         return NextResponse.json({ error: 'phone debe ser texto' }, { status: 400 })
@@ -299,8 +303,8 @@ export async function POST(req: NextRequest) {
 
     let latitude: number | null = null
     let longitude: number | null = null
-    if (body.latitude !== undefined && body.latitude !== null) {
-      const lat = Number(body.latitude)
+    if (bodyObj.latitude !== undefined && bodyObj.latitude !== null) {
+      const lat = Number(bodyObj.latitude)
       if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
         return NextResponse.json(
           { error: 'latitude debe estar entre -90 y 90' },
@@ -309,8 +313,8 @@ export async function POST(req: NextRequest) {
       }
       latitude = lat
     }
-    if (body.longitude !== undefined && body.longitude !== null) {
-      const lng = Number(body.longitude)
+    if (bodyObj.longitude !== undefined && bodyObj.longitude !== null) {
+      const lng = Number(bodyObj.longitude)
       if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
         return NextResponse.json(
           { error: 'longitude debe estar entre -180 y 180' },

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get('q')
 
     let query = 'SELECT id, vendor_id, name, description, price, photo_url, created_at FROM products WHERE 1=1'
-    const params: any[] = []
+    const params: unknown[] = []
 
     if (vendorId) {
       // Reject malformed UUIDs up front so we don't hand a non-UUID string to
@@ -155,9 +155,9 @@ export async function POST(req: NextRequest) {
     )
 
     return NextResponse.json({ product: result.rows[0] }, { status: 201 })
-  } catch (err: any) {
+  } catch (err) {
     logger.error(serializeErr(err), 'Products POST error:')
-    if (err?.code === '22003') {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: unknown }).code === '22003') {
       return NextResponse.json(
         { error: 'Precio demasiado grande (máx 99,999,999.99 COP)' },
         { status: 400 }

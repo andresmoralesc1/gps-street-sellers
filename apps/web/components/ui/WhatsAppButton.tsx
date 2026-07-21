@@ -23,7 +23,14 @@ import { clsx } from 'clsx'
  * animation.
  */
 interface WhatsAppButtonProps {
-  href: string
+  /**
+   * Direct URL to navigate to (e.g. a pre-built `https://wa.me/...?text=` link).
+   * Ignored if `onClick` is provided — use `onClick` when the URL depends on
+   * async data (catalog, cart, etc.) that isn't ready on first render.
+   */
+  href?: string
+  /** Optional click handler — if present, runs instead of navigating to `href`. */
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void
   children?: React.ReactNode
   className?: string
   /** Optional label shown next to the icon. Defaults to "WhatsApp". */
@@ -32,6 +39,7 @@ interface WhatsAppButtonProps {
 
 export function WhatsAppButton({
   href,
+  onClick,
   children,
   className,
   label = 'WhatsApp',
@@ -78,14 +86,26 @@ export function WhatsAppButton({
     } else {
       triggerEffect(x, y)
     }
+    // Hand off to the caller's onClick if they supplied one (it may
+    // e.g. open a different URL, or clear state). We only call it
+    // when present — if both href and onClick are absent we just
+    // sit there with the ripple animating (rare: every current
+    // caller supplies at least one).
+    if (onClick) {
+      // onClick is responsible for its own nav/window-open. Don't
+      // preventDefault unless they do — letting it through means the
+      // <a href="..."> still navigates if both are provided but the
+      // caller's onClick didn't preventDefault.
+      onClick(e)
+    }
   }
 
   return (
     <a
       ref={buttonRef}
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={href ?? '#'}
+      target={href ? '_blank' : undefined}
+      rel={href ? 'noopener noreferrer' : undefined}
       onClick={handleClick}
       aria-label={`Contactar por ${label}`}
       className={clsx(

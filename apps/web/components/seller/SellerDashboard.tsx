@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { WhatsAppButton } from '@/components/ui/WhatsAppButton'
 import {
   Star, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package,
-  ChevronRight, Check, MapPin, Phone, MessageCircle, Truck,
+  ChevronRight, Check, MapPin, Phone, Truck,
   TrendingUp, Calendar, Eye,
 } from 'lucide-react'
 import { getCategoryInfo } from '@/lib/core/constants'
@@ -404,15 +405,15 @@ export function SellerDashboard({
                   {/* N10: inline actions */}
                   <div className="flex items-center gap-2 mt-2">
                     {wa && (
-                      <a
+                      <WhatsAppButton
                         href={wa}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Contactar a ${order.buyer_name} por WhatsApp`}
-                        className="flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full hover:bg-green-100"
-                      >
-                        <MessageCircle size={12} /> WhatsApp
-                      </a>
+                        // Compact pill style — overrides the default
+                        // "Pedir por WhatsApp" look to match the surrounding
+                        // order-action chips (text-xs, rounded-full). The
+                        // ripple still emanates from the click point.
+                        label={`WhatsApp · ${order.buyer_name}`}
+                        className="text-xs px-2 py-1 rounded-full"
+                      />
                     )}
                     {order.status === 'pending' && (
                       <button

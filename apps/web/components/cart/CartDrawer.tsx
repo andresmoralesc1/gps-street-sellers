@@ -1,7 +1,8 @@
 'use client'
 
-import { X, Minus, Plus, ShoppingBag, Trash2, MessageCircle } from 'lucide-react'
+import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { WhatsAppButton } from '@/components/ui/WhatsAppButton'
 import { useStore } from '@/store/useStore'
 
 interface CartDrawerProps {
@@ -118,16 +119,19 @@ export function CartDrawer({ vendorPhone, vendorName = 'Vendedor', onCheckout, i
             </div>
 
             {hasWhatsApp ? (
-              <Button
-                variant="secondary"
-                className="w-full flex items-center justify-center gap-2"
-                size="lg"
-                onClick={handleWhatsApp}
-                isLoading={isCheckingOut}
-              >
-                <MessageCircle size={20} className="text-green-600" />
-                Pedir por WhatsApp
-              </Button>
+              <WhatsAppButton
+                // No href — the URL depends on the full cart payload
+                // (buildWhatsAppText), so we let handleWhatsApp do its
+                // existing window.open. We still get the ripple + fly-out
+                // because WhatsAppButton handles its own click event
+                // before delegating to onClick.
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleWhatsApp()
+                }}
+                label="Pedir por WhatsApp"
+                className="w-full px-7 py-3.5 text-base"
+              />
             ) : (
               <div className="space-y-2">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">

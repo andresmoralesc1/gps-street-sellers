@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
+import { sendPasswordResetEmail } from '@/lib/email'
 
 /**
  * POST /api/auth/forgot-password
@@ -75,44 +76,23 @@ export async function POST(req: NextRequest) {
         { expiresIn: '1h' }
       )
 
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gps.andresmorales.com.co'
-      const resetUrl = `${siteUrl}/reset-password?token=${resetToken}`
+      const userResult = await pool.query(
+        'SELECT name FROM users WHERE LOWER(email) = LOWER($1) AND is_active = true',
+        [email]
+      )
+      const name = userResult.rows[0]?.name ?? ''
 
-      // Send via Brevo. We await so failures are logged, but the user-facing
-      // response is the same generic message either way (no enumeration).
+      // Send via the email helper. We await so failures are logged, but the
+      // user-facing response is the same generic message either way (no
+      // enumeration).
       try {
-        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-          method: 'POST',
-          headers: {
-            'api-key': process.env.BREVO_API_KEY || '',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sender: {
-              name: process.env.EMAIL_FROM_NAME || 'BarrioTech',
-              email: process.env.EMAIL_FROM || 'info@andresmorales.com.co',
-            },
-            to: [{ email: email.toLowerCase() }],
-            subject: 'Restablece tu contraseña — BarrioTech',
-            htmlContent: `
-              <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h1 style="color: #F97316;">Restablece tu contraseña</h1>
-                <p>Hola,</p>
-                <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en BarrioTech.</p>
-                <p>Si no fuiste tú, puedes ignorar este mensaje. Tu contraseña no cambiará hasta que uses el enlace.</p>
-                <p style="margin: 32px 0;">
-                  <a href="${resetUrl}" style="background: #F97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
-                    Restablecer contraseña
-                  </a>
-                </p>
-                <p style="color: #666; font-size: 14px;">Este enlace expira en 1 hora.</p>
-                <p style="color: #666; font-size: 14px;">Si el botón no funciona, copia y pega este enlace:<br/><span style="word-break: break-all;">${resetUrl}</span></p>
-              </div>
-            `,
-          }),
+        const result = await sendPasswordResetEmail({
+          to: email.toLowerCase(),
+          name,
+          token: resetToken,
         })
-        if (!res.ok) {
-          console.error('[forgot-password] Brevo send failed:', res.status, await res.text())
+        if (!result.ok) {
+          logger.error({ to: email, error: result.error }, '[forgot-password] Email send failed:')
         }
       } catch (emailErr) {
         logger.error(serializeErr(emailErr), '[forgot-password] Email error (non-fatal):')

@@ -131,6 +131,11 @@ export async function POST(req: NextRequest) {
         avatarUrl: '',
         phone: user.phone || '',
         cityId: user.city_id || '',
+        // email_verified lives on the user row; the login route already
+        // selected it earlier. Mirror it into the response so the
+        // client-side store can render the verify banner without an
+        // extra /api/auth/me round-trip.
+        emailVerified: user.email_verified,
       }
     })
 

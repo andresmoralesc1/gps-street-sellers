@@ -1,0 +1,174 @@
+'use client'
+
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { Mail, Check, X } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { useStore } from '@/store/useStore'
+
+/**
+ * /verificar-email
+ *
+ * Two states:
+ *  - URL has ?token=… → call /api/auth/verify-email, show result.
+ *  - No token → show a "resend" form (you can re-trigger from here).
+ *
+ * The page is in Spanish; the verify-email flow happens in the same
+ * tab, no email template changes needed.
+ */
+function VerifyEmailContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const user = useStore((s) => s.user)
+
+  const token = searchParams.get('token')
+
+  const [verifying, setVerifying] = useState(false)
+  const [result, setResult] = useState<null | { ok: boolean; message: string }>(null)
+  const [resendEmail, setResendEmail] = useState('')
+  const [resendStatus, setResendStatus] = useState<null | { ok: boolean; message: string }>(null)
+  const [sending, setSending] = useState(false)
+
+  // Auto-verify if the URL has a token
+  useEffect(() => {
+    if (!token) return
+    setVerifying(true)
+    fetch('/api/auth/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ token }),
+    })
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}))
+        if (r.ok && data.verified) {
+          setResult({ ok: true, message: 'Tu email ha sido verificado. ¡Ya puedes usar BarrioTech!' })
+          if (user) {
+            useStore.setState({ user: { ...user, emailVerified: true } })
+          }
+          setTimeout(() => router.push('/map'), 2500)
+        } else {
+          setResult({ ok: false, message: data.error || 'No pudimos verificar tu email.' })
+        }
+      })
+      .catch(() => setResult({ ok: false, message: 'Error de conexión. Intenta de nuevo.' }))
+      .finally(() => setVerifying(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  const handleResend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (sending) return
+    setSending(true)
+    setResendStatus(null)
+    try {
+      const r = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resendEmail || user?.email || '' }),
+      })
+      const data = await r.json().catch(() => ({}))
+      // The endpoint always returns a generic message whether the email
+      // exists or not. We surface it identically to keep the API honest.
+      setResendStatus({ ok: r.ok, message: data.message || 'Email reenviado.' })
+    } catch {
+      setResendStatus({ ok: false, message: 'Error de conexión. Intenta de nuevo.' })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl shadow-gray-900/5 p-8 sm:p-10 w-full max-w-lg">
+      <div className="text-center mb-6">
+        <div className="inline-flex w-14 h-14 items-center justify-center rounded-2xl bg-orange-100 mb-4">
+          <Mail size={28} className="text-primary" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Verifica tu email</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          Confirma tu dirección de email para activar tu cuenta de BarrioTech.
+        </p>
+      </div>
+
+      {/* Verifying (URL has token) */}
+      {verifying && (
+        <div className="text-center py-6">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <p className="text-gray-500 mt-3 text-sm">Verificando tu email…</p>
+        </div>
+      )}
+
+      {/* Result from verification */}
+      {result && !verifying && (
+        <div
+          className={`p-4 rounded-xl mb-6 ${
+            result.ok
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {result.ok ? <Check size={18} /> : <X size={18} />}
+            <p className="text-sm font-medium">{result.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Resend form (no token) */}
+      {!token && !verifying && (
+        <form onSubmit={handleResend} className="space-y-3">
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">Tu email</label>
+            <input
+              type="email"
+              value={resendEmail || user?.email || ''}
+              onChange={(e) => setResendEmail(e.target.value)}
+              required
+              placeholder="tu@email.com"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Si te registraste, te enviamos un email con un enlace. Revisa
+              también la carpeta de spam.
+            </p>
+          </div>
+          <Button type="submit" disabled={sending} className="w-full">
+            {sending ? 'Enviando…' : 'Reenviar email de verificación'}
+          </Button>
+          {resendStatus && (
+            <p
+              className={`text-sm text-center ${
+                resendStatus.ok ? 'text-gray-600' : 'text-red-600'
+              }`}
+            >
+              {resendStatus.message}
+            </p>
+          )}
+        </form>
+      )}
+
+      <div className="text-center mt-6 pt-4 border-t border-gray-100">
+        <Link href="/" className="text-sm text-primary-700 hover:underline">
+          Volver al inicio
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-8">
+      <Suspense
+        fallback={
+          <div className="w-full max-w-lg p-8 flex items-center justify-center">
+            <p className="text-gray-400">Cargando...</p>
+          </div>
+        }
+      >
+        <VerifyEmailContent />
+      </Suspense>
+    </div>
+  )
+}

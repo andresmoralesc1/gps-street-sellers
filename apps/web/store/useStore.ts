@@ -12,6 +12,7 @@ export interface User {
   avatarUrl: string
   phone?: string
   cityId?: string
+  emailVerified?: boolean
 }
 
 interface Filters {

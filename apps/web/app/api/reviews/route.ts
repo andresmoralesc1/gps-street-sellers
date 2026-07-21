@@ -29,6 +29,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solo compradores pueden dejar reseñas' }, { status: 403 })
     }
 
+    // Email verification gate — reviews are public and influence vendor
+    // visibility. Same rationale as POST /api/vendors.
+    const verified = await pool.query(
+      'SELECT email_verified FROM users WHERE id = $1',
+      [userId]
+    )
+    if (verified.rows[0]?.email_verified === false) {
+      return NextResponse.json(
+        {
+          error: 'Verifica tu email antes de dejar una reseña.',
+          requiresEmailVerification: true,
+        },
+        { status: 403 }
+      )
+    }
+
     let body: unknown
     try {
       body = await req.json()

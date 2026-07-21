@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { Menu, X, MapPin, User, LogIn, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { NotificationBell } from './notifications/NotificationBell'
+import { EmailVerifyBanner } from './EmailVerifyBanner'
 // Theme toggle hidden while dark mode is disabled. Component kept in
 // repo for easy re-enable later.
 // import { ThemeToggle } from './ThemeToggle'
@@ -60,6 +61,7 @@ export function SiteHeader() {
           : 'bg-white shadow-soft border-b border-transparent'
       }`}
     >
+      <EmailVerifyBanner />
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
 

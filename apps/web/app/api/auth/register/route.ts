@@ -6,6 +6,7 @@ import { COLOMBIA_CITIES } from '@/lib/core/constants'
 import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
+import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
 import {
   isEmail,
   isPhone,
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
         `INSERT INTO users (email, password_hash, name, phone, city_id, role)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT DO NOTHING
-         RETURNING id, email, name, role, phone, city_id`,
+         RETURNING id, email, name, role, phone, city_id, email_verified`,
         [cleanEmail, passwordHash, trimmedName, cleanPhone, cityId || null, roleValue]
       )
 
@@ -207,13 +208,17 @@ export async function POST(req: NextRequest) {
 
       // ── Ley 1581/2012 — record the consent inside the same tx so the
       // audit log never refers to a user that doesn't exist.
+      // The ip_address column is `inet`; use NULL when we couldn't
+      // resolve a real client IP rather than the placeholder string
+      // 'unknown' (which Postgres rejects as invalid inet syntax).
       const policyVersion = process.env.POLICY_VERSION || 'v1.0'
+      const safeIp = (ip && ip !== 'unknown') ? ip : null
       await client.query(
         `INSERT INTO consent_logs
           (user_id, consent_type, policy_version, granted, ip_address, user_agent)
          VALUES ($1, 'terms', $2, true, $3, $4),
                 ($1, 'privacy', $2, true, $3, $4)`,
-        [user.id, policyVersion, ip, req.headers.get('user-agent')]
+        [user.id, policyVersion, safeIp, req.headers.get('user-agent')]
       )
 
       await client.query('COMMIT')
@@ -224,12 +229,39 @@ export async function POST(req: NextRequest) {
       client.release()
     }
 
+    // ── Email verification — issue a token and queue a Brevo email.
+    // Best-effort: a failed send does not fail registration (the user
+    // can resend from the dashboard banner). Token is hashed before
+    // storage so a DB dump alone can't be used to verify arbitrary emails.
+    if (user.email) {
+      try {
+        const v = issueEmailVerificationToken(user.id)
+        await pool.query(
+          `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+           VALUES ($1, $2, $3)`,
+          [user.id, v.tokenHash, v.expiresAt]
+        )
+        const result = await sendVerificationEmail({
+          to: user.email,
+          name: user.name,
+          token: v.token,
+        })
+        if (!result.ok) {
+          logger.error({ userId: user.id, error: result.error }, '[register] Verification email send failed:')
+        }
+      } catch (emailErr) {
+        logger.error(serializeErr(emailErr), '[register] Verification email error (non-fatal):')
+      }
+    }
+
     const tokenPayload = { userId: user.id, email: user.email, role: roleValue as 'buyer' | 'seller', tokenVersion: 1 }
     const token = signTokenSync(tokenPayload, '15m')
     const refreshToken = signTokenSync(tokenPayload, '7d')
 
     // Token is set via httpOnly cookies only — never echo it in the body
     const response = NextResponse.json({
+      emailVerified: false,
+      requiresEmailVerification: true,
       user: {
         id: user.id,
         email: user.email || '',

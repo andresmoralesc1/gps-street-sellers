@@ -4,7 +4,7 @@ import pool from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 async function getUserFromDb(userId: string) {
   const result = await pool.query(
-    'SELECT id, email, name, role, phone, city_id, is_active FROM users WHERE id = $1',
+    'SELECT id, email, name, role, phone, city_id, is_active, email_verified FROM users WHERE id = $1',
     [userId]
   )
   if (result.rows.length === 0) return null
@@ -18,6 +18,7 @@ async function getUserFromDb(userId: string) {
     phone: u.phone || '',
     cityId: u.city_id || '',
     avatarUrl: '',
+    emailVerified: u.email_verified,
   }
 }
 

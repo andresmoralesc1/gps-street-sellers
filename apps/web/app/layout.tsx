@@ -20,8 +20,13 @@ export const metadata: Metadata = {
   keywords: ['vendedores informales colombia', 'comida callejera', 'frutas', 'artesanías', 'gps', 'mapa', 'barrio', 'comprar local', 'street food colombia', 'vendedores ambulantes'],
   authors: [{ name: 'BarrioTech' }],
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
+    // SVG first for browsers that prefer it (modern Firefox, Safari 14+).
+    // .ico is the universal fallback. apple is iOS bookmark icon.
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
+    ],
+    shortcut: '/favicon.svg',
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.json',
@@ -93,6 +98,19 @@ export default function RootLayout({
     name: 'BarrioTech',
     url: 'https://gps.andresmorales.com.co',
     inLanguage: 'es-CO',
+    // SearchAction enables the Google sitelinks search box for our brand.
+    // Even without an internal search engine, declaring a target that's
+    // useful (the map) signals our canonical entry point for "find
+    // vendors near me" queries.
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://gps.andresmorales.com.co/map?city={search_term_string}',
+      },
+      // Query-input intent for the placeholder text Google shows.
+      'query-input': 'required name=search_term_string',
+    },
   }
 
   return (

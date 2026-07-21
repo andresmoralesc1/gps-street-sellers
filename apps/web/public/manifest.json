@@ -1,7 +1,7 @@
 {
   "name": "BarrioTech",
   "short_name": "BarrioTech",
-  "description": "Encuentra vendedores informales cerca de ti en tiempo real",
+  "description": "Encuentra vendedores locales cerca de ti en tiempo real",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -12,8 +12,24 @@
   "dir": "ltr",
   "categories": ["food", "shopping", "lifestyle"],
   "icons": [
-    { "src": "/logo-avatar.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "/logo-avatar.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-avatar.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ],
   "screenshots": [],
   "prefer_related_applications": false

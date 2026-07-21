@@ -63,14 +63,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let vendorPages: MetadataRoute.Sitemap = []
   try {
     const result = await pool.query(
-      `SELECT slug, created_at FROM vendors
+      `SELECT slug, GREATEST(
+         COALESCE(created_at, NOW()),
+         COALESCE(location_updated_at, '1970-01-01'::timestamptz)
+       ) AS last_modified
+       FROM vendors
        WHERE is_active = true AND slug IS NOT NULL`
     )
     vendorPages = result.rows.map((row) => {
       const esPath = `/vendor/${row.slug}`
       return {
         url: `${BASE}${esPath}`,
-        lastModified: new Date(row.created_at ?? Date.now()),
+        lastModified: new Date(row.last_modified ?? Date.now()),
         priority: 0.8,
         changeFrequency: 'weekly' as const,
         alternates: { languages: buildAlternates(esPath) },

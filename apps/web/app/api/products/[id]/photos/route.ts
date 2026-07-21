@@ -113,6 +113,10 @@ export async function POST(req: NextRequest, { params: paramsPromise }: { params
 }
 
 export async function DELETE(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  // B-031: deprecated — use /api/products/[id]/photos/[photoId] (new
+  // route) which puts the resource id in the URL path. Some CDNs strip
+  // DELETE bodies. Kept for one release in case any external caller still
+  // hits the old shape; will be removed next sprint if no traffic.
   const params = await paramsPromise
   try {
     if (!params.id || !UUID_RE.test(params.id)) {

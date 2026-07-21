@@ -169,16 +169,19 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
 
   // A: confirmation flow. Called only after the user clicks "Eliminar" in
   // the modal — `removePhoto` is now the actual delete handler.
+  // B-031 fix: photoId in URL path (REST convention) instead of body.
+  // Some CDNs/proxies strip DELETE bodies, breaking the previous endpoint.
   const removePhoto = async (photoId: string) => {
     setConfirmDeleting(true)
     setConfirmError(null)
     try {
-      const res = await fetch(`/api/products/${productId}/photos`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ photo_id: photoId }),
-      })
+      const res = await fetch(
+        `/api/products/${productId}/photos/${encodeURIComponent(photoId)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      )
       if (res.ok) {
         const next = photos.filter((p) => p.id !== photoId)
         setPhotos(next)

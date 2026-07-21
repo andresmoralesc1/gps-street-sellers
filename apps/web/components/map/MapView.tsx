@@ -16,6 +16,13 @@ import Link from 'next/link'
 import { VendorCard } from './VendorCard'
 import { LocationAdjustControl } from './LocationAdjustControl'
 import { DraggableUserMarker } from './DraggableUserMarker'
+import {
+  MapUpdater,
+  MapClickCloser,
+  LeafletTouchTargetOverride,
+  MapPanToVendor,
+  MapRecenter,
+} from './MapHelpers'
 import { useStore } from '@/store/useStore'
 import { calculateDistance } from '@/lib/core/utils/geo'
 import { getCategoryInfo, COLOMBIA_CITIES } from '@/lib/core/constants'
@@ -26,99 +33,9 @@ import L from 'leaflet'
 // Fix para íconos de Leaflet en Next.js
 import '@/lib/leaflet-icon-fix'
 
-function MapUpdater({ center }: { center: LatLng }) {
-  const map = useMap()
-  useEffect(() => {
-    map.setView(center)
-  }, [map, center])
-  return null
-}
-
-// Closes the selected vendor when the user clicks empty map (not on a marker).
-function MapClickCloser({ onMapClick }: { onMapClick: () => void }) {
-  useMapEvents({
-    click: () => onMapClick(),
-  })
-  return null
-}
-
-// Injects a <style> tag that bumps Leaflet's zoom +/- buttons to
-// WCAG-compliant 44x44px on mobile viewports. The selector chains through
-// `html body` so it wins specificity against Leaflet's own
-// `.leaflet-touch .leaflet-bar a { width: 30px }` without needing to
-// globally raise Leaflet's selector priority. !important is kept as a
-// defensive guard for any future Leaflet refactor.
-function LeafletTouchTargetOverride() {
-  useEffect(() => {
-    const STYLE_ID = 'leaflet-touch-target-override'
-    if (document.getElementById(STYLE_ID)) return
-    const style = document.createElement('style')
-    style.id = STYLE_ID
-    style.textContent = `
-      @media (max-width: 768px) {
-        html body .leaflet-touch .leaflet-bar a,
-        html body .leaflet-control-zoom a,
-        html body .leaflet-control-zoom-in,
-        html body .leaflet-control-zoom-out {
-          width: 44px !important;
-          height: 44px !important;
-          line-height: 44px !important;
-          font-size: 22px !important;
-        }
-      }
-    `
-    document.head.appendChild(style)
-  }, [])
-  return null
-}
-
-// Pans the map so the selected vendor stays visible above the floating card.
-// `bottomOffsetPx` is the height in pixels the floating card occupies at the
-// bottom of the viewport — we pan up by that amount so the marker isn't
-// hidden under the card.
-//
-// Upgraded 2026-07-21 from panTo → flyTo so the user sees the spatial
-// relationship between vendors (panTo just slides; flyTo animates both
-// pan AND zoom, giving a sense of "the map is flying to the vendor").
-// `easeLinearity: 0.25` adds a tiny ease-out so the motion feels organic
-// instead of mechanically linear. Zoom range `[currentZoom, 16]` zooms
-// in slightly on selection, then if the user pans away it stays where
-// they left it (flyTo doesn't auto-recenter like setView would).
-function MapPanToVendor({
-  vendor,
-  bottomOffsetPx,
-}: {
-  vendor: Vendor | null
-  bottomOffsetPx: number
-}) {
-  const map = useMap()
-  useEffect(() => {
-    if (!vendor || vendor.latitude == null || vendor.longitude == null) return
-    const point = map.latLngToContainerPoint([vendor.latitude, vendor.longitude])
-    // Move the vendor marker up by the card height + small breathing room.
-    const targetPoint = L.point(point.x, point.y - bottomOffsetPx)
-    const targetLatLng = map.containerPointToLatLng(targetPoint)
-    const targetZoom = Math.max(map.getZoom(), 15)
-    map.flyTo(targetLatLng, targetZoom, {
-      animate: true,
-      duration: 0.8,
-      easeLinearity: 0.25,
-    })
-  }, [map, vendor, bottomOffsetPx])
-  return null
-}
-
-// Smoothly recenters the map on a given lat/lng. Used when the user
-// finishes dragging the location pin or re-locates via GPS — we want
-// the map to follow so the new origin is visible.
-function MapRecenter({ center, trigger }: { center: LatLng; trigger: number }) {
-  const map = useMap()
-  useEffect(() => {
-    if (trigger === 0) return // skip initial mount
-    map.panTo(center, { animate: true, duration: 0.5 })
-  }, [map, center.lat, center.lng, trigger])
-  return null
-}
+// 5 Leaflet helpers (MapUpdater, MapClickCloser, LeafletTouchTargetOverride,
+// MapPanToVendor, MapRecenter) moved to ./MapHelpers on 2026-07-21 to keep
+// this file under 500 lines. Imported above.
 
 export function MapView() {
   const selectedCity = useStore((s) => s.selectedCity)

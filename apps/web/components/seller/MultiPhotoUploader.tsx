@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { Plus, X, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { toast } from '@/components/ui/Toast'
+import { ConfirmPhotoDeleteModal } from './ConfirmPhotoDeleteModal'
 
 /**
  * N12 — Multi-photo uploader (URL-based, max 6 photos).
@@ -354,55 +355,15 @@ export function MultiPhotoUploader({ productId, initialPhotos = [], onChange, on
         {reordering && ' · Guardando orden…'}
       </p>
 
-      {/* A: confirmation modal — prevents accidental deletion. */}
-      {confirmDeleteId && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="photo-delete-title"
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-          onClick={() => !confirmDeleting && setConfirmDeleteId(null)}
-        >
-          <div
-            className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="photo-delete-title" className="text-lg font-bold mb-2">
-              ¿Eliminar esta foto?
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Esta acción no se puede deshacer. Si era la foto principal,
-              la siguiente foto de la galería pasará a ser la principal.
-            </p>
-            {confirmError && (
-              <div
-                role="alert"
-                className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2 mb-3"
-              >
-                {confirmError}
-              </div>
-            )}
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteId(null)}
-                disabled={confirmDeleting}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => removePhoto(confirmDeleteId)}
-                disabled={confirmDeleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
-              >
-                {confirmDeleting ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* A: confirmation modal — extracted to ConfirmPhotoDeleteModal
+          (2026-07-21) to keep this file focused on the uploader UI. */}
+      <ConfirmPhotoDeleteModal
+        photoId={confirmDeleteId}
+        deleting={confirmDeleting}
+        error={confirmError}
+        onCancel={() => setConfirmDeleteId(null)}
+        onConfirm={() => confirmDeleteId && removePhoto(confirmDeleteId)}
+      />
     </div>
   )
 }

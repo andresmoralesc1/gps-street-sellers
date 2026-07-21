@@ -1,3 +1,9 @@
+// Note 2026-07-21: this file is intentionally one big static component. It's
+// 447 lines of legal text (Ley 1581 de 2012), not interactive code. Splitting
+// it into 9 section-components would make typo fixes a 9-file edit and
+// wouldn't reduce bundle size (everything renders on /privacidad anyway).
+// If we ever need dynamic policy versioning or A/B testing, migrate to a
+// .md file rendered with react-markdown — until then, keep it monolithic.
 import Link from 'next/link'
 
 const POLICY_VERSION = 'v1.0'

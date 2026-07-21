@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { isOpenNow } from '@/lib/business-hours'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { parseVendorFilters, buildVendorWhereClause } from './filters'
 
 // Public: GET /api/vendors
 //
@@ -19,70 +20,31 @@ import pool from '@/lib/db'
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const category = searchParams.get('category')
-    const active = searchParams.get('active')
-    const withLocation = searchParams.get('withLocation') === 'true'
-    const cityId = searchParams.get('cityId')
-    const vehicleType = searchParams.get('vehicleType')
-    const bbox = searchParams.get('bbox')
 
-    // Pagination — capped at 500 to keep the map query bounded.
-    // Default 200 is what the map page typically renders in a single viewport.
-    const limit = Math.min(parseInt(searchParams.get('limit') || '200', 10) || 200, 500)
-    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
+    // Filter parsing + WHERE-clause construction are in ./filters — keeps the
+    // list and count queries in sync (was previously duplicated with a
+    // "keep this in sync" comment that was begging to be refactored).
+    const filters = parseVendorFilters(searchParams)
 
-    // Build filter against the view (so we get is_sponsored for free)
-    let query = `
-      SELECT v.*, c.label AS category_label
-      FROM vendors_with_sponsorship v
-      LEFT JOIN categories c ON v.category = c.id
-      WHERE 1=1
-    `
-    const params: any[] = []
+  // Pagination — capped at 500 to keep the map query bounded.
+  // Default 200 is what the map page typically renders in a single viewport.
+  const limit = Math.min(parseInt(searchParams.get('limit') || '200', 10) || 200, 500)
+  const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
 
-    if (category) {
-      params.push(category)
-      query += ` AND v.category = $${params.length}`
-    }
+  const { where: filterWhere, args: filterArgs } = buildVendorWhereClause(filters)
+  // limit/offset placeholders come after the filter args.
+  const limitIdx = filterArgs.length + 1
+  const offsetIdx = filterArgs.length + 2
 
-    if (active === 'true') {
-      query += ' AND v.is_active = true'
-    }
-
-    if (withLocation) {
-      query += ' AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL'
-    }
-
-    if (cityId) {
-      params.push(cityId)
-      query += ` AND v.city_id = $${params.length}`
-    }
-
-    if (vehicleType) {
-      params.push(vehicleType)
-      query += ` AND v.vehicle_type = $${params.length}`
-    }
-
-    // Bounding box filter for the map viewport
-    if (bbox) {
-      const parts = bbox.split(',').map(Number)
-      if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
-        const [minLat, minLng, maxLat, maxLng] = parts
-        if (minLat <= maxLat && minLng <= maxLng) {
-          params.push(minLat, maxLat, minLng, maxLng)
-          const base = params.length - 3
-          query += ` AND v.latitude BETWEEN $${base} AND $${base + 1}`
-          query += ` AND v.longitude BETWEEN $${base + 2} AND $${base + 3}`
-        }
-      }
-    }
-
-    // Sponsored first, then by most recent activity
-    query += ' ORDER BY v.is_sponsored DESC, COALESCE(v.location_updated_at, v.created_at) DESC'
-    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
-    params.push(limit, offset)
-
-    const result = await pool.query(query, params)
+  const query = `
+    SELECT v.*, c.label AS category_label
+    FROM vendors_with_sponsorship v
+    LEFT JOIN categories c ON v.category = c.id
+    WHERE 1=1 ${filterWhere}
+    ORDER BY v.is_sponsored DESC, COALESCE(v.location_updated_at, v.created_at) DESC
+    LIMIT $${limitIdx} OFFSET $${offsetIdx}
+  `
+  const result = await pool.query(query, [...filterArgs, limit, offset])
     // ads is a VIEW (see migrations/014_ads_view_and_seed.sql) backed by
     // ad_campaigns. Window filter is applied here, not in the view, so admin
     // tooling can still SELECT paused/expired rows.
@@ -138,41 +100,14 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Build total count by stripping LIMIT/OFFSET and counting with same filters
-    const buildWhere = (n: (i: number) => string) => {
-      const w: string[] = []
-      const a: any[] = []
-      const baseParams = params.slice(0, params.length - 2)
-      // Rebuild WHERE clauses that match the above — keep this in sync with the
-      // filter block above. Limit/Offset are stripped.
-      let i = 1
-      if (category) { w.push(`AND v.category = ${n(i)}`); a.push(category); i++ }
-      if (active === 'true') { w.push(`AND v.is_active = true`) }
-      if (withLocation) { w.push(`AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL`) }
-      if (cityId) { w.push(`AND v.city_id = ${n(i)}`); a.push(cityId); i++ }
-      if (vehicleType) { w.push(`AND v.vehicle_type = ${n(i)}`); a.push(vehicleType); i++ }
-      if (bbox) {
-        const parts = bbox.split(',').map(Number)
-        if (parts.length === 4 && parts.every((num) => Number.isFinite(num))) {
-          const [minLat, minLng, maxLat, maxLng] = parts
-          if (minLat <= maxLat && minLng <= maxLng) {
-            a.push(minLat, maxLat, minLng, maxLng)
-            const base = a.length - 3
-            w.push(`AND v.latitude BETWEEN ${n(base)} AND ${n(base + 1)}`)
-            w.push(`AND v.longitude BETWEEN ${n(base + 2)} AND ${n(base + 3)}`)
-          }
-        }
-      }
-      return { where: w.join(' '), args: a }
-    }
-    const { where: countWhere, args: countArgs } = buildWhere((n) => `$${n}`)
-    // WHERE 1=1 prefix — matches the main query above so `countWhere` (which
-    // starts with "AND ...") parses correctly. Without this, the count query
-    // throws "syntax error at or near AND" on every GET with active/category/etc.
-    const totalCountResult = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM vendors_with_sponsorship v WHERE 1=1 ${countWhere}`,
-      countArgs
-    )
+    // Total count: same WHERE clause (already built above), no LIMIT/OFFSET.
+  // Reusing buildVendorWhereClause means the count can never drift from the
+  // list — the old inline buildWhere was the source of a past "syntax error
+  // at or near AND" bug.
+  const totalCountResult = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM vendors_with_sponsorship v WHERE 1=1 ${filterWhere}`,
+    filterArgs
+  )
 
     const sponsoredCount = vendors.filter((v) => v.isSponsored).length
 

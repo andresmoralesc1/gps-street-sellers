@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/Badge'
 import { WhatsAppButton } from '@/components/ui/WhatsAppButton'
 import {
   Star, Apple, UtensilsCrossed, CupSoda, Palette, Shirt, Package,
-  ChevronRight, Check, MapPin, Phone, Truck,
+  ChevronRight, MapPin, Phone,
   TrendingUp, Calendar, Eye,
 } from 'lucide-react'
 import { getCategoryInfo } from '@/lib/core/constants'
 import type { VendorCategory } from '@/lib/core/types'
 import { toast } from '@/components/ui/Toast'
+import { ChecklistItem } from '@/components/seller/ChecklistItem'
+import { OrderRow, type Order } from '@/components/seller/OrderRow'
 
 const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   frutas: Apple,
@@ -77,22 +79,7 @@ interface VendorStats {
   rankPercentile?: number // 0-100; lower = better ranking
 }
 
-interface OrderItem {
-  id: string
-  product_name: string
-  quantity: number
-  price: string
-}
-
-interface Order {
-  id: string
-  buyer_name: string
-  buyer_phone?: string
-  total: string
-  status: string
-  created_at: string
-  items: OrderItem[]
-}
+// Order shape moved to ./OrderRow on 2026-07-21. Imported as `Order` above.
 
 export function SellerDashboard({
   vendorId,
@@ -411,59 +398,14 @@ export function SellerDashboard({
             <span className="text-sm text-gray-500">{orders.length} en total</span>
           </div>
           <div className="space-y-3">
-            {orders.slice(0, 5).map((order) => {
-              const wa = whatsappLink(order)
-              return (
-                <div key={order.id} className="py-2 border-b last:border-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div>
-                      <p className="font-medium text-sm">{order.buyer_name}</p>
-                      <p className="text-xs text-gray-500">
-                        {order.items.map((item) => `${item.quantity}x ${item.product_name}`).join(', ')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm text-primary">
-                        ${parseFloat(order.total).toLocaleString('es-CO')}
-                      </p>
-                      <Badge variant={order.status === 'pending' ? 'secondary' : order.status === 'completed' ? 'primary' : 'outline'}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  {/* N10: inline actions */}
-                  <div className="flex items-center gap-2 mt-2">
-                    {wa && (
-                      <WhatsAppButton
-                        href={wa}
-                        // Compact pill style — overrides the default
-                        // "Pedir por WhatsApp" look to match the surrounding
-                        // order-action chips (text-xs, rounded-full). The
-                        // ripple still emanates from the click point.
-                        label={`WhatsApp · ${order.buyer_name}`}
-                        className="text-xs px-2 py-1 rounded-full"
-                      />
-                    )}
-                    {order.status === 'pending' && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          // Optimistic update: flip the visible badge before the
-                          // request resolves. The handler in the parent owns the
-                          // fetch and will refresh the orders list on success.
-                          onOrderAction?.('mark_delivered', order.id)
-                          // We don't show a toast here — the parent's fetch will
-                          // re-render the list with the new status.
-                        }}
-                        className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100"
-                      >
-                        <Truck size={12} /> Marcar entregado
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+            {orders.slice(0, 5).map((order) => (
+              <OrderRow
+                key={order.id}
+                order={order}
+                whatsappUrl={whatsappLink(order)}
+                onMarkDelivered={(id) => onOrderAction?.('mark_delivered', id)}
+              />
+            ))}
           </div>
         </Card>
       )}
@@ -510,17 +452,4 @@ export function SellerDashboard({
   )
 }
 
-function ChecklistItem({ done, label }: { done: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${done ? 'bg-green-500' : 'bg-gray-200'}`}>
-        {done ? (
-          <Check size={14} className="text-white" />
-        ) : (
-          <span className="w-2 h-2 rounded-full bg-gray-400" />
-        )}
-      </div>
-      <span className={`text-sm ${done ? 'text-gray-700' : 'text-gray-400'}`}>{label}</span>
-    </div>
-  )
-}
+// ChecklistItem moved to ./ChecklistItem on 2026-07-21. Imported above.

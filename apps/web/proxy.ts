@@ -8,7 +8,7 @@ const SELLER_ROUTES = ['/dashboard', '/profile/edit', '/products']
 // Routes that should redirect to /login if unauthenticated
 // Note: /favorites and /orders handle their own unauthenticated state
 // in-page (show a "Log in" CTA), so we don't force-redirect from the proxy.
-const AUTH_ROUTES = ['/settings', '/notifications']
+const AUTH_ROUTES = ['/settings', '/notifications', '/onboarding']
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl

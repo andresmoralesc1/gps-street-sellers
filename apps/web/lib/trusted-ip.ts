@@ -138,15 +138,18 @@ function matchesTrusted(target: Uint8Array, ranges: ReturnType<typeof getTrusted
  * expose it on the App Router. We fall back to the ip header that
  * `trust proxy` would set, but only after we've verified the socket is
  * trusted. For Next 16 on Node the socket IP is the only direct value
- * we can rely on; in production behind Caddy, that's `127.0.0.1`. */
-function getSocketIp(req: NextRequest): string | null {
-  // NextRequest doesn't expose a stable `.ip` field. We rely on the
-  // request headers and the only DIRECT value is from the platform —
-  // which for Vercel/Render is `x-vercel-forwarded-for`, for everything
-  // else is the value of `x-forwarded-for` when there's a single hop.
-  // Our callers treat both the same: only trust the header if the
-  // configured trusted proxies match.
-  return null
+ * we can rely on; in production behind Caddy, that's `127.0.0.1`.
+ *
+ * Caddy is configured (Caddyfile gps.andresmorales.com.co block) to
+ * forward `X-Real-IP {remote_host}` + `X-Forwarded-For {remote_host}`
+ * to the upstream. So the socket is always 127.0.0.1 and we don't
+ * need to inspect it — we trust those headers. */
+function getSocketIp(_req: NextRequest): string | null {
+  // We deliberately do not parse `request.ip` (unreliable on Next 16 App
+  // Router) — the deployment is locked down to 127.0.0.1:3005 behind
+  // Caddy on the same host, so any request reaching us came through the
+  // proxy. The headers it sets are our source of truth.
+  return '127.0.0.1'
 }
 
 /**

@@ -38,6 +38,25 @@ export async function POST(req: NextRequest) {
 
     const id = identifier.trim()
 
+    // S1-SEC-1 (audit 2026-07-22): per-account rate limit so an attacker who
+    // rotates IPs (Tor, botnet, IPv6 prefix sweep) still can't brute-force
+    // one specific account. 5 attempts / 15min per normalized identifier.
+    // We always burn the bucket regardless of validity — otherwise an attacker
+    // can probe by enumerating identifiers with low confidence.
+    const accountKey = id.toLowerCase()
+    const accountLimit = await checkRateLimit(
+      accountKey,
+      'login_account',
+      5,
+      15 * 60 * 1000
+    )
+    if (!accountLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiados intentos para esta cuenta. Intenta más tarde.', retryAfter: accountLimit.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(accountLimit.retryAfter) } }
+      )
+    }
+
     // Detect whether the identifier is an email or a phone. The helper rules
     // are shared with /api/auth/register so users can log in with whichever
     // they registered with.

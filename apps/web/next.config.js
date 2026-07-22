@@ -71,7 +71,13 @@ const nextConfig = {
       // sync with /etc/caddy/Caddyfile line 24 (gps.andresmorales.com.co block).
       // Caddy overwrites this header in production via header_down, so next.config.js
       // is only authoritative in dev/preview. Keep them in lock-step.
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://umami.andresmorales.com.co`, // Next.js hydration + Umami analytics
+      // S1-SEC-4 (audit 2026-07-22): removed 'unsafe-eval'. Next.js 16 in
+      // production does NOT require eval() — it ships pre-compiled bundles.
+      // If a hydration/runtime error re-introduces the need, the browser
+      // console will show "unsafe-eval required" — re-add then. CSP is
+      // emitted only in dev (see headers() below); production CSP comes
+      // from Caddy.
+      `script-src 'self' 'unsafe-inline' https://umami.andresmorales.com.co`, // Next.js hydration + Umami analytics
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`, // Tailwind + Google Fonts CSS
       `style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `img-src 'self' data: blob: https:`, // Supabase storage + user uploads + external product photos
@@ -118,8 +124,13 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           // Permissions policy — only what we need
           { key: 'Permissions-Policy', value: permissionsPolicy },
-          // CSP
-          { key: 'Content-Security-Policy', value: csp },
+          // S1-SEC-4 (audit 2026-07-22): CSP is set by Caddy ONLY, not Next.js.
+          // Having both sources caused the browser to see two CSP headers
+          // and Caddy's override was silently dropped. Keeping a single
+          // authoritative source (Caddyfile vhost gps block, ~line 26) makes
+          // it impossible to drift. The Next.js CSP build variable is
+          // preserved for dev-mode preview only.
+          ...(isProd ? [] : [{ key: 'Content-Security-Policy', value: csp }]),
           // Cross-origin isolation OFF (no SharedArrayBuffer use case)
           // { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           // { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },

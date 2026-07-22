@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { getCityById } from '@/lib/core/constants'
 async function getUserFromDb(userId: string) {
   const result = await pool.query(
     'SELECT id, email, name, role, phone, city_id, is_active, email_verified FROM users WHERE id = $1',
@@ -103,6 +104,22 @@ export async function PATCH(req: NextRequest) {
       values.push(normalizedPhone)
     }
     if (cityId !== undefined) {
+      // S1-DB-3 (audit 2026-07-22): users.city_id is text without FK, so without
+      // this check a PATCH could set city_id='marte' or any garbage. vendors
+      // table has a CHECK constraint that DOES enforce Colombian cities (see
+      // commit aa5b09f), so a free-form cityId would create an inconsistency
+      // between user.city_id and the bootstrap vendor's city_id. Mirror the
+      // register flow's validation: whitelist against COLOMBIA_CITIES.
+      if (typeof cityId !== 'string' || cityId === '') {
+        return NextResponse.json({ error: 'cityId debe ser texto' }, { status: 400 })
+      }
+      const validCity = !!getCityById(cityId)
+      if (!validCity) {
+        return NextResponse.json(
+          { error: 'Ciudad no válida. Selecciona una de la lista.' },
+          { status: 400 }
+        )
+      }
       updates.push(`city_id = $${paramCount++}`)
       values.push(cityId)
     }

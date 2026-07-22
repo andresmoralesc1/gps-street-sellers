@@ -100,7 +100,12 @@
   /* Respect users who prefer no motion — disables every animated
      utility in the codebase (Tailwind-generated AND the CSS-only
      locationPulse). Centralizing here so we don't have to remember
-     to add new animations to multiple places. */
+     to add new animations to multiple places.
+
+     Note: the role-selector scale + shadow feedback in RegisterForm
+     and the altContact/error grid-rows expand use plain CSS transitions
+     (not Tailwind animations). The blanket `transition: none !important`
+     below covers them too. */
   @media (prefers-reduced-motion: reduce) {
     .animate-heart-pop,
     .animate-cart-bounce,
@@ -120,6 +125,15 @@
     .animate-fab-stagger-in {
       animation: none !important;
       transition: none !important;
+    }
+    /* Belt-and-suspenders for the register form microinteractions
+       (M-1 altContact expand, M-2 error fade, M-3 role scale).
+       They use transition- utilities, not animate-, but we still
+       kill transitions globally for users who opted out. */
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0ms !important;
     }
   }
 

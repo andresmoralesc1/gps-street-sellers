@@ -131,15 +131,17 @@ export function RegisterForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Role selector */}
+      {/* Role selector — M-3: shadow + scale feedback when selected so the
+          click feels like a real selection instead of a border-only toggle. */}
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => setSelectedRole('buyer')}
-          className={`p-3 rounded-xl border-2 text-center transition-all ${
+          aria-pressed={selectedRole === 'buyer'}
+          className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ease-out ${
             selectedRole === 'buyer'
-              ? 'border-primary bg-orange-50'
-              : 'border-gray-200 hover:border-gray-300'
+              ? 'border-primary bg-orange-50 shadow-card-hover scale-[1.02]'
+              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
           }`}
         >
           <div className="text-2xl mb-1">🛒</div>
@@ -149,10 +151,11 @@ export function RegisterForm({
         <button
           type="button"
           onClick={() => setSelectedRole('seller')}
-          className={`p-3 rounded-xl border-2 text-center transition-all ${
+          aria-pressed={selectedRole === 'seller'}
+          className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ease-out ${
             selectedRole === 'seller'
-              ? 'border-primary bg-orange-50'
-              : 'border-gray-200 hover:border-gray-300'
+              ? 'border-primary bg-orange-50 shadow-card-hover scale-[1.02]'
+              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
           }`}
         >
           <div className="text-2xl mb-1">📍</div>
@@ -191,26 +194,40 @@ export function RegisterForm({
         <p className="text-xs text-gray-500 mt-1">Necesitas al menos uno.</p>
       </div>
 
-      {contact && (
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-1 block">
-            {isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
-          </label>
-          <input
-            type="text"
-            inputMode={isContactEmail ? 'tel' : 'email'}
-            autoComplete={isContactEmail ? 'tel' : 'email'}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            value={altContact}
-            onChange={(e) => setAltContact(e.target.value)}
-            placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
-            disabled={isLoading}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-          />
+      {/*
+        M-1: grid-rows 0fr→1fr so the altContact field expands smoothly
+        instead of jumping the whole form down ~64px when it appears.
+        The wrapping <div> is always rendered; only the inner row's height
+        animates between 0fr (hidden) and 1fr (full content height).
+      */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+          contact ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+        aria-hidden={!contact}
+      >
+        <div className="overflow-hidden">
+          <div className="pb-1">
+            <label className="text-sm font-medium text-gray-700 mb-1 block">
+              {isContactEmail ? 'Teléfono (opcional)' : 'Email (opcional)'}
+            </label>
+            <input
+              type="text"
+              inputMode={isContactEmail ? 'tel' : 'email'}
+              autoComplete={isContactEmail ? 'tel' : 'email'}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={altContact}
+              onChange={(e) => setAltContact(e.target.value)}
+              placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
+              disabled={isLoading}
+              tabIndex={contact ? 0 : -1}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+            />
+          </div>
         </div>
-      )}
+      </div>
 
       <div>
         <label className="text-sm font-medium text-gray-700 mb-1 block">Ciudad</label>
@@ -245,9 +262,24 @@ export function RegisterForm({
         </div>
       </div>
 
-      {error && (
-        <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>
-      )}
+      {/*
+        M-2: the error banner is always in the DOM so its height is
+        reserved; opacity + max-height transition so it fades in/out
+        smoothly instead of pushing the consent checkboxes down.
+      */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+          error ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+        aria-live="polite"
+        role={error ? 'alert' : undefined}
+      >
+        <div className="overflow-hidden">
+          <p className="text-red-700 text-sm bg-red-50 rounded-lg px-3 py-2">
+            {error || ''}
+          </p>
+        </div>
+      </div>
 
       <div className="space-y-1 pt-2">
         <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer py-2.5 px-2 -mx-2 rounded hover:bg-gray-50 transition-colors min-h-[44px]">

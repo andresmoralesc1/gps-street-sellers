@@ -182,23 +182,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Email verification gate — vendors are public-facing entities that
-    // appear on the map and receive orders. A user squatting on a
-    // stranger's email can be removed only by the real owner once they
-    // verify. Until then, block the action.
+    // Email verification gate — DISABLED 2026-07-22 (feature-paused, NOT deleted).
+    // The original rationale was: vendors are public-facing entities that
+    // appear on the map and receive orders; a user squatting on a stranger's
+    // email can be removed only by the real owner once they verify.
+    // Until verification is re-enabled, new users are created with
+    // email_verified=true so this gate is a no-op for them. We still
+    // query the column to keep the code path hot in case we want to
+    // flip it back on — just don't block on the result.
+    //
+    // To re-enable: uncomment the `if (verified.rows[0]?.email_verified === false)`
+    // branch below.
+    // ──────────────────────────────────────────────────────────────────
     const verified = await pool.query(
       'SELECT email_verified FROM users WHERE id = $1',
       [auth.userId]
     )
-    if (verified.rows[0]?.email_verified === false) {
-      return NextResponse.json(
-        {
-          error: 'Verifica tu email antes de crear un puesto.',
-          requiresEmailVerification: true,
-        },
-        { status: 403 }
-      )
-    }
+    // if (verified.rows[0]?.email_verified === false) {
+    //   return NextResponse.json(
+    //     {
+    //       error: 'Verifica tu email antes de crear un puesto.',
+    //       requiresEmailVerification: true,
+    //     },
+    //     { status: 403 }
+    //   )
+    // }
 
     let body: unknown
     try {

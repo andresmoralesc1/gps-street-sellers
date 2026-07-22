@@ -6,7 +6,12 @@ import { COLOMBIA_CITIES } from '@/lib/core/constants'
 import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
-import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
+// Email verification temporarily disabled (2026-07-22) — feature-paused, NOT deleted.
+// To re-enable: uncomment the imports below + the `Email verification` block
+// after the COMMIT, AND flip the `email_verified` literal back to `false` in
+// the INSERT, AND restore the `emailVerified: false, requiresEmailVerification: true`
+// fields in the JSON response.
+// import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
 import {
   isEmail,
   isPhone,
@@ -162,9 +167,13 @@ export async function POST(req: NextRequest) {
     try {
       await client.query('BEGIN')
 
+      // Email verification feature-paused (2026-07-22) — new users are created
+      // with email_verified=true so they can use the app immediately.
+      // To re-enable: drop the literal `true` here and uncomment the
+      // `Email verification` block + the `sendVerificationEmail` import.
       const userResult = await client.query(
-        `INSERT INTO users (email, password_hash, name, phone, city_id, role)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO users (email, password_hash, name, phone, city_id, role, email_verified)
+         VALUES ($1, $2, $3, $4, $5, $6, true)
          ON CONFLICT DO NOTHING
          RETURNING id, email, name, role, phone, city_id, email_verified`,
         [cleanEmail, passwordHash, trimmedName, cleanPhone, cityId || null, roleValue]
@@ -229,30 +238,32 @@ export async function POST(req: NextRequest) {
       client.release()
     }
 
-    // ── Email verification — issue a token and queue a Brevo email.
-    // Best-effort: a failed send does not fail registration (the user
-    // can resend from the dashboard banner). Token is hashed before
-    // storage so a DB dump alone can't be used to verify arbitrary emails.
-    if (user.email) {
-      try {
-        const v = issueEmailVerificationToken(user.id)
-        await pool.query(
-          `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
-           VALUES ($1, $2, $3)`,
-          [user.id, v.tokenHash, v.expiresAt]
-        )
-        const result = await sendVerificationEmail({
-          to: user.email,
-          name: user.name,
-          token: v.token,
-        })
-        if (!result.ok) {
-          logger.error({ userId: user.id, error: result.error }, '[register] Verification email send failed:')
-        }
-      } catch (emailErr) {
-        logger.error(serializeErr(emailErr), '[register] Verification email error (non-fatal):')
-      }
-    }
+    // ── Email verification — DISABLED 2026-07-22 (feature-paused, NOT deleted).
+    // The token issuance + email send are kept commented below so we can
+    // re-enable the feature in one place. The DB column `email_verified` is
+    // forced true in the INSERT above, so new users skip verification.
+    // To re-enable:
+    //   1. Uncomment `import { issueEmailVerificationToken, sendVerificationEmail }`
+    //      at the top of this file.
+    //   2. Drop the literal `true` from the INSERT and uncomment this block:
+    //   ──────────────────────────────────────────────────────────────────
+    //   if (user.email) {
+    //     try {
+    //       const v = issueEmailVerificationToken(user.id)
+    //       await pool.query(
+    //         `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+    //          VALUES ($1, $2, $3)`,
+    //         [user.id, v.tokenHash, v.expiresAt]
+    //       )
+    //       const result = await sendVerificationEmail({
+    //         to: user.email, name: user.name, token: v.token,
+    //       })
+    //       if (!result.ok) logger.error({ userId: user.id, error: result.error }, '[register] Verification email send failed:')
+    //     } catch (emailErr) {
+    //       logger.error(serializeErr(emailErr), '[register] Verification email error (non-fatal):')
+    //     }
+    //   }
+    //   3. Flip `emailVerified: false, requiresEmailVerification: true` below.
 
     const tokenPayload = { userId: user.id, email: user.email, role: roleValue as 'buyer' | 'seller', tokenVersion: 1 }
     const token = signTokenSync(tokenPayload, '15m')
@@ -260,8 +271,11 @@ export async function POST(req: NextRequest) {
 
     // Token is set via httpOnly cookies only — never echo it in the body
     const response = NextResponse.json({
-      emailVerified: false,
-      requiresEmailVerification: true,
+      // Email verification feature-paused 2026-07-22 — new users are
+      // immediately verified. Keep the field name so the frontend keeps
+      // working; flip both back to `false` / `true` to re-enable.
+      emailVerified: true,
+      requiresEmailVerification: false,
       user: {
         id: user.id,
         email: user.email || '',

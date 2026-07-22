@@ -28,9 +28,9 @@ export async function PATCH(req: NextRequest, { params: paramsPromise }: { param
     }
     const profile = profileRes.rows[0]
 
-    const { status } = await req.json()
+    const { status: nextStatus } = await req.json()
 
-    if (!['pending', 'accepted', 'ready', 'completed', 'cancelled'].includes(status)) {
+    if (!['pending', 'accepted', 'ready', 'completed', 'cancelled'].includes(nextStatus)) {
       return NextResponse.json({ error: 'Estado inválido' }, { status: 400 })
     }
 
@@ -52,11 +52,52 @@ export async function PATCH(req: NextRequest, { params: paramsPromise }: { param
       return NextResponse.json({ error: 'Solo el vendedor puede cambiar el estado' }, { status: 403 })
     }
 
+    // State machine — vendor can move an order forward OR cancel at any
+    // non-terminal step. A vendor can NOT reach into a done order and flip
+    // it back, nor skip states (e.g. pending → ready without accepted).
+    //
+    // pending   → accepted | cancelled
+    // accepted  → ready    | cancelled
+    // ready     → completed| cancelled
+    // completed → ∅        (terminal)
+    // cancelled → ∅        (terminal)
+    const currentStatus = order.status
+    const allowedFrom: Record<string, string[]> = {
+      pending: ['accepted', 'cancelled'],
+      accepted: ['ready', 'cancelled'],
+      ready: ['completed', 'cancelled'],
+      completed: [],
+      cancelled: [],
+    }
+    if (!allowedFrom[currentStatus].includes(nextStatus)) {
+      return NextResponse.json(
+        {
+          error: `Transición inválida: ${currentStatus} → ${nextStatus}`,
+          allowed: allowedFrom[currentStatus],
+        },
+        { status: 409 }
+      )
+    }
+
+    // Atomic UPDATE with the current status in the WHERE clause — if the row
+    // was concurrently updated (race between two vendor tabs), rowCount = 0.
     const result = await pool.query(
-      'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
-      [status, params.id]
+      'UPDATE orders SET status = $1 WHERE id = $2 AND status = $3 RETURNING *',
+      [nextStatus, params.id, currentStatus]
     )
+    if (result.rowCount === 0) {
+      // Concurrent update won the race. Re-fetch and surface the real state.
+      const fresh = await pool.query('SELECT status FROM orders WHERE id = $1', [params.id])
+      return NextResponse.json(
+        {
+          error: 'Otro dispositivo cambió el estado de esta orden.',
+          currentStatus: fresh.rows[0]?.status ?? null,
+        },
+        { status: 409 }
+      )
+    }
     const updatedOrder = result.rows[0]
+    const status = nextStatus // shadow for the existing push-notify block below
 
     // Push notification to the buyer when the order status changes.
     // Buyer-facing messages only — cancellation/acceptance/ready/completed.

@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
+import { isSafePublicUrl } from '@/lib/safe-url'
 
 
 /**
@@ -43,9 +44,14 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-    if (!/^https:\/\//i.test(endpoint)) {
+    // SSRF guard (CRIT-12): a PushSubscription's `endpoint` should always be a
+    // legitimate push-service URL, but a malicious/buggy client can stuff any
+    // host into it (incl. loopback, RFC1918 LAN, 169.254.169.254 cloud
+    // metadata, metadata.google.internal). Reject anything that is not a
+    // public https URL before we persist or POST to it.
+    if (!isSafePublicUrl(endpoint)) {
       return NextResponse.json(
-        { error: 'endpoint debe ser https://' },
+        { error: 'Endpoint no permitido.' },
         { status: 400 }
       )
     }

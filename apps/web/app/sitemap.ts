@@ -71,7 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        WHERE is_active = true AND slug IS NOT NULL`
     )
     vendorPages = result.rows.map((row) => {
-      const esPath = `/vendor/${row.slug}`
+      const esPath = `/vendedor/${row.slug}`
       return {
         url: `${BASE}${esPath}`,
         lastModified: new Date(row.last_modified ?? Date.now()),

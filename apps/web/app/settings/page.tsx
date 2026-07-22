@@ -219,18 +219,27 @@ export default function SettingsPage() {
               </Button>
             </div>
 
-            {/* Ver perfil público del vendedor */}
+            {/* Ver perfil público del vendedor
+                Bug 2026-07-22: si vendorId está vacío (seller legacy o
+                fallo en la creación del vendor) el href `/vendor/` da 404.
+                Ahora: si no hay vendorId redirigimos al onboarding para que
+                cree su perfil. Rara vez se ve desde que el register
+                auto-crea el vendor (commit del fix). */}
             {user.role === 'seller' && (
               <Link
-                href={`/vendor/${vendorId || ''}`}
+                href={vendorId ? `/vendor/${vendorId}` : '/onboarding?redirectTo=/settings'}
                 className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                <span className="text-sm">Ver perfil público</span>
+                <span className="text-sm">
+                  {vendorId ? 'Ver perfil público' : 'Crear mi perfil de vendedor'}
+                </span>
                 <ChevronRight size={16} className="text-gray-400" />
               </Link>
             )}
 
-            {/* Editar perfil del negocio — solo sellers */}
+            {/* Editar perfil del negocio — solo sellers.
+                Funciona en ambos casos: si tienen vendor editan, si no
+                la página /profile/edit muestra su propio CTA (opción B). */}
             {user.role === 'seller' && (
               <Link
                 href="/profile/edit"

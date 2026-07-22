@@ -12,6 +12,7 @@ import { getClientIp } from '@/lib/trusted-ip'
 // the INSERT, AND restore the `emailVerified: false, requiresEmailVerification: true`
 // fields in the JSON response.
 // import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
+import { generateUniqueSlug } from '@/lib/vendor-slug'
 import {
   isEmail,
   isPhone,
@@ -157,6 +158,20 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12)
     const roleValue = role
 
+    // ── Seller requires a city for vendor auto-bootstrap ─────────────────
+    // The vendors table has a CHECK constraint requiring city_id NOT NULL
+    // AND in the set of valid Colombian cities (bogota, medellin, ...).
+    // Since 2026-07-22 we auto-create a vendors row inside the same
+    // register transaction, so a missing city would throw on commit and
+    // leave the user with role='seller' but no vendor — exactly the bug
+    // we are trying to fix. Force the seller to pick a city at signup.
+    if (roleValue === 'seller' && !cityId) {
+      return NextResponse.json(
+        { error: 'Selecciona una ciudad para tu perfil de vendedor' },
+        { status: 400 }
+      )
+    }
+
     // Wrap users + profiles insert in a transaction so a profile failure
     // rolls back the user row. Before this fix a profile INSERT failure left
     // a user with no profile, making logout a no-op (isTokenRevoked returns
@@ -204,16 +219,50 @@ export async function POST(req: NextRequest) {
       // Profile upsert: token_version is forced to 1 so the JWT we issue
       // matches profiles.token_version (otherwise isTokenRevoked would treat
       // the brand-new token as revoked on the very first request).
-      await client.query(
+      // RETURNING id so we can auto-create a vendors row when role='seller'
+      // (see seller auto-bootstrap block below).
+      const profileResult = await client.query(
         `INSERT INTO profiles (id, user_id, email, name, role, token_version)
          VALUES (gen_random_uuid(), $1, $2, $3, $4, 1)
          ON CONFLICT (user_id) DO UPDATE
            SET token_version = 1,
                email = EXCLUDED.email,
                name = EXCLUDED.name,
-               role = EXCLUDED.role`,
+               role = EXCLUDED.role
+         RETURNING id`,
         [user.id, user.email, user.name, roleValue]
       )
+      const profileId: string = profileResult.rows[0].id
+
+      // ── Seller auto-bootstrap (2026-07-22) — when a user registers with
+      // role='seller', we automatically create a vendors row inside the
+      // same transaction. Before this fix, the seller had to complete the
+      // /onboarding VendorFormSlide to create their vendor row. If they
+      // skipped onboarding (closed tab, navigated away, etc.) they ended
+      // up with user.role='seller' but an empty vendors table, which made
+      // /profile/edit show "No tienes perfil" and /vendor/${null} 404.
+      //
+      // We create the vendor with placeholder values that are easy to spot
+      // in the UI ("Mi negocio de {firstName}") so the seller knows they
+      // have to finish editing it from /profile/edit before going live.
+      //
+      // The slug uses the placeholder name + city, same algorithm as POST
+      // /api/vendors (generateUniqueSlug, now in @/lib/vendor-slug).
+      if (roleValue === 'seller') {
+        const firstName = trimmedName.split(' ')[0] || trimmedName || 'vendedor'
+        const placeholderName = `Mi negocio de ${firstName}`
+        const slug = await generateUniqueSlug(client, placeholderName, cityId || null)
+        await client.query(
+          `INSERT INTO vendors (
+            profile_id, name, slug, category, description,
+            city_id, latitude, longitude, station_type,
+            phone, is_active, is_verified, created_at
+          )
+          VALUES ($1, $2, $3, 'comida', '', $4, NULL, NULL, 'mobile', $5, false, false, NOW())
+          ON CONFLICT DO NOTHING`,
+          [profileId, placeholderName, slug, cityId || null, cleanPhone || null]
+        )
+      }
 
       // ── Ley 1581/2012 — record the consent inside the same tx so the
       // audit log never refers to a user that doesn't exist.

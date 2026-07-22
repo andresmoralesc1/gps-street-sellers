@@ -4,6 +4,7 @@ import { isOpenNow } from '@/lib/business-hours'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { parseVendorFilters, buildVendorWhereClause } from './filters'
+import { generateUniqueSlug } from '@/lib/vendor-slug'
 
 // Public: GET /api/vendors
 //
@@ -372,7 +373,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Slug generation ─────────────────────────────────────────────────
-    const slug = await generateUniqueSlug(name, cityId)
+    const slug = await generateUniqueSlug(pool, name, cityId)
 
     // ── Insert ──────────────────────────────────────────────────────────
     const insertSql = `
@@ -446,37 +447,5 @@ async function resolveViewerId(req: NextRequest): Promise<string | null> {
   }
 }
 
-/**
- * Generate a URL-safe slug from a vendor name. Collisions get a numeric suffix.
- *
- * Examples:
- *   "Arepas La Caleña" + city "cali" → "arepas-la-calena-cali"
- *   "Arepas La Caleña" (no city)     → "arepas-la-calena"
- *
- * If the base slug is taken, append -2, -3, ... until unique.
- */
-async function generateUniqueSlug(name: string, cityId: string | null): Promise<string> {
-  const slugify = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')  // strip diacritics
-      .replace(/[^a-z0-9\s-]/g, '')     // drop punctuation
-      .trim()
-      .replace(/\s+/g, '-')              // spaces → dashes
-      .replace(/-+/g, '-')               // collapse multiple dashes
-      .replace(/^-|-$/g, '')             // trim leading/trailing dashes
-      .slice(0, 60)                      // safety bound
-
-  const base = slugify(name) || 'puesto'
-  const withCity = cityId ? `${base}-${slugify(cityId)}` : base
-
-  // Try base, then -2, -3, ... up to -99.
-  for (let i = 1; i < 100; i++) {
-    const candidate = i === 1 ? withCity : `${withCity}-${i}`
-    const r = await pool.query('SELECT 1 FROM vendors WHERE slug = $1 LIMIT 1', [candidate])
-    if (r.rows.length === 0) return candidate
-  }
-  // Fallback to random suffix (should be unreachable for any realistic scale).
-  return `${withCity}-${Date.now().toString(36)}`
-}
+// generateUniqueSlug moved to @/lib/vendor-slug so the register flow can
+// reuse it without pulling in the whole /api/vendors route module.

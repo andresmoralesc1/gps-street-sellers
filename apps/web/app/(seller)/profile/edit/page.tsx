@@ -52,6 +52,11 @@ export default function EditProfilePage() {
     )
   }
 
+  // Red de seguridad (opción B del fix 2026-07-22): si el seller no tiene
+  // vendor todavía (cuenta legacy creada antes del auto-bootstrap o un fallo
+  // de transacción), le damos una acción en vez de una pared.
+  // Rara vez se dispara ahora que /api/auth/register crea el vendor
+  // automáticamente, pero cuesta poco mantenerla por si A se desactiva.
   if (!vendorId) {
     return (
       <div className="min-h-screen bg-background-cream">
@@ -67,9 +72,17 @@ export default function EditProfilePage() {
             <p className="text-sm text-gray-400 mb-6">
               Crea tu perfil para empezar a recibir pedidos
             </p>
-            <Link href="/dashboard">
-              <Button>Volver al dashboard</Button>
-            </Link>
+            <div className="flex flex-col gap-2">
+              {/* El seller rellena sus datos en /onboarding (que ya tiene
+                  VendorFormSlide con los campos completos). Al terminar lo
+                  manda al dashboard con la vendor row creada. */}
+              <Link href="/onboarding?redirectTo=/profile/edit">
+                <Button>Crear mi perfil de vendedor</Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button variant="ghost">Volver al dashboard</Button>
+              </Link>
+            </div>
           </Card>
         </div>
       </div>

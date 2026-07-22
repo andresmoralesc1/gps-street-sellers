@@ -33,19 +33,35 @@ function getPreviousKey(): Uint8Array | null {
 const secretKey = getSecretKey()
 const previousKey = getPreviousKey()
 
+// CRIT-14: pin issuer + audience so tokens minted by another app using the same
+// secret (or a stolen token replayed across environments) can't pass verification.
+// Must stay in sync with lib/auth.ts (issuer/audience literals) so middleware
+// and API routes agree on which tokens to accept.
+const JWT_ISSUER = 'barriotech.gps'
+const JWT_AUDIENCE = 'barriotech.gps.api'
+
 /**
  * Edge-safe token verification (used by middleware).
- * Returns null on any failure (invalid signature, expired, revoked).
+ * Returns null on any failure (invalid signature, wrong iss/aud, expired, revoked).
+ *
+ * NOTE: this is signature + iss/aud/exp only. The middleware path has no DB
+ * access; the per-profile revocation check happens in `requireAuth` (Node).
  */
 export async function verifyTokenEdge(token: string): Promise<TokenPayload | null> {
   if (!secretKey) return null
   try {
-    const { payload } = await jwtVerify(token, secretKey)
+    const { payload } = await jwtVerify(token, secretKey, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    })
     return payload as unknown as TokenPayload
   } catch {
     if (previousKey) {
       try {
-        const { payload } = await jwtVerify(token, previousKey)
+        const { payload } = await jwtVerify(token, previousKey, {
+          issuer: JWT_ISSUER,
+          audience: JWT_AUDIENCE,
+        })
         return payload as unknown as TokenPayload
       } catch {
         return null

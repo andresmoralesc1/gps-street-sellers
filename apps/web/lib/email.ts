@@ -206,7 +206,12 @@ export async function sendPasswordResetEmail(args: {
   name: string
   token: string
 }): Promise<{ ok: boolean; error?: string }> {
-  const link = `${getAppUrl()}/restablecer-contrasena?token=${encodeURIComponent(args.token)}`
+  // URL MUST match `apps/web/app/(auth)/reset-password/page.tsx` (the (auth)
+  // group is a Next.js layout group and doesn't appear in the URL — the path
+  // is `/reset-password`, NOT `/restablecer-contrasena`). The token is the
+  // SHA-256 plaintext (random 32 bytes base64url) — the API route hashes it
+  // on receipt and looks up by `token_hash`.
+  const link = `${getAppUrl()}/reset-password?token=${encodeURIComponent(args.token)}`
   const html = emailShell(
     'Restablece tu contraseña de BarrioTech',
     `

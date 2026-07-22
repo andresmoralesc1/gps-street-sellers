@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { hashToken } from '@/lib/email'
+import { checkRateLimitFromRequest } from '@/lib/rate-limit'
 
 /**
  * POST /api/auth/verify-email
@@ -25,6 +26,18 @@ import { hashToken } from '@/lib/email'
  */
 
 export async function POST(req: NextRequest) {
+  // Defense against DoS via connection-pool exhaustion: this endpoint runs
+  // BEGIN + SELECT FOR UPDATE + 2 UPDATEs + COMMIT for every request (5
+  // round-trips with a row lock). A flood of bogus tokens can saturate the
+  // pool even though the SHA-256'd token space is unguessable.
+  const rl = await checkRateLimitFromRequest(req, 'verify_email', 20, 15 * 60 * 1000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Intenta más tarde.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
+  }
+
   let body: { token?: string }
   try {
     body = await req.json()

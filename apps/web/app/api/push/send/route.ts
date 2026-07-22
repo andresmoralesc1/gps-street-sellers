@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { notify } from '@/lib/push'
+import { checkRateLimitFromRequest } from '@/lib/rate-limit'
 
 /**
  * POST /api/push/send — authenticated user-triggered push.
@@ -32,6 +33,18 @@ export async function POST(request: NextRequest) {
   if (auth instanceof NextResponse) return auth
 
   const userId = auth.userId
+
+  // 1b. Rate limit — each /push/send inserts a row into `notifications` AND
+  // fires a web-push HTTP request to FCM/Mozilla. Without a per-user cap, a
+  // buggy/script-kiddie client could fill both `notifications` and the push
+  // provider quota at line speed.
+  const rl = await checkRateLimitFromRequest(request, 'push_send', 30, 60 * 60 * 1000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
+  }
 
   // 2. Validate body
   let body: SendBody

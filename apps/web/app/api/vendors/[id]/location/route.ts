@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
 import pool from '@/lib/db'
 import { notify } from '@/lib/push'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/trusted-ip'
 
 
 // PUT /api/vendors/[id]/location — update vendor location (owner only)
@@ -14,6 +16,18 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth
     const userId = auth.userId
+
+    // Rate limit at the legacy [id]/location endpoint. The newer /me/location
+    // already has the same guard; without it here, a buggy mobile client could
+    // blow up `vendor_location_history` at ~6k rows/min/vendor (60/min × 60
+    // × 24 = 86k rows/day). Mirrors /me/location's "location_update" bucket.
+    const rl = await checkRateLimit(getClientIp(req), 'location_update_legacy', 30, 60 * 1000)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas actualizaciones. Espera un momento.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+      )
+    }
 
     const vendorId = params.id
 

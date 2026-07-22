@@ -70,9 +70,12 @@ export async function DELETE(request: NextRequest) {
       // Anonymize favorites: drop the rows (no business value without the user).
       await client.query(`DELETE FROM favorites WHERE buyer_id = $1`, [profileId])
       // Anonymize notifications: drop (they're personal to the user).
-      // notifications.user_id FKs to users.id, not profiles.id — pass userId directly.
+      // notifications.user_id FKs to profiles.id (NOT users.id — confirmed via
+      // \d public.notifications). The previous code passed `userId` here,
+      // which never matched any row → user notifications survived the DELETE
+      // and persisted PII forever — direct Ley 1581/2012 art. 9 violation.
       await client.query(`DELETE FROM notifications WHERE user_id = $1`, [
-        userId,
+        profileId,
       ])
     }
 

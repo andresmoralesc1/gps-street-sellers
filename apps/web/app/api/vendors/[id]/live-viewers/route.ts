@@ -16,6 +16,12 @@ import {
  * Tracking method: count vendor_views rows for this vendor in the last 60s.
  * Approximation; matches what DoorDash/Wolt do for "live" indicators.
  *
+ * NOTE: We COUNT(DISTINCT user_id) here, not user_ip. The INSERT path at
+ * /api/vendors/[id]/route.ts only writes `(vendor_id, user_id)` — user_ip is
+ * a nullable column that is rarely populated. Counting user_ip rows yielded
+ * "0 viewers" on every dashboard (user_ip was NULL). Counting user_id is the
+ * populated column and matches the actual logged-in user who opened the page.
+ *
  * Connection limits: see lib/streaming-limits.ts.
  */
 
@@ -71,7 +77,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       // Initial emit.
       try {
         const result = await pool.query(
-          `SELECT COUNT(DISTINCT user_ip) as viewers
+          `SELECT COUNT(DISTINCT user_id) as viewers
            FROM vendor_views
            WHERE vendor_id = $1 AND viewed_at > NOW() - INTERVAL '60 seconds'`,
           [vendorId]
@@ -84,7 +90,7 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
       const interval = setInterval(async () => {
         try {
           const result = await pool.query(
-            `SELECT COUNT(DISTINCT user_ip) as viewers
+            `SELECT COUNT(DISTINCT user_id) as viewers
              FROM vendor_views
              WHERE vendor_id = $1 AND viewed_at > NOW() - INTERVAL '60 seconds'`,
             [vendorId]

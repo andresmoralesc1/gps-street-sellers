@@ -56,7 +56,7 @@ export function BusinessDataSection({
       />
 
       <Input
-        label="Teléfono"
+        label="WhatsApp (teléfono)"
         type="tel"
         value={phone}
         onChange={(e) => onPhoneChange(e.target.value)}

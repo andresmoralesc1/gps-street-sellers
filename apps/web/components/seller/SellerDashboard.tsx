@@ -354,7 +354,7 @@ export function SellerDashboard({
           <ChecklistItem done={!!vendor.category && vendor.category !== 'otros'} label="Categoría" />
           <ChecklistItem done={!!vendor.photoUrl} label="Foto de perfil" />
           <ChecklistItem done={productCount > 0} label="Agregar productos" />
-          <ChecklistItem done={!!vendor.latitude} label="Compartir ubicación" />
+          <ChecklistItem done={!!vendor.latitude} label="Ubicación (mapa o GPS)" />
           <ChecklistItem done={!!vendor.phone} label="WhatsApp" />
         </div>
       </Card>

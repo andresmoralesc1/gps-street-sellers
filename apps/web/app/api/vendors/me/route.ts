@@ -178,6 +178,11 @@ export async function PATCH(req: NextRequest) {
       geoZoneLat: 'geo_zone_lat',
       geoZoneLng: 'geo_zone_lng',
       geoZoneRadiusM: 'geo_zone_radius_m',
+      // Lat/lng persisted when the seller places their pin in the manual
+      // location picker on /profile/edit. Distinct from `geo_zone_lat/lng`
+      // (battery mode anchor) — this is the vendor's own position.
+      latitude: 'latitude',
+      longitude: 'longitude',
     }
 
     const updates: string[] = []

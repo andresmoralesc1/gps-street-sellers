@@ -3,6 +3,11 @@
 import { useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
+// ManualLocationPicker (dashboard) is loaded by a dynamic import that may not
+// include the same Leaflet CSS bundle as the public map page. Importing it
+// here too is idempotent and prevents "tiles cut off / no controls visible"
+// when the seller lands on the dashboard without first visiting /map.
+import 'leaflet/dist/leaflet.css'
 
 interface Props {
   center: [number, number]

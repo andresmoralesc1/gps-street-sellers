@@ -32,6 +32,12 @@ export function useEditProfile() {
   const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')
   const [vehiclePhotoUrl, setVehiclePhotoUrl] = useState('')
 
+  // Location pin state. Owned here so the page can save it alongside the
+  // rest of the profile on "Guardar Cambios". Kept out of the manual
+  // picker's own state because we want one source of truth.
+  const [latitude, setLatitude] = useState<number | null>(null)
+  const [longitude, setLongitude] = useState<number | null>(null)
+
   const [geoMode, setGeoMode] = useState<'precise' | 'battery'>('precise')
   const [geoZoneRadiusM, setGeoZoneRadiusM] = useState<number>(500)
 
@@ -95,6 +101,14 @@ export function useEditProfile() {
           setPhotoUrl(vendorData.vendor.photoUrl || '')
           setVehicleType(vendorData.vendor.vehicleType ?? '')
           setVehiclePhotoUrl(vendorData.vendor.vehiclePhotoUrl || '')
+          // Hydrate the map pin from the vendor's stored coords. The
+          // LocationSection mirrors these into its own local state.
+          if (typeof vendorData.vendor.latitude === 'number') {
+            setLatitude(vendorData.vendor.latitude)
+          }
+          if (typeof vendorData.vendor.longitude === 'number') {
+            setLongitude(vendorData.vendor.longitude)
+          }
         }
       } catch {
         /* network error — fall through to loading=false */
@@ -150,6 +164,8 @@ export function useEditProfile() {
           vehiclePhotoUrl: vehiclePhotoUrl || null,
           geoMode,
           geoZoneRadiusM,
+          ...(latitude != null && { latitude }),
+          ...(longitude != null && { longitude }),
           ...(geoZoneLat !== undefined && { geoZoneLat }),
           ...(geoZoneLng !== undefined && { geoZoneLng }),
         }),
@@ -167,7 +183,9 @@ export function useEditProfile() {
     }
   }, [
     vendorId, name, description, category, phone, photoUrl,
-    vehicleType, vehiclePhotoUrl, geoMode, geoZoneRadiusM, router,
+    vehicleType, vehiclePhotoUrl,
+    latitude, longitude,
+    geoMode, geoZoneRadiusM, router,
   ])
 
   return {
@@ -182,6 +200,10 @@ export function useEditProfile() {
     photoUrl,
     vehicleType,
     vehiclePhotoUrl,
+    latitude,
+    longitude,
+    setLatitude,
+    setLongitude,
     geoMode,
     geoZoneRadiusM,
     setName,

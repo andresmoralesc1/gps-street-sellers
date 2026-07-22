@@ -9,6 +9,7 @@ import { useEditProfile } from '@/hooks/useEditProfile'
 import { ProfilePictureSection } from '@/components/seller/ProfilePictureSection'
 import { BusinessDataSection } from '@/components/seller/BusinessDataSection'
 import { VehicleSection } from '@/components/seller/VehicleSection'
+import { LocationSection } from '@/components/seller/LocationSection'
 import { GeoModeSection } from '@/components/seller/GeoModeSection'
 
 export default function EditProfilePage() {
@@ -25,6 +26,8 @@ export default function EditProfilePage() {
     photoUrl,
     vehicleType,
     vehiclePhotoUrl,
+    latitude,
+    longitude,
     geoMode,
     geoZoneRadiusM,
     setName,
@@ -34,6 +37,8 @@ export default function EditProfilePage() {
     setPhotoUrl,
     setVehicleType,
     setVehiclePhotoUrl,
+    setLatitude,
+    setLongitude,
     setGeoMode,
     setGeoZoneRadiusM,
     handleSave,
@@ -99,6 +104,15 @@ export default function EditProfilePage() {
           vehiclePhotoUrl={vehiclePhotoUrl}
           onVehicleTypeChange={setVehicleType}
           onVehiclePhotoChange={setVehiclePhotoUrl}
+        />
+
+        <LocationSection
+          initialLat={latitude}
+          initialLng={longitude}
+          onLocationChange={(lat, lng) => {
+            setLatitude(lat)
+            setLongitude(lng)
+          }}
         />
 
         <GeoModeSection

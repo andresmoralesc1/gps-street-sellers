@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
+import { isUuid } from '@/lib/core/utils/slug'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
@@ -142,6 +143,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const vendorId = searchParams.get('vendorId')
+
+    // vendor_id is a UUID column — reject malformed values early instead of
+    // letting the DB throw "invalid input syntax for type uuid" (which would
+    // return a 500). Empty/missing vendorId returns the global list.
+    if (vendorId !== null && vendorId !== '' && !isUuid(vendorId)) {
+      return NextResponse.json({ error: 'vendorId debe ser un UUID válido' }, { status: 400 })
+    }
 
     let query = 'SELECT * FROM reviews WHERE 1=1'
     const params: unknown[] = []

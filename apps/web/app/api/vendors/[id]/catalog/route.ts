@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
+import { isUuid } from '@/lib/core/utils/slug'
 import pool from '@/lib/db'
 
 /**
@@ -12,6 +13,12 @@ import pool from '@/lib/db'
 export async function GET(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
   const vendorId = params.id
+
+  // vendors.id is a UUID column — reject malformed values before the DB
+  // throws "invalid input syntax for type uuid" (which would 500).
+  if (!isUuid(vendorId)) {
+    return NextResponse.json({ error: 'Vendor no encontrado' }, { status: 404 })
+  }
 
   try {
     const vendorRes = await pool.query(

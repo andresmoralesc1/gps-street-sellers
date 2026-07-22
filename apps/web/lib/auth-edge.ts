@@ -15,21 +15,30 @@ export interface TokenPayload {
   tokenVersion: number
 }
 
-const JWT_SECRET_RAW = process.env.JWT_SECRET
-if (!JWT_SECRET_RAW) {
-  throw new Error('JWT_SECRET environment variable is required. Generate one with: openssl rand -base64 64')
+// Don't throw at module load — the middleware runs in edge runtime where
+// process.env may not be fully populated at import time. We instead lazily
+// resolve the secret on first use, and surface a clear error if it's missing
+// (so misconfigured deploys fail fast instead of returning 0-byte responses).
+function getSecretKey(): Uint8Array | null {
+  const raw = process.env.JWT_SECRET
+  if (!raw) return null
+  return new TextEncoder().encode(raw)
 }
-const JWT_SECRET: string = JWT_SECRET_RAW
-const JWT_SECRET_PREVIOUS: string = process.env.JWT_SECRET_PREVIOUS || ''
+function getPreviousKey(): Uint8Array | null {
+  const raw = process.env.JWT_SECRET_PREVIOUS || ''
+  if (!raw) return null
+  return new TextEncoder().encode(raw)
+}
 
-const secretKey = new TextEncoder().encode(JWT_SECRET)
-const previousKey = JWT_SECRET_PREVIOUS ? new TextEncoder().encode(JWT_SECRET_PREVIOUS) : null
+const secretKey = getSecretKey()
+const previousKey = getPreviousKey()
 
 /**
  * Edge-safe token verification (used by middleware).
  * Returns null on any failure (invalid signature, expired, revoked).
  */
 export async function verifyTokenEdge(token: string): Promise<TokenPayload | null> {
+  if (!secretKey) return null
   try {
     const { payload } = await jwtVerify(token, secretKey)
     return payload as unknown as TokenPayload

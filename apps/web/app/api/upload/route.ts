@@ -11,7 +11,43 @@ import { randomUUID } from 'crypto'
 const STORAGE_DIR = path.join(process.cwd(), 'storage')
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+// CRIT-24 fix (2026-07-22): the MIME type comes from the client
+// (`Content-Type` part of the multipart upload). Trusting it allowed storing
+// `<script>` HTML as `image/jpeg` and serving it from /storage/* (the file
+// content was correct HTML even though Caddy served it with the attacker-
+// chosen MIME). The headers X-Content-Type-Options: nosniff + Caddy's
+// Content-Type header happened to prevent browser execution today, but
+// any future change to MIME handling (e.g. serving by extension) would
+// turn this into stored XSS. Validate content instead.
+//
+// We sniff the first 12 bytes of the uploaded buffer and require it to
+// match the magic bytes of one of the whitelisted image formats. SVG is
+// intentionally excluded (it can carry inline <script>); users can host
+// vector art via Supabase or a future CDN.
+type MagicCheck = (buf: Buffer) => boolean
+
+const MAGIC_BYTES: Record<string, MagicCheck> = {
+  'image/jpeg': (buf) => buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff,
+  'image/png':  (buf) =>
+    buf.length >= 8 &&
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a,
+  'image/gif':  (buf) =>
+    buf.length >= 4 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38,
+  // WebP: "RIFF" at 0, size (4 bytes) at 4, "WEBP" at 8.
+  'image/webp': (buf) =>
+    buf.length >= 12 &&
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50,
+}
+
+const ALLOWED_TYPES = Object.keys(MAGIC_BYTES) // ['image/jpeg','image/png','image/gif','image/webp']
+
+function matchesMagic(buf: Buffer, mime: string): boolean {
+  const check = MAGIC_BYTES[mime]
+  if (!check) return false
+  return check(buf)
+}
 
 export async function POST(req: NextRequest) {
   // Rate limit BEFORE auth — uploads are expensive (disk I/O).
@@ -56,6 +92,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 })
     }
 
+    // CRIT-24: read the bytes BEFORE writing to disk. The MIME check above
+    // trusts the client's `Content-Type`, which an attacker controls. We
+    // verify magic bytes against the same whitelist before persisting — if
+    // the content isn't actually an image, we 400 and never write anything.
+    const buffer = Buffer.from(await file.arrayBuffer())
+    if (!matchesMagic(buffer, file.type)) {
+      logger.warn(
+        { mime: file.type, name: file.name, size: file.size, ip },
+        '[upload] Rejected: client-declared MIME does not match content magic bytes'
+      )
+      return NextResponse.json(
+        { error: 'El contenido del archivo no coincide con el tipo declarado' },
+        { status: 400 }
+      )
+    }
+
     // Whitelist the extension from a known-safe set so the client can't
     // rename 'evil.html' to 'evil.jpg' to bypass the MIME check.
     const ALLOWED_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'] as const
@@ -70,7 +122,6 @@ export async function POST(req: NextRequest) {
       await mkdir(subdir, { recursive: true })
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
     await writeFile(filepath, buffer)
 
     const url = `/storage/${folder}/${filename}`

@@ -55,21 +55,27 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          # schema.full.sql is the consolidated output of `pg_dump --schema-only`
-          # against a DB that has schema.sql + all migrations applied. It contains
-          # every table, function, trigger, view, index, and CHECK constraint the
-          # app needs, in one file.
+          # schema.full.sql is the consolidated output of `pg_dump
+          # --no-owner --no-privileges` against the local sandbox DB
+          # (which has schema.sql + all migrations applied + seed data
+          # for cities from migration 010). It contains every table,
+          # function, trigger, view, index, CHECK constraint, and the
+          # categories seed (via COPY) that the app needs.
           #
-          # schema.sql is the original (incomplete) base; migrations/*.sql are
-          # deltas that assume schema.sql ran first. Some of them reference tables
-          # that schema.sql never created (product_photos, cities, orders, ...).
-          # schema.full.sql is regenerated when migrations change:
-          #   psql ... -f schema.sql
-          #   for m in migrations/*.sql; do psql ... -f "$m" || true; done
-          #   pg_dump --schema-only --no-owner --no-privileges > schema.full.sql
+          # The earlier attempt — applying schema.sql + `scripts/migrate.js`
+          # in the workflow — failed because some migrations (004_fk_indexes)
+          # reference tables (vendor_views) that only exist after the first
+          # full schema+seed initialization. The pg_dump approach captures
+          # the post-init state directly, so it's stable.
+          #
+          # Regenerate when migrations change:
+          #   PGPASSWORD=postgres pg_dump --no-owner --no-privileges \\
+          #     -h localhost -U postgres gps_street_sellers > schema.full.sql
           echo "Applying schema.full.sql"
           PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f schema.full.sql
-
+          echo "Seed counts:"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -tAc \
+            "SELECT 'categories=' || count(*) FROM categories; SELECT 'cities=' || count(*) FROM cities;"
       - name: Provision .env for tests
         # Tests share a single env-loader that hardcodes `apps/web/.env`.
         # We materialize the committed `.env.test` into that path so the

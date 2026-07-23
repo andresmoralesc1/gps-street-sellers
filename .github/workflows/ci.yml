@@ -75,8 +75,10 @@ jobs:
       - name: Start Next.js server (background)
         run: |
           cd apps/web
-          # `npm start` blocks; run it in background and capture logs.
-          npm start > /tmp/next.log 2>&1 &
+          # `next start` defaults to :3000 — pin :3005 so curl-localhost
+          # matches TEST_BASE_URL=http://localhost:3005 below. Captures
+          # logs so the wait-loop can dump them on timeout.
+          PORT=3005 npm start > /tmp/next.log 2>&1 &
           echo $! > /tmp/next.pid
 
       - name: Wait for server ready

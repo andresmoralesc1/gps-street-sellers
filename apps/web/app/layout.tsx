@@ -5,6 +5,7 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { OnboardingTour } from '@/components/OnboardingTour'
 import { ToastContainer } from '@/components/ui/Toast'
 import { UmamiAnalytics } from '@/components/UmamiAnalytics'
+import { SellerOnboardingBanner } from '@/components/SellerOnboardingBanner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -128,6 +129,7 @@ export default function RootLayout({
       <body className="bg-background-cream min-h-screen flex flex-col">
         <Providers>
           <SiteHeader />
+          <SellerOnboardingBanner />
           <main className="flex-1">{children}</main>
           <SiteFooter />
           <OnboardingTour />

@@ -5,6 +5,7 @@ import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
 import { isOpenNow } from '@/lib/business-hours'
 import { parseJsonBody } from '@/lib/parse-json'
+import { normalizePhone } from '@/lib/auth-helpers'
 
 
 type RouteContext = {
@@ -212,7 +213,25 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       updates.push(`photo_url = $${params.length}`)
     }
     if (phone !== undefined) {
-      params.push(phone)
+      // CRIT-B1 (2026-07-23): sanitize phone on write so vendors.phone is
+      // always digit-only in the DB. Call sites (wa.me, SMS, CSV exports)
+      // all .replace(/\D/g, '') at read time, but storing dirty data
+      // breaks integrations that don't sanitize (future SMS providers,
+      // exports to Mercader CRM, etc.). If the user submits an invalid
+      // phone we reject with 400 instead of silently dropping the update —
+      // better than storing NULL and surprising them.
+      if (typeof phone !== 'string') {
+        return NextResponse.json({ error: 'phone debe ser una cadena' }, { status: 400 })
+      }
+      const trimmed = phone.trim()
+      const cleanPhone = trimmed === '' ? null : normalizePhone(trimmed)
+      if (trimmed !== '' && !cleanPhone) {
+        return NextResponse.json(
+          { error: 'Ingresa un número de teléfono colombiano válido (10 dígitos)' },
+          { status: 400 }
+        )
+      }
+      params.push(cleanPhone)
       updates.push(`phone = $${params.length}`)
     }
     if (is_active !== undefined) {

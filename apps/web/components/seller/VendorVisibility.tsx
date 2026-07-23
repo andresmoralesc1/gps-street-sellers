@@ -123,6 +123,12 @@ export function VendorVisibility({
   // Migrated from ActiveToggle: when isActive, poll geolocation. Polling
   // interval and payload depend on geoMode (see component header).
   const watcherRef = useRef<number | null>(null)
+  // GPS-003: cache the last sent coordinates so heartbeat can repeat them.
+  // `location_updated_at` has to keep moving even when the seller doesn't
+  // cross the zone boundary, but we still want to avoid writing the same
+  // lat/lng repeatedly (history bloat, server-side UPDATE churn). For
+  // `precise` mode this just tracks the most recent tick.
+  const lastSentCoordsRef = useRef<{ lat: number; lng: number } | null>(null)
   // In battery mode, the zone center moves as the vendor moves. We track
   // the live center here so the "are we still inside?" check uses the
   // latest anchor, not the one originally saved in /profile/edit.
@@ -147,28 +153,63 @@ export function VendorVisibility({
     if (!isActive || !navigator.geolocation) return
 
     let inFlight = false
+    let cancelled = false
 
+    // GPS-006: surface non-OK responses instead of swallowing them. 429/401/500
+    // are resolved fetches (no throw), so without this the timestamp silently
+    // ages out and the buyer stops seeing the seller as active. Retry with
+    // exponential backoff up to 3 attempts.
     const pushLocation = async (lat: number, lng: number) => {
-      // Fire-and-forget. Errors are intentionally swallowed: this is a
-      // background best-effort pinger, the toggle above already wrote the
-      // visible state.
-      try {
-        await fetch(
-          `/api/vendors/${encodeURIComponent(vendorId)}/location`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              isActive: true,
-              latitude: lat,
-              longitude: lng,
-            }),
+      let attempt = 0
+      const maxAttempts = 3
+      while (attempt < maxAttempts && !cancelled) {
+        attempt++
+        try {
+          const res = await fetch(
+            `/api/vendors/${encodeURIComponent(vendorId)}/location`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                isActive: true,
+                latitude: lat,
+                longitude: lng,
+              }),
+            }
+          )
+          if (res.ok) return
+          // 429 → honor Retry-After, don't busy-loop.
+          if (res.status === 429) {
+            const retryAfter = Number(res.headers.get('Retry-After')) || 5
+            await new Promise((r) => setTimeout(r, Math.min(retryAfter, 30) * 1000))
+            continue
           }
-        )
-      } catch {
-        /* best-effort */
+          // Other errors: bail and let the next tick try again.
+          return
+        } catch {
+          // Network error: backoff 2^attempt seconds, capped at 20s.
+          if (attempt < maxAttempts) {
+            await new Promise((r) => setTimeout(r, Math.min(2 ** attempt, 20) * 1000))
+            continue
+          }
+          return
+        }
       }
+    }
+
+    // GPS-003: in battery mode, when the vendor stays inside the saved zone,
+    // we still need to refresh `location_updated_at` so the buyer's "Activo"
+    // badge doesn't expire. But we deliberately don't push new coordinates
+    // or write history. To keep the API contract simple (the existing PUT
+    // endpoint rewrites the zone anchor and history when isActive=true is
+    // already set), we send the EXISTING cached coords one final time, marked
+    // as a heartbeat. The server treats it as a no-op for coords but bumps
+    // `location_updated_at` (see /api/vendors/[id]/location).
+    const sendHeartbeat = async () => {
+      const cached = lastSentCoordsRef.current
+      if (!cached) return
+      await pushLocation(cached.lat, cached.lng)
     }
 
     // In battery mode, when the vendor crosses the zone boundary we re-anchor
@@ -189,14 +230,16 @@ export function VendorVisibility({
     }
 
     const tick = () => {
-      if (inFlight) return
+      if (inFlight || cancelled) return
       inFlight = true
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
+          if (cancelled) return
           inFlight = false
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
           setUserLocation({ lat, lng })
+          lastSentCoordsRef.current = { lat, lng }
 
           if (geoMode === 'precise') {
             await pushLocation(lat, lng)
@@ -223,9 +266,13 @@ export function VendorVisibility({
             await reanchorZone(lat, lng)
             zoneCenterRef.current = { lat, lng }
           }
-          // Inside the zone: do nothing. The next tick (60s) will check
-          // again. We deliberately skip the network round-trip entirely
-          // here — no isActive ping, nothing.
+          // Inside the zone: still send a heartbeat so location_updated_at
+          // stays fresh (GPS-003). We do NOT update the zone anchor — that
+          // would defeat the whole point of "battery mode" (don't write on
+          // every tick when the seller hasn't moved materially).
+          else {
+            await sendHeartbeat()
+          }
         },
         () => {
           inFlight = false
@@ -246,11 +293,31 @@ export function VendorVisibility({
     const intervalMs = geoMode === 'battery' ? 60_000 : 10_000
     watcherRef.current = window.setInterval(tick, intervalMs)
 
+    // GPS-001: when the tab returns from background (mobile Safari/Chrome
+    // suspends setInterval after a few seconds of hidden), kick a tick
+    // immediately so the timestamp doesn't ride out the clock. Also runs
+    // on `pageshow` for cases where the BFCache restored the page without
+    // firing visibilitychange.
+    const onVisibility = () => {
+      if (typeof document === 'undefined') return
+      if (document.visibilityState === 'visible' && !cancelled) {
+        tick()
+      }
+    }
+    const onPageShow = () => {
+      if (!cancelled) tick()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pageshow', onPageShow)
+
     return () => {
+      cancelled = true
       if (watcherRef.current) {
         window.clearInterval(watcherRef.current)
         watcherRef.current = null
       }
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pageshow', onPageShow)
     }
   }, [isActive, vendorId, setUserLocation, geoMode, geoZoneRadiusM, geoZoneLat, geoZoneLng])
 

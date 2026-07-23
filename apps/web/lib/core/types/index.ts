@@ -48,6 +48,9 @@ export interface Vendor {
   latitude?: number
   longitude?: number
   location_updated_at?: string
+  // GPS-005: explicit freshness flag so the map and the detail card can
+  // render differentiated UI ("online recently" vs "toggle on but stale").
+  locationFresh?: boolean
 }
 
 export interface VendorLocation {

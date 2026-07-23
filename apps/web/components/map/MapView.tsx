@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Frown, LogIn, X } from 'lucide-react'
@@ -30,6 +30,13 @@ import { getCategoryInfo, COLOMBIA_CITIES } from '@/lib/core/constants'
 import type { Vendor, VendorCategory } from '@/lib/core/types'
 import type { LatLng } from 'leaflet'
 import L from 'leaflet'
+// MAP-005: subscribe to incremental GPS updates via the SSE endpoint that
+// already emits vendor location changes every 5s. Without this the only
+// path into React state was a 30s polling cycle that rebuilt the entire
+// `activeVendors` array and forced every marker to call `setIcon` (visible
+// flicker on slow devices). The poll remains as a fallback for when the
+// SSE is disconnected — see the useEffect below.
+import { useVendorStream } from '@/lib/hooks/useVendorStream'
 
 // Fix para íconos de Leaflet en Next.js
 import '@/lib/leaflet-icon-fix'
@@ -43,7 +50,15 @@ export function MapView() {
   const setSelectedCity = useStore((s) => s.setSelectedCity)
   const [center, setCenter] = useState<[number, number]>(selectedCity.center)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  // MapView is built around ~10 pieces of state (selectedCity, filters, etc.).
+  // The hooks below are grouped together to keep the data-flow of the page
+  // legible at a glance.
   const [activeVendors, setActiveVendors] = useState<Vendor[]>([])
+  // MAP-001: cache of `L.DivIcon` instances keyed by visual props. Persists
+  // across re-renders so the same `<Marker>` keeps receiving the same icon
+  // reference and react-leaflet skips `setIcon()` (which was destroying the
+  // marker DOM every 30s poll and causing the visible flicker).
+  const iconCacheRef = useRef<Map<string, L.DivIcon>>(new Map())
   const [cardHeightPx, setCardHeightPx] = useState(0)
   const cardRef = useRef<HTMLDivElement | null>(null)
   const filters = useStore((s) => s.filters)
@@ -121,13 +136,44 @@ export function MapView() {
       const res = await fetch(`/api/vendors?${params.toString()}`)
       const data = await res.json()
       if (data.vendors) {
-        setActiveVendors(data.vendors)
+        // MAP-005: merge instead of replace. The 30s poll is now a fallback
+        // for when SSE is offline. Merge keeps the existing entries and
+        // only adds/updates what changed — markers that haven't moved
+        // don't get re-evaluated. Also dedupes by id so a vendor appearing
+        // twice (SSE + polling race) keeps one entry.
+        setActiveVendors((prev) => {
+          const byId = new Map<string, Vendor>()
+          for (const v of prev) byId.set(v.id, v)
+          for (const v of data.vendors as Vendor[]) byId.set(v.id, v)
+          return Array.from(byId.values())
+        })
       }
     } catch (err) {
       console.error('Failed to fetch vendors:', err)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCity.id, hasRealGeolocation])
+
+  // MAP-005: when SSE delivers a per-vendor update, patch the existing entry
+  // in place — do NOT rebuild the array. This is the key fix for the
+  // marker flicker: only one marker's `position` prop changes per update
+  // instead of every icon reference in 50+ markers.
+  useVendorStream(selectedCity?.id ?? null, (u) => {
+    setActiveVendors((prev) => {
+      const idx = prev.findIndex((v) => v.id === u.vendorId)
+      if (idx === -1) return prev
+      const next = prev.slice()
+      next[idx] = {
+        ...next[idx],
+        latitude: u.latitude,
+        longitude: u.longitude,
+        isActive: u.isActive,
+        location_updated_at: u.locationUpdatedAt,
+        locationFresh: true,
+      }
+      return next
+    })
+  })
   useEffect(() => {
     if (!userLocation) {
       // Try to get real location
@@ -201,24 +247,31 @@ export function MapView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [selectedVendor])
 
-  const filteredVendors = activeVendors.filter((v) => {
-    if (filters.category && v.category !== filters.category) return false
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase()
-      if (!v.name?.toLowerCase().includes(query)) return false
-    }
-    // null = sin límite de distancia (Todos)
-    if (
-      filters.maxDistanceMeters !== null &&
-      userLocation &&
-      v.latitude &&
-      v.longitude
-    ) {
-      const dist = calculateDistance(userLocation.lat, userLocation.lng, v.latitude, v.longitude)
-      if (dist > filters.maxDistanceMeters) return false
-    }
-    return true
-  })
+  // MAP-006: memoize filteredVendors. The filter runs on every render (which
+  // happens every 30s on the polling cycle). Without useMemo each filter
+  // builds a fresh array → `MapFitBounds` and every <Marker> receive new
+  // props → Leaflet skips its diff and triggers DOM work. With useMemo the
+  // array reference is stable when inputs haven't changed.
+  const filteredVendors = useMemo(() => {
+    return activeVendors.filter((v) => {
+      if (filters.category && v.category !== filters.category) return false
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase()
+        if (!v.name?.toLowerCase().includes(query)) return false
+      }
+      // null = sin límite de distancia (Todos)
+      if (
+        filters.maxDistanceMeters !== null &&
+        userLocation &&
+        v.latitude &&
+        v.longitude
+      ) {
+        const dist = calculateDistance(userLocation.lat, userLocation.lng, v.latitude, v.longitude)
+        if (dist > filters.maxDistanceMeters) return false
+      }
+      return true
+    })
+  }, [activeVendors, filters.category, filters.searchQuery, filters.maxDistanceMeters, userLocation])
 
   const getVendorDistance = useCallback(
     (vendor: Vendor) => {
@@ -401,33 +454,47 @@ export function MapView() {
             // reads as "this is the one you tapped" without competing
             // with the category color of the icon.
             const isSelected = selectedVendor?.id === vendor.id
-            const pulseRing = isSelected
-              ? '<div class="vendor-marker-pulse" style="position:absolute;inset:-6px;border-radius:50%;background:rgba(194,65,12,0.35);animation:marker-pulse-ring 1.4s ease-in-out infinite;pointer-events:none;"></div>'
-              : ''
-            const markerIcon = new L.DivIcon({
-              html: `<div style="
-                background: ${catColor};
-                width: 42px;
-                height: 42px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                border: ${ringWidth}px solid ${ringColor};
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3)${sponsored ? ', 0 0 12px rgba(245, 158, 11, 0.6)' : ''};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 20px;
-                position: relative;
-              "><span style="transform: rotate(45deg);">${emoji}</span>${
-                sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
-              }${
-                showClosedBadge ? '<span style="position:absolute;bottom:-4px;left:-4px;background:#6B7280;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);color:white;font-weight:600;">⏻</span>' : ''
-              }${pulseRing}</div>`,
-              className: 'vendor-category-marker',
-              iconSize: [42, 42],
-              iconAnchor: [21, 42],
-              popupAnchor: [0, -44],
-            })
+
+            // MAP-001 / MAP-002 fix: react-leaflet compares `icon` by reference,
+            // so building a fresh `L.DivIcon` per render makes `setIcon()` fire
+            // every poll (30s default) and the marker DOM re-renders, causing
+            // visible flicker. Cache the icon by a stable key derived from
+            // visual properties — when those don't change, we reuse the same
+            // instance and Leaflet skips `setIcon`. The cache ref persists
+            // across renders, and stale entries are evicted if the selected
+            // vendor changes (selected state is part of the key).
+            const iconKey = `${cat}|${sponsored ? 1 : 0}|${showClosedBadge ? 1 : 0}|${isSelected ? 1 : 0}`
+            let markerIcon = iconCacheRef.current.get(iconKey)
+            if (!markerIcon) {
+              const pulseRing = isSelected
+                ? '<div class="vendor-marker-pulse" style="position:absolute;inset:-6px;border-radius:50%;background:rgba(194,65,12,0.35);animation:marker-pulse-ring 1.4s ease-in-out infinite;pointer-events:none;"></div>'
+                : ''
+              markerIcon = new L.DivIcon({
+                html: `<div style="
+                  background: ${catColor};
+                  width: 42px;
+                  height: 42px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  border: ${ringWidth}px solid ${ringColor};
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.3)${sponsored ? ', 0 0 12px rgba(245, 158, 11, 0.6)' : ''};
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 20px;
+                  position: relative;
+                "><span style="transform: rotate(45deg);">${emoji}</span>${
+                  sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
+                }${
+                  showClosedBadge ? '<span style="position:absolute;bottom:-4px;left:-4px;background:#6B7280;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);color:white;font-weight:600;">⏻</span>' : ''
+                }${pulseRing}</div>`,
+                className: 'vendor-category-marker',
+                iconSize: [42, 42],
+                iconAnchor: [21, 42],
+                popupAnchor: [0, -44],
+              })
+              iconCacheRef.current.set(iconKey, markerIcon)
+            }
 
             return (
               <Marker

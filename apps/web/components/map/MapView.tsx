@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { VendorCard } from './VendorCard'
 import { LocationAdjustControl } from './LocationAdjustControl'
 import { DraggableUserMarker } from './DraggableUserMarker'
+import { MobileBottomSheet } from '@/components/ui/MobileBottomSheet'
 import {
   MapUpdater,
   MapClickCloser,
@@ -527,11 +528,60 @@ export function MapView() {
       </MapContainer>
 
       {selectedVendor && (
+        <>
+        {/* Desktop layout (>=640px): floating card with X to close.
+            On mobile this is hidden — the MobileBottomSheet below takes
+            over with a drag handle and swipe-down-to-dismiss. */}
         <div
           ref={cardRef}
-          className="absolute left-3 right-3 sm:left-4 sm:right-4 bottom-[88px] sm:bottom-4 z-[1000] max-w-md mx-auto animate-slide-up"
+          className="hidden sm:block absolute left-3 right-3 sm:left-4 sm:right-4 bottom-[88px] sm:bottom-4 z-[1000] max-w-md mx-auto animate-slide-up"
           role="dialog"
           aria-label={`Detalles de ${selectedVendor.name}`}
+        >
+          <VendorCard
+            vendor={selectedVendor}
+            distance={getVendorDistance(selectedVendor)}
+            onClose={() => setSelectedVendor(null)}
+            onViewDetails={
+              isLoggedIn
+                ? () => {
+                    window.location.href = `/vendor/${selectedVendor.slug || selectedVendor.id}`
+                  }
+                : undefined
+            }
+          />
+          {!isLoggedIn && (
+            <div className="mt-2 bg-white rounded-xl shadow-card border border-stone-200 px-4 py-3 text-center">
+              <p className="text-sm font-semibold text-stone-900 mb-2">
+                Inicia sesión para ver detalles
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-600 transition-colors"
+                >
+                  Ingresar
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200 transition-colors"
+                >
+                  Registrarme
+              </Link>
+            </div>
+          </div>
+        )}
+        </div>
+
+        {/* Mobile layout (<640px): draggable bottom sheet with handle.
+            Same VendorCard content as the desktop variant — both consume
+            the same selectedVendor state so a tap on a marker is mirrored
+            in both views (only one is visible at a time thanks to the
+            `sm:hidden` / `hidden sm:block` class split above). */}
+        <MobileBottomSheet
+          open={!!selectedVendor}
+          onClose={() => setSelectedVendor(null)}
+          ariaLabel={`Detalles de ${selectedVendor.name}`}
         >
           <VendorCard
             vendor={selectedVendor}
@@ -566,7 +616,8 @@ export function MapView() {
               </div>
             </div>
           )}
-        </div>
+        </MobileBottomSheet>
+        </>
       )}
 
       {/* Location-adjust control — floating action buttons to manually

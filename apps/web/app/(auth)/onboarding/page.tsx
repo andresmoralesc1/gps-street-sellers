@@ -67,9 +67,35 @@ export default function OnboardingPage() {
 
   // Buyer onboarding (original)
   const slide = BUYER_SLIDES[step]
+  const totalSteps = BUYER_SLIDES.length
+  const progressPct = ((step + 1) / totalSteps) * 100
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
+      {/* Progress bar (top, fixed position). The `role="progressbar"` plus
+          aria-valuenow/min/max makes this readable by VoiceOver / TalkBack
+          and turns the visual fill into semantic progress info. The fill
+          uses a CSS transform rather than a width change so the GPU can
+          composite it without triggering layout on every step. */}
+      <div className="fixed top-0 left-0 right-0 z-50 px-6 pt-3 pointer-events-none">
+        <div
+          className="w-full max-w-sm mx-auto h-1.5 bg-stone-200 rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={step + 1}
+          aria-valuemin={1}
+          aria-valuemax={totalSteps}
+          aria-label={`Paso ${step + 1} de ${totalSteps}`}
+        >
+          <div
+            className="h-full bg-primary rounded-full transition-transform duration-300 ease-out origin-left"
+            style={{ transform: `scaleX(${progressPct / 100})` }}
+          />
+        </div>
+        <div className="text-center text-xs text-stone-500 mt-2 font-medium">
+          {step + 1} de {totalSteps}
+        </div>
+      </div>
+
       <div className="text-center max-w-sm mx-auto flex-1 flex flex-col items-center justify-center py-12">
         <div className="w-full h-64 rounded-2xl overflow-hidden mb-8 shadow-lg">
           <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" />
@@ -78,7 +104,9 @@ export default function OnboardingPage() {
         <p className="text-gray-500 text-lg">{slide.description}</p>
       </div>
 
-      {/* Dots */}
+      {/* Dots — kept as a visual second cue in addition to the progress
+          bar. Some users (colorblind, low-vision) find the bar too thin
+          to notice; the dots remain as a backup. */}
       <div className="flex gap-2 mb-8">
         {BUYER_SLIDES.map((_, i) => (
           <div

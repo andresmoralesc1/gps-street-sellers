@@ -134,6 +134,17 @@
     *::before,
     *::after {
       transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+    }
+    /* Inline-style animations (e.g. the bottom-sheet drag handle transform
+       and the marker-pulse ring set via `style="animation: ..."` in
+       DivIcon HTML) are not catchable by the class selectors above.
+       Kill the keyframes at the source. */
+    .location-pulse-ring,
+    [style*="locationPulse"] {
+      animation: none !important;
+      transform: none !important;
     }
   }
 

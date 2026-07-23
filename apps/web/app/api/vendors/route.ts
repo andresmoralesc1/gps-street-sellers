@@ -69,36 +69,59 @@ export async function GET(req: NextRequest) {
     // Phone is public — vendors publish their number so buyers can reach them.
     // No redaction by viewer: if a vendor wants to stay unreachable, they leave
     // `phone` NULL at registration.
-    const vendors = result.rows.map((v) => ({
-      id: v.id,
-      name: v.name,
-      slug: v.slug,
-      description: v.description,
-      category: v.category,
-      categoryLabel: v.category_label,
-      latitude: v.latitude,
-      longitude: v.longitude,
-      isActive: v.is_active,
-      isVerified: v.is_verified,
-      rating: v.rating,
-      reviewCount: v.review_count,
-      photoUrl: v.photo_url,
-      phone: v.phone || null,
-      cityId: v.city_id,
-      vehicleType: v.vehicle_type,
-      vehiclePhotoUrl: v.vehicle_photo_url,
-      businessHoursEnabled: v.business_hours_enabled,
-      businessHoursStart: v.business_hours_start,
-      businessHoursEnd: v.business_hours_end,
-      businessDays: v.business_days,
-      stationType: v.station_type,
-      isSponsored: v.is_sponsored,
-      isOpenNow: isOpenNow(
-        v.business_hours_start,
-        v.business_hours_end,
-        v.business_days,
-      ),
-    }))
+    //
+    // GPS-005: `isActive` in the response is now derived from BOTH the DB
+    // flag AND the recency of the last GPS ping. The DB column tells us
+    // "the seller has the toggle on"; the timestamp tells us "they've
+    // actually been seen in the last 5 minutes". Returning `true` when
+    // one is fresh but the other is stale was the source of the "ghost
+    // vendors" bug reported by buyers in the SSE sprint review.
+    //
+    // `locationFresh` is also exposed so the client can render a separate
+    // "online recently" badge distinct from the manual toggle state (e.g.
+    // a vendor who toggled off 6 minutes ago should not show up as
+    // isActive=true just because their cached coords are still in the
+    // DB row).
+    const FIVE_MINUTES_MS = 5 * 60 * 1000
+    const now = Date.now()
+    const vendors = result.rows.map((v) => {
+      const lastPingMs = v.location_updated_at
+        ? new Date(v.location_updated_at).getTime()
+        : 0
+      const locationFresh = lastPingMs > 0 && now - lastPingMs < FIVE_MINUTES_MS
+      return {
+        id: v.id,
+        name: v.name,
+        slug: v.slug,
+        description: v.description,
+        category: v.category,
+        categoryLabel: v.category_label,
+        latitude: v.latitude,
+        longitude: v.longitude,
+        isActive: Boolean(v.is_active) && locationFresh,
+        locationFresh,
+        locationUpdatedAt: v.location_updated_at,
+        isVerified: v.is_verified,
+        rating: v.rating,
+        reviewCount: v.review_count,
+        photoUrl: v.photo_url,
+        phone: v.phone || null,
+        cityId: v.city_id,
+        vehicleType: v.vehicle_type,
+        vehiclePhotoUrl: v.vehicle_photo_url,
+        businessHoursEnabled: v.business_hours_enabled,
+        businessHoursStart: v.business_hours_start,
+        businessHoursEnd: v.business_hours_end,
+        businessDays: v.business_days,
+        stationType: v.station_type,
+        isSponsored: v.is_sponsored,
+        isOpenNow: isOpenNow(
+          v.business_hours_start,
+          v.business_hours_end,
+          v.business_days,
+        ),
+      }
+    })
 
     // Total count: same WHERE clause (already built above), no LIMIT/OFFSET.
   // Reusing buildVendorWhereClause means the count can never drift from the

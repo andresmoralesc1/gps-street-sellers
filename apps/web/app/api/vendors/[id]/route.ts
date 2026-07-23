@@ -104,6 +104,17 @@ export async function GET(req: NextRequest, context: RouteContext) {
     // Return vendor in camelCase to match /api/vendors (consistency).
     // products and reviews stay snake_case here; the client already maps them
     // to its own Product/Review types on the way in (see VendorDetailClient.tsx).
+    //
+    // GPS-005: `isActive` derives from BOTH the toggle flag AND the recency
+    // of the last GPS ping (see also /api/vendors/route.ts). Mirrored here
+    // so the vendor detail page matches what the map shows — otherwise a
+    // buyer could open a vendor card and see "Activo" while their map
+    // marker is hidden, and vice versa.
+    const FIVE_MINUTES_MS = 5 * 60 * 1000
+    const lastPingMs = vendorResult.rows[0]?.location_updated_at
+      ? new Date(vendorResult.rows[0].location_updated_at).getTime()
+      : 0
+    const locationFresh = lastPingMs > 0 && Date.now() - lastPingMs < FIVE_MINUTES_MS
     const vendorRow = vendorResult.rows[0]
     const camelVendor = {
       id: vendorRow.id,
@@ -117,7 +128,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
       vehicleType: vendorRow.vehicle_type,
       vehiclePhotoUrl: vendorRow.vehicle_photo_url,
       stationType: vendorRow.station_type,
-      isActive: vendorRow.is_active,
+      isActive: (vendorRow.is_active ?? false) && locationFresh,
+      locationFresh,
       isVerified: vendorRow.is_verified || false,
       businessHours: {
         enabled: vendorRow.business_hours_enabled || false,

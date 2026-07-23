@@ -61,7 +61,17 @@ export function buildVendorWhereClause(filters: VendorFilters, startAt = 1): Whe
     i++
   }
   if (filters.active === 'true') {
+    // GPS-004: "Activo" now means BOTH `is_active = true` AND a fresh GPS
+    // ping (location_updated_at within the last 5 minutes). Without this
+    // filter the public listing kept returning vendors whose mobile app had
+    // been backgrounded for hours — they were "active in DB" but actually
+    // unreachable. The 5-min threshold matches the rule documented in the
+    // project context (vendors appear "Activo" only when timestamp <300s).
+    // We use `NOW() - INTERVAL '5 minutes'` rather than a Redis/cache TTL
+    // because PostgreSQL is the source of truth here; the freshness window
+    // is enforced on every read, not just at write time.
     w.push(`AND v.is_active = true`)
+    w.push(`AND v.location_updated_at >= NOW() - INTERVAL '5 minutes'`)
   }
   if (filters.withLocation) {
     w.push(`AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL`)

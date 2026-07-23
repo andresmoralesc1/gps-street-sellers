@@ -31,8 +31,8 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       JWT_SECRET: ci-test-secret-not-real-do-not-use-in-production
-      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BElZ2tExamplePublicKeyDummyValueForCIOnly1234567890
-      VAPID_PRIVATE_KEY: ExampleVapidPrivateKeyDummyValueForCIOnlyDoNotUse12345
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BKurq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s
+      VAPID_PRIVATE_KEY: zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc0
       ADMIN_EMAIL: admin@test.local
       NEXT_TELEMETRY_DISABLED: 1
       TEST_BASE_URL: http://localhost:3005
@@ -55,6 +55,12 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
+          # schema.sql = base tables (users, vendors, products, ...).
+          # Migrations are DELTAS — they assume schema.sql ran first.
+          # Without schema.sql the DB is empty and POST /api/auth/register
+          # returns 500 "relation does not exist" → CI red.
+          echo "Applying schema.sql"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f schema.sql
           PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f migrations/000_create_migrations_table.sql
           # Apply other migrations (idempotent — guarded with IF NOT EXISTS where possible)
           for m in migrations/*.sql; do

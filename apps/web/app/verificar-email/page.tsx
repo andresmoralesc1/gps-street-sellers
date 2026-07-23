@@ -125,6 +125,15 @@ function VerifyEmailContent() {
               value={resendEmail || user?.email || ''}
               onChange={(e) => setResendEmail(e.target.value)}
               required
+              // Explicit autoComplete prevents browsers from guessing (and
+              // from password managers that have a stored password for a
+              // different site from injecting into the wrong field).
+              // Also adds `inputMode="email"` so mobile keyboards show the
+              // email-optimized layout. Spec: WHATWG HTML living standard
+              // — `autoComplete` for email is the token "email".
+              autoComplete="email"
+              inputMode="email"
+              name="email"
               placeholder="tu@email.com"
               className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />

@@ -172,7 +172,7 @@ export function RegisterForm({
           onChange={(e) => setFullName(e.target.value)}
           placeholder="Juan Pérez"
           disabled={isLoading}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+          className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
         />
       </div>
 
@@ -189,7 +189,7 @@ export function RegisterForm({
           onChange={(e) => setContact(e.target.value)}
           placeholder="tu@email.com o 300 123 4567"
           disabled={isLoading}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+          className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
         />
         <p className="text-xs text-gray-500 mt-1">Necesitas al menos uno.</p>
       </div>
@@ -223,7 +223,7 @@ export function RegisterForm({
               placeholder={isContactEmail ? '300 123 4567' : 'tu@email.com'}
               disabled={isLoading}
               tabIndex={contact ? 0 : -1}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
             />
           </div>
         </div>
@@ -249,13 +249,13 @@ export function RegisterForm({
             placeholder="Mínimo 8 caracteres"
             disabled={isLoading}
             autoComplete="new-password"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
+            className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-12"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>

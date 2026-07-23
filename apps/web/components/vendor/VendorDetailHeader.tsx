@@ -42,7 +42,7 @@ export function VendorDetailHeader({
       <button
         type="button"
         onClick={onBack}
-        className="p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
+        className="min-w-[44px] min-h-[44px] p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors flex items-center justify-center"
         aria-label="Volver"
       >
         <ChevronLeft size={20} aria-hidden="true" />
@@ -51,7 +51,7 @@ export function VendorDetailHeader({
       <button
         type="button"
         onClick={onToggleFavorite}
-        className="ml-auto p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
+        className="ml-auto min-w-[44px] min-h-[44px] p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors flex items-center justify-center"
         aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
         aria-pressed={isFavorite}
       >
@@ -68,7 +68,7 @@ export function VendorDetailHeader({
       <button
         type="button"
         onClick={onOpenCart}
-        className="relative p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors"
+        className="relative min-w-[44px] min-h-[44px] p-2 rounded-full hover:bg-stone-100 active:bg-stone-200 transition-colors flex items-center justify-center"
         aria-label={`Abrir carrito${cartItemCount > 0 ? `, ${cartItemCount} ${cartItemCount === 1 ? 'producto' : 'productos'}` : ''}`}
       >
         <ShoppingCart

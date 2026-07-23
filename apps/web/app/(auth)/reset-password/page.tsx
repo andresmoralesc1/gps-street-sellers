@@ -116,17 +116,17 @@ function ResetPasswordContent() {
                 placeholder="Mínimo 8 caracteres"
                 disabled={isLoading}
                 autoComplete="new-password"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-10"
+                className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 pr-12"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
@@ -151,7 +151,7 @@ function ResetPasswordContent() {
 
           <Link
             href="/login"
-            className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-primary-700"
+            className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-primary-700 min-h-[44px]"
           >
             <ArrowLeft size={14} />
             Volver a iniciar sesión

@@ -126,14 +126,14 @@ function VerifyEmailContent() {
               onChange={(e) => setResendEmail(e.target.value)}
               required
               placeholder="tu@email.com"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <p className="text-xs text-gray-500 mt-1">
               Si te registraste, te enviamos un email con un enlace. Revisa
               también la carpeta de spam.
             </p>
           </div>
-          <Button type="submit" disabled={sending} className="w-full">
+          <Button type="submit" disabled={sending} className="w-full" size="lg">
             {sending ? 'Enviando…' : 'Reenviar email de verificación'}
           </Button>
           {resendStatus && (
@@ -149,7 +149,7 @@ function VerifyEmailContent() {
       )}
 
       <div className="text-center mt-6 pt-4 border-t border-gray-100">
-        <Link href="/" className="text-sm text-primary-700 hover:underline">
+        <Link href="/" className="text-sm text-primary-700 hover:underline inline-flex items-center min-h-[44px] px-2">
           Volver al inicio
         </Link>
       </div>

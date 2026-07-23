@@ -22,6 +22,7 @@ import {
   LeafletTouchTargetOverride,
   MapPanToVendor,
   MapRecenter,
+  MapFitBounds,
 } from './MapHelpers'
 import { useStore } from '@/store/useStore'
 import { calculateDistance } from '@/lib/core/utils/geo'
@@ -51,6 +52,11 @@ export function MapView() {
   const _hasHydrated = useStore((s) => s._hasHydrated)
   const isLoggedIn = _hasHydrated && !!user
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(false)
+  // True only when the user grants the browser's geolocation prompt. When
+  // permission is denied / unavailable we fall back to the city center so the
+  // map always has something to display — but in that case MapFitBounds can
+  // still kick in to auto-frame vendors that are far from the city center.
+  const [hasRealGeolocation, setHasRealGeolocation] = useState(false)
 
   // ─── Location-adjust mode ──────────────────────────────────────────
   // `isAdjusting`: when true, the user-location marker becomes draggable
@@ -103,12 +109,16 @@ export function MapView() {
 
   const fetchActiveVendors = useCallback(async () => {
     try {
-      const cityId = selectedCity.id
-      // We fetch ALL vendors with location (active or not) and let the map
-      // render a "Cerrado" badge for those whose business hours say we're
-      // closed right now. Filtering `is_active=true` server-side would leave
-      // the map empty outside business hours.
-      const res = await fetch(`/api/vendors?withLocation=true&cityId=${encodeURIComponent(cityId)}`)
+      // Without real GPS we can't tell which city the user is actually in, so
+      // fetch ALL vendors with a known location and let the map + fitBounds
+      // figure out what to show. Filtering by selectedCity here would leave
+      // the map empty whenever the default city differs from where sellers
+      // actually are. The user can still narrow via the city picker.
+      const params = new URLSearchParams({ withLocation: 'true' })
+      if (hasRealGeolocation && selectedCity) {
+        params.set('cityId', selectedCity.id)
+      }
+      const res = await fetch(`/api/vendors?${params.toString()}`)
       const data = await res.json()
       if (data.vendors) {
         setActiveVendors(data.vendors)
@@ -116,14 +126,15 @@ export function MapView() {
     } catch (err) {
       console.error('Failed to fetch vendors:', err)
     }
-  }, [selectedCity.id])
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCity.id, hasRealGeolocation])
   useEffect(() => {
     if (!userLocation) {
       // Try to get real location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            setHasRealGeolocation(true)
             useStore.getState().setUserLocation({
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
@@ -316,6 +327,14 @@ export function MapView() {
         )}
 
         <MapUpdater center={{ lat: center[0], lng: center[1] } as LatLng} />
+        {/* M-003: auto-fitBounds to visible vendors. Skipped only when the user
+            has granted real geolocation (their location is already centered).
+            When geolocation is denied/unavailable we still want vendors to be
+            visible even if they're in another city — the fallback to city center
+            would otherwise leave the user staring at empty tiles. */}
+        {!hasRealGeolocation && (
+          <MapFitBounds vendors={filteredVendors} />
+        )}
         <MapClickCloser
           onMapClick={() => {
             // In adjust mode the click is consumed by DraggableUserMarker
@@ -443,7 +462,7 @@ export function MapView() {
       {selectedVendor && (
         <div
           ref={cardRef}
-          className="absolute left-3 right-3 sm:left-4 sm:right-4 bottom-[72px] sm:bottom-4 z-[1000] max-w-md mx-auto animate-slide-up"
+          className="absolute left-3 right-3 sm:left-4 sm:right-4 bottom-[88px] sm:bottom-4 z-[1000] max-w-md mx-auto animate-slide-up"
           role="dialog"
           aria-label={`Detalles de ${selectedVendor.name}`}
         >

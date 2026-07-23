@@ -177,7 +177,7 @@ function ProductCard({ product, compact, onAddToCart, user, router, extraPhotos 
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:text-primary-800 transition-colors"
+            className="mt-2 inline-flex items-center gap-1 min-h-[44px] px-2 text-sm font-medium text-primary-700 hover:text-primary-800 transition-colors rounded"
           >
             <span>{expanded ? 'Ver menos' : 'Ver más'}</span>
             <ChevronDown

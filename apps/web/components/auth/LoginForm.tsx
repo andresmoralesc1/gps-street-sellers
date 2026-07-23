@@ -94,7 +94,7 @@ export function LoginForm({ isLoading, error, setError, setIsLoading }: Props) {
           onChange={(e) => setIdentifier(e.target.value)}
           placeholder="tu@email.com o 300 123 4567"
           disabled={isLoading}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+          className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
         />
       </div>
       <div>
@@ -102,7 +102,7 @@ export function LoginForm({ isLoading, error, setError, setIsLoading }: Props) {
           <label className="text-sm font-medium text-gray-700">Contraseña</label>
           <Link
             href="/forgot-password"
-            className="text-sm text-primary-700 hover:text-primary-800 hover:underline font-medium px-2 py-1.5 -mx-2 rounded min-h-[36px] inline-flex items-center"
+            className="text-sm text-primary-700 hover:text-primary-800 hover:underline font-medium px-2 py-2.5 -mx-2 rounded min-h-[44px] inline-flex items-center"
           >
             ¿Olvidaste tu contraseña?
           </Link>
@@ -121,7 +121,7 @@ export function LoginForm({ isLoading, error, setError, setIsLoading }: Props) {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>

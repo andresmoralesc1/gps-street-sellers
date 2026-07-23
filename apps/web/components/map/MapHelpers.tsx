@@ -10,7 +10,7 @@
  * would just add import boilerplate without making any one of them easier to
  * read.
  */
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import type { LatLng } from 'leaflet'
@@ -97,6 +97,35 @@ export function MapPanToVendor({
       easeLinearity: 0.25,
     })
   }, [map, vendor, bottomOffsetPx])
+  return null
+}
+
+// M-003: auto-fitBounds when vendors are visible but no userLocation is set.
+// Without this, opening /map in a new city shows a single tile at zoom 15 with
+// vendors potentially 10+ km away. fitBounds({maxZoom:15}) gives the user a
+// "see all sellers at once" view the moment data loads. Skipped if the user
+// already panned the map (we can't detect that easily — so we only fire on
+// first render via the `hasFit` ref).
+export function MapFitBounds({ vendors }: { vendors: Vendor[] }) {
+  const map = useMap()
+  const hasFit = useRef(false)
+  useEffect(() => {
+    if (hasFit.current) return
+    const valid = vendors.filter(
+      (v) => typeof v.latitude === 'number' && typeof v.longitude === 'number'
+    )
+    if (valid.length === 0) return
+    if (valid.length === 1) {
+      // Single vendor: just center on it.
+      map.setView([valid[0].latitude as number, valid[0].longitude as number], 15, { animate: true })
+    } else {
+      const bounds = L.latLngBounds(
+        valid.map((v) => [v.latitude as number, v.longitude as number])
+      )
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: true })
+    }
+    hasFit.current = true
+  }, [map, vendors])
   return null
 }
 

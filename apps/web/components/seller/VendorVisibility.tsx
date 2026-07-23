@@ -285,13 +285,13 @@ export function VendorVisibility({
               aria-label={isActive ? 'Estoy abierto — ocultar' : 'Estoy cerrado — mostrar'}
               onClick={toggleActive}
               disabled={saving}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isActive ? 'bg-green-500' : 'bg-gray-300'
+              className={`relative inline-flex min-h-[44px] min-w-[44px] h-11 w-20 items-center rounded-full transition-colors ${
+                isActive ? 'bg-green-500' : 'bg-stone-400'
               } disabled:opacity-50`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  isActive ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform motion-reduce:transition-none ${
+                  isActive ? 'translate-x-10' : 'translate-x-1.5'
                 }`}
               />
             </button>
@@ -308,7 +308,7 @@ export function VendorVisibility({
               onClick={() => setType('fixed')}
               disabled={saving}
               aria-pressed={stationType === 'fixed'}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium border transition-colors ${
+              className={`flex items-center justify-center gap-1.5 min-h-[44px] py-3 px-3 rounded-lg text-sm font-medium border transition-colors ${
                 stationType === 'fixed'
                   ? 'bg-primary text-white border-primary'
                   : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
@@ -322,7 +322,7 @@ export function VendorVisibility({
               onClick={() => setType('mobile')}
               disabled={saving}
               aria-pressed={stationType === 'mobile'}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium border transition-colors ${
+              className={`flex items-center justify-center gap-1.5 min-h-[44px] py-3 px-3 rounded-lg text-sm font-medium border transition-colors ${
                 stationType === 'mobile'
                   ? 'bg-primary text-white border-primary'
                   : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'

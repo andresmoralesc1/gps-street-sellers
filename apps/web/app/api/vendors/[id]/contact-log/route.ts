@@ -92,6 +92,3 @@ export async function POST(
     return new NextResponse(null, { status: 204 })
   }
 }
-
-// Exported for unit-tests to keep in sync with VendorContactActions.tsx.
-export const __ALLOWED__ = ALLOWED

@@ -52,23 +52,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const vendor = vendorResult.rows[0]
     const vendorId: string = vendor.id
 
-    // Determine if caller is the owner — phone is only visible to the owner
-    // and to buyers with an active order/favorite (out of scope here; conservative
-    // default: hide from everyone except owner).
-    let isOwner = false
-    try {
-      const token = getTokenFromRequest(req)
-      if (token) {
-        const decoded = await verifyToken(token)
-        if (decoded) {
-          const ownerCheck = await pool.query(
-            'SELECT 1 FROM profiles WHERE id = $1 AND user_id = $2',
-            [vendor.profile_id, decoded.userId]
-          )
-          isOwner = ownerCheck.rows.length > 0
-        }
-      }
-    } catch {}
+    // Phone is always public. BarrioTech's model is that vendors publish their
+    // contact info so buyers can reach them — contact-info redaction was
+    // over-engineering without a written privacy analysis. If a vendor
+    // doesn't want to be reached, they leave `phone` NULL at registration.
 
     // Fetch products
     const productsResult = await pool.query(
@@ -124,7 +111,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       category: vendorRow.category,
       categoryLabel: vendorRow.category_label,
       description: vendorRow.description,
-      phone: isOwner ? vendorRow.phone : null,
+      phone: vendorRow.phone || null,
       photoUrl: vendorRow.photo_url,
       vehicleType: vendorRow.vehicle_type,
       vehiclePhotoUrl: vendorRow.vehicle_photo_url,

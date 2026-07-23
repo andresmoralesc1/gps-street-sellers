@@ -2,9 +2,11 @@
 
 import { clsx } from 'clsx'
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { VendorContactActions } from '@/components/vendor/VendorContactActions'
 import {
   Apple,
   UtensilsCrossed,
@@ -175,6 +177,14 @@ export function VendorCard({ vendor, compact, distance, onClose, onViewDetails, 
           <p className="text-gray-600 mt-2 text-sm line-clamp-2">
             {vendor.description}
           </p>
+
+          {/* Contact CTAs (tel / WhatsApp / directions). Always shown in the
+              bottom-sheet so a buyer can reach the vendor without leaving the
+              map. The component itself guards each button on `phone` and
+              lat/lng so vendors without a number just hide the row. */}
+          <div className="mt-3">
+            <VendorContactActions vendor={vendor} />
+          </div>
 
           <div className="flex gap-2 mt-3">
             {onViewDetails && (

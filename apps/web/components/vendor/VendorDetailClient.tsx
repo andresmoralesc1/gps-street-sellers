@@ -82,6 +82,9 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
 
   // Adapt vendor to component's expected shape (some fields are
   // pre-parsed in the hook, some are still raw strings from the API).
+  // M-001 fix: phone + latitude + longitude must reach `VendorContactActions`
+  // so the contact CTAs render. Earlier omission made the API return phone
+  // for free but the UI never saw it.
   const adaptedVendor: Vendor = {
     id: vendor.id,
     userId: '',
@@ -96,6 +99,9 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
     createdAt: vendor.createdAt,
     vehicleType: vendor.vehicleType,
     vehiclePhotoUrl: vendor.vehiclePhotoUrl,
+    phone: vendor.phone,
+    latitude: vendor.latitude,
+    longitude: vendor.longitude,
   }
 
   return (

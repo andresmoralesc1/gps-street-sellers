@@ -16,7 +16,8 @@ const MapView = dynamic(
   { ssr: false, loading: () => <div className="flex-1 bg-gray-200 animate-pulse rounded-xl" /> }
 )
 
-// Transform API vendor to match Vendor type with lat/lng directly
+// Transform API vendor to match Vendor type. Must keep `phone` so the
+// bottom-sheet rendered inside MapView can show the contact CTAs (M-002).
 function transformVendor(apiVendor: any): Vendor {
   return {
     id: apiVendor.id,
@@ -31,6 +32,7 @@ function transformVendor(apiVendor: any): Vendor {
     createdAt: apiVendor.created_at,
     latitude: apiVendor.latitude,
     longitude: apiVendor.longitude,
+    phone: apiVendor.phone || null,
   }
 }
 

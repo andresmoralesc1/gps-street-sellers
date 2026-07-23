@@ -66,41 +66,39 @@ export async function GET(req: NextRequest) {
       targetUrl: a.target_url,
     }))
 
-    // Strip phone unless viewer is owner (phone leak fix)
-    const viewerId = (await resolveViewerId(req)) || null
-    const vendors = result.rows.map((v) => {
-      const isOwner = viewerId && v.profile_id === viewerId
-      return {
-        id: v.id,
-        name: v.name,
-        slug: v.slug,
-        description: v.description,
-        category: v.category,
-        categoryLabel: v.category_label,
-        latitude: v.latitude,
-        longitude: v.longitude,
-        isActive: v.is_active,
-        isVerified: v.is_verified,
-        rating: v.rating,
-        reviewCount: v.review_count,
-        photoUrl: v.photo_url,
-        cityId: v.city_id,
-        vehicleType: v.vehicle_type,
-        vehiclePhotoUrl: v.vehicle_photo_url,
-        businessHoursEnabled: v.business_hours_enabled,
-        businessHoursStart: v.business_hours_start,
-        businessHoursEnd: v.business_hours_end,
-        businessDays: v.business_days,
-        stationType: v.station_type,
-        isSponsored: v.is_sponsored,
-        isOpenNow: isOpenNow(
-          v.business_hours_start,
-          v.business_hours_end,
-          v.business_days,
-        ),
-        ...(isOwner ? { phone: v.phone } : {}),
-      }
-    })
+    // Phone is public — vendors publish their number so buyers can reach them.
+    // No redaction by viewer: if a vendor wants to stay unreachable, they leave
+    // `phone` NULL at registration.
+    const vendors = result.rows.map((v) => ({
+      id: v.id,
+      name: v.name,
+      slug: v.slug,
+      description: v.description,
+      category: v.category,
+      categoryLabel: v.category_label,
+      latitude: v.latitude,
+      longitude: v.longitude,
+      isActive: v.is_active,
+      isVerified: v.is_verified,
+      rating: v.rating,
+      reviewCount: v.review_count,
+      photoUrl: v.photo_url,
+      phone: v.phone || null,
+      cityId: v.city_id,
+      vehicleType: v.vehicle_type,
+      vehiclePhotoUrl: v.vehicle_photo_url,
+      businessHoursEnabled: v.business_hours_enabled,
+      businessHoursStart: v.business_hours_start,
+      businessHoursEnd: v.business_hours_end,
+      businessDays: v.business_days,
+      stationType: v.station_type,
+      isSponsored: v.is_sponsored,
+      isOpenNow: isOpenNow(
+        v.business_hours_start,
+        v.business_hours_end,
+        v.business_days,
+      ),
+    }))
 
     // Total count: same WHERE clause (already built above), no LIMIT/OFFSET.
   // Reusing buildVendorWhereClause means the count can never drift from the
@@ -124,7 +122,7 @@ export async function GET(req: NextRequest) {
       },
       {
         // Public listing is cheap to cache; CDNs/edge can serve 60s + SWR 5min.
-        // Phone leak was fixed by the per-field check in the GET above.
+        // Phone is public on this endpoint (same as /api/vendors/[id]).
         headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=300' },
       }
     )

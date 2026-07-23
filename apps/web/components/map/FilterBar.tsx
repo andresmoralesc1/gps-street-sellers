@@ -25,6 +25,11 @@ const CategoryIconMap: Record<VendorCategory, typeof Apple> = {
   otros: Package,
 }
 
+// M-004 fix: 44px is the Apple HIG / WCAG 2.5.5 minimum tap target. The old
+// 36px fell below the threshold and made chips hard to hit with the thumb on
+// mobile. Used everywhere a clickable filter chip is rendered.
+const CHIP_TAP = 'min-h-[44px]'
+
 // null = "Todos" (sin límite de distancia). Número = metros máximos.
 const DISTANCES: { label: string; value: number | null }[] = [
   { label: 'Todos', value: null },
@@ -73,7 +78,7 @@ export function FilterBar() {
           <button
             onClick={() => setFilters({ category: null })}
             className={clsx(
-              'shrink-0 snap-start px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 min-h-[36px]',
+              `shrink-0 snap-start px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${CHIP_TAP}`,
               filters.category === null
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -88,7 +93,7 @@ export function FilterBar() {
                 key={cat.id}
                 onClick={() => setFilters({ category: cat.id as VendorCategory })}
                 className={clsx(
-                  'shrink-0 snap-start px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 min-h-[36px]',
+                  `shrink-0 snap-start px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${CHIP_TAP}`,
                   filters.category === cat.id
                     ? 'text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -113,7 +118,7 @@ export function FilterBar() {
               key={dist.value ?? 'all'}
               onClick={() => setFilters({ maxDistanceMeters: dist.value })}
               className={clsx(
-                'shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 min-h-[36px]',
+                `shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${CHIP_TAP}`,
                 filters.maxDistanceMeters === dist.value
                   ? 'bg-secondary text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -127,7 +132,7 @@ export function FilterBar() {
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="ml-auto shrink-0 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1.5 min-h-[36px]"
+            className={`ml-auto shrink-0 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1.5 ${CHIP_TAP}`}
           >
             <X size={14} />
             Limpiar filtros

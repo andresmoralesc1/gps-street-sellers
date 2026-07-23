@@ -31,15 +31,21 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       JWT_SECRET: ci-test-secret-not-real-do-not-use-in-production
-      NODE_ENV: test
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BKurq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s
+      VAPID_PRIVATE_KEY: zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc0
+      ADMIN_EMAIL: admin@test.local
+      NEXT_TELEMETRY_DISABLED: 1
+      TEST_BASE_URL: http://localhost:3005
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
+      - name: Verify Node version
+        run: node --version
 
       - name: Install dependencies
         run: npm ci
@@ -51,17 +57,69 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f migrations/000_create_migrations_table.sql
-          # Apply other migrations (idempotent — guarded with IF NOT EXISTS where possible)
-          for m in migrations/*.sql; do
-            echo "Applying $m"
-            PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f "$m" || true
-          done
+          # schema.full.sql is the consolidated output of `pg_dump
+          # --no-owner --no-privileges` against the local sandbox DB
+          # (which has schema.sql + all migrations applied + seed data
+          # for cities from migration 010). It contains every table,
+          # function, trigger, view, index, CHECK constraint, and the
+          # categories seed (via COPY) that the app needs.
+          #
+          # The earlier attempt — applying schema.sql + `scripts/migrate.js`
+          # in the workflow — failed because some migrations (004_fk_indexes)
+          # reference tables (vendor_views) that only exist after the first
+          # full schema+seed initialization. The pg_dump approach captures
+          # the post-init state directly, so it's stable.
+          #
+          # Regenerate when migrations change:
+          #   PGPASSWORD=postgres pg_dump --no-owner --no-privileges \\
+          #     -h localhost -U postgres gps_street_sellers > schema.full.sql
+          echo "Applying schema.full.sql"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f schema.full.sql
+          echo "Seed counts:"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -tAc \
+            "SELECT 'categories=' || count(*) FROM categories; SELECT 'cities=' || count(*) FROM cities;"
+      - name: Provision .env for tests
+        # Tests share a single env-loader that hardcodes `apps/web/.env`.
+        # We materialize the committed `.env.test` into that path so the
+        # loader has something to read; workflow env vars still win for
+        # any key they define.
+        run: cp apps/web/.env.test apps/web/.env
 
       - name: Build
-        run: npm run build
+        run: cd apps/web && npm run build
+
+      - name: Start Next.js server (background)
+        run: |
+          cd apps/web
+          # `next start` defaults to :3000 — pin :3005 so curl-localhost
+          # matches TEST_BASE_URL=http://localhost:3005 below. Captures
+          # logs so the wait-loop can dump them on timeout.
+          PORT=3005 npm start > /tmp/next.log 2>&1 &
+          echo $! > /tmp/next.pid
+
+      - name: Wait for server ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:3005/api/health > /dev/null 2>&1; then
+              echo "Ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not become ready in 60s"
+          cat /tmp/next.log
+          kill "$(cat /tmp/next.pid)" 2>/dev/null || true
+          exit 1
 
       - name: Run tests
         run: node --test scripts/tests/*.test.js
-        # Note: integration tests hit the deployed site; they're guarded by env presence.
-        # For pure DB tests we'd need a separate test suite — TODO.
+
+      - name: Show Next.js log on failure
+        if: failure()
+        run: |
+          echo "--- last 80 lines of /tmp/next.log ---"
+          tail -80 /tmp/next.log || true
+
+      - name: Stop Next.js server
+        if: always()
+        run: kill "$(cat /tmp/next.pid)" 2>/dev/null || true

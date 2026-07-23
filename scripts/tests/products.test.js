@@ -12,25 +12,13 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const path = require('node:path')
 const fs = require('node:fs')
-
-function loadEnv() {
-  const envPath = path.join(__dirname, '../../apps/web/.env')
-  const txt = fs.readFileSync(envPath, 'utf8')
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/)
-    if (m) {
-      let v = m[2].trim()
-      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1)
-      if (!process.env[m[1]]) process.env[m[1]] = v
-    }
-  }
-}
+const path = require('node:path')
+const { loadEnv, getBase } = require('./_lib/env-loader')
 
 loadEnv()
 
-const BASE = 'https://gps.andresmorales.com.co'
+const BASE = getBase()
 
 async function fetchJSON(path, options = {}) {
   const res = await fetch(BASE + path, options)
@@ -262,17 +250,28 @@ test('GET /api/products?q=bad-chars does not crash (plainto_tsquery sanitizes)',
 })
 // --- Audit 2026-07-20: backfill + slug resolve ---------------------------
 
+function readDbUrl() {
+  const envPath = path.join(__dirname, '../../apps/web/.env')
+  if (!fs.existsSync(envPath)) return process.env.DATABASE_URL || ''
+  const txt = fs.readFileSync(envPath, 'utf8')
+  for (const line of txt.split('\n')) {
+    const m = line.match(/^(DATABASE_URL)\s*=\s*(.*)$/)
+    if (m) return m[2].trim().replace(/^["']|["']$/g, '')
+  }
+  return process.env.DATABASE_URL || ''
+}
+
+const { setupTestVendor, wipeCiTestRows } = require('./_lib/seed')
+
+test('setup: wipe ci-test-* rows from previous runs', async () => {
+  await wipeCiTestRows()
+})
+
 test('migration 017 left no products without a product_photos row', async () => {
   // Run a direct DB query. We import pg only when needed so the file is still
   // safe to import in environments without DB access.
   const pg = require('pg')
-  const envPath = path.join(__dirname, '../../apps/web/.env')
-  const txt = fs.readFileSync(envPath, 'utf8')
-  let dbUrl = ''
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^(DATABASE_URL)\s*=\s*(.*)$/)
-    if (m) { dbUrl = m[2].trim().replace(/^["']|["']$/g, ''); break }
-  }
+  const dbUrl = readDbUrl()
   if (!dbUrl) {
     // No DB URL — skip rather than fail.
     return
@@ -292,31 +291,12 @@ test('migration 017 left no products without a product_photos row', async () => 
   }
 })
 
-test('GET /api/vendors/{slug}/catalog returns products for a public slug', async () => {
-  // Pick the first vendor with a non-empty slug from the seed data.
-  const pg = require('pg')
-  const envPath = path.join(__dirname, '../../apps/web/.env')
-  const txt = fs.readFileSync(envPath, 'utf8')
-  let dbUrl = ''
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^(DATABASE_URL)\s*=\s*(.*)$/)
-    if (m) { dbUrl = m[2].trim().replace(/^["']|["']$/g, ''); break }
-  }
-  if (!dbUrl) return
-  const client = new pg.Client({ connectionString: dbUrl })
-  await client.connect()
-  let slug
-  try {
-    const { rows } = await client.query(
-      `SELECT slug FROM vendors WHERE slug IS NOT NULL AND slug <> '' LIMIT 1`
-    )
-    if (!rows[0]) return // no slug data, skip
-    slug = rows[0].slug
-  } finally {
-    await client.end()
-  }
+test('GET /api/vendors/{id}/catalog returns products for a public id', async () => {
+  // Create a fresh test vendor with a known id + slug + product + photo.
+  // This way the test doesn't depend on whatever data lives in the DB.
+  const v = await setupTestVendor()
 
-  const res = await fetchJSON(`/api/vendors/${slug}/catalog`)
+  const res = await fetchJSON(`/api/vendors/${v.vendorId}/catalog`)
   assert.equal(res.status, 200)
   assert.ok(res.body.vendor, 'response has vendor object')
   assert.ok(Array.isArray(res.body.products), 'response has products array')

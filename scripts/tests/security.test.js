@@ -38,21 +38,61 @@ test('next.config.js headers returns an array including a wildcard security rule
   assert.ok(result[0].headers.length >= 6)
 })
 
-test('next.config.js includes all OWASP baseline headers', async () => {
-  const cfg = require('../../apps/web/next.config.js')
-  const result = await cfg.headers()
+// next.config.js intentionally diverges by env:
+//   - production: emit HSTS (max-age > 0, includeSubDomains) — strict policy.
+//   - non-production: emit CSP (Content-Security-Policy header) so devs
+//     see issues in dev tools; HSTS is disabled because locking
+//     browsers to https://localhost makes recovery painful.
+// Both configs share the rest of the OWASP baseline.
+// Two tests verify each branch; one happy-path covers the union.
+
+test('next.config.js includes all OWASP baseline headers (production branch)', async () => {
+  const prevEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+  delete require.cache[require.resolve('../../apps/web/next.config.js')]
+  let result
+  try {
+    const cfg = require('../../apps/web/next.config.js')
+    result = await cfg.headers()
+  } finally {
+    process.env.NODE_ENV = prevEnv
+    delete require.cache[require.resolve('../../apps/web/next.config.js')]
+  }
   const flat = result[0].headers
   const byKey = Object.fromEntries(flat.map((h) => [h.key.toLowerCase(), h.value]))
 
+  // Production branch: HSTS strict, no inline CSP (proxied via HTTPS proxy).
   assert.ok(byKey['strict-transport-security'], 'HSTS missing')
   assert.match(byKey['strict-transport-security'], /max-age=\d+/)
   assert.match(byKey['strict-transport-security'], /includeSubDomains/)
-
   assert.equal(byKey['x-frame-options'], 'DENY')
   assert.equal(byKey['x-content-type-options'], 'nosniff')
   assert.equal(byKey['referrer-policy'], 'strict-origin-when-cross-origin')
+  assert.ok(byKey['permissions-policy'], 'Permissions-Policy missing')
+})
 
-  assert.ok(byKey['content-security-policy'], 'CSP missing')
+test('next.config.js includes all OWASP baseline headers (dev branch)', async () => {
+  const prevEnv = process.env.NODE_ENV
+  // Pretend we're running in dev (the default for `npm run dev`).
+  process.env.NODE_ENV = 'development'
+  delete require.cache[require.resolve('../../apps/web/next.config.js')]
+  let result
+  try {
+    const cfg = require('../../apps/web/next.config.js')
+    result = await cfg.headers()
+  } finally {
+    process.env.NODE_ENV = prevEnv
+    delete require.cache[require.resolve('../../apps/web/next.config.js')]
+  }
+  const flat = result[0].headers
+  const byKey = Object.fromEntries(flat.map((h) => [h.key.toLowerCase(), h.value]))
+
+  // Dev branch: HSTS relaxed, CSP emitted for dev tools visibility.
+  assert.match(byKey['strict-transport-security'], /max-age=0/)
+  assert.equal(byKey['x-frame-options'], 'DENY')
+  assert.equal(byKey['x-content-type-options'], 'nosniff')
+  assert.equal(byKey['referrer-policy'], 'strict-origin-when-cross-origin')
+  assert.ok(byKey['content-security-policy'], 'CSP missing in dev')
   assert.ok(byKey['permissions-policy'], 'Permissions-Policy missing')
 })
 

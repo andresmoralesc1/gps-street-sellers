@@ -8,8 +8,16 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { loadEnv, getBase } = require('./_lib/env-loader')
+const { setupTestUser, wipeCiTestRows } = require('./_lib/seed')
 
 loadEnv()
+
+// Best-effort: if a prior test run died before its `exit`-hook cleanup
+// ran, ci-test-* rows may linger. Wipe at startup so each run is
+// reproducible. Skip silently if the DB is unreachable.
+test('setup: wipe any leftover ci-test-* rows from previous runs', async () => {
+  await wipeCiTestRows()
+})
 
 // Reset rate limit so tests aren't blocked by prior runs.
 // Each test run starts fresh — useful when iterating locally.
@@ -48,17 +56,19 @@ async function fetchJSON(path, options = {}) {
 
 test('POST /api/auth/login with valid email returns 200 + user + sets cookies', async () => {
   await resetRateLimit()
+  // Setup: register a buyer we control (CI-run user; gets auto-cleaned at exit).
+  const u = await setupTestUser({ role: 'buyer' })
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // Send as `identifier` — backend detects email vs phone.
-    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
+    body: JSON.stringify({ identifier: u.email, password: u.password }),
   })
   assert.equal(res.status, 200)
   // Token is set via httpOnly cookies only — never echo it in the body.
   assert.equal(res.body.token, undefined, 'token must NOT be in response body')
   assert.ok(res.body.user, 'should have user')
-  assert.equal(res.body.user.email, 'test@hermes.local')
+  assert.equal(res.body.user.email, u.email)
   assert.equal(res.body.user.role, 'buyer')
   // Set-Cookie should be present
   const setCookie = res.headers.get('set-cookie') || ''
@@ -68,10 +78,11 @@ test('POST /api/auth/login with valid email returns 200 + user + sets cookies', 
 })
 
 test('POST /api/auth/login with wrong password returns 401', async () => {
+  const u = await setupTestUser({ role: 'buyer' })
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'wrong-password' }),
+    body: JSON.stringify({ identifier: u.email, password: 'wrong-password' }),
   })
   assert.equal(res.status, 401)
   assert.equal(res.body.error, 'Credenciales inválidas')
@@ -111,45 +122,23 @@ test('GET /api/auth/me with invalid token returns 401', async () => {
   assert.equal(res.body.error, 'Token inválido')
 })
 
-/**
- * Parse token from Set-Cookie header.
- * Node's fetch returns the raw set-cookie value; we extract the 'token' cookie.
- */
-function extractTokenFromHeaders(headers) {
-  const setCookie = headers.get('set-cookie') || ''
-  const match = setCookie.match(/token=([^;]+)/)
-  return match ? match[1] : null
-}
-
 test('GET /api/auth/me with valid token returns user', async () => {
-  // First, log in to get a token (now via Set-Cookie, not body)
-  const login = await fetchJSON('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
-  })
-  const token = extractTokenFromHeaders(login.headers)
-  assert.ok(token, 'should have extracted token from Set-Cookie header')
-
+  // First, register+login our own CI user — no reliance on remote seed.
+  const u = await setupTestUser({ role: 'buyer' })
+  // setupTestUser already extracted the token from Set-Cookie.
   const me = await fetchJSON('/api/auth/me', {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${u.token}` },
   })
   assert.equal(me.status, 200)
-  assert.equal(me.body.email, 'test@hermes.local')
+  assert.equal(me.body.email, u.email)
 })
 
 test('GET /api/auth/me with cookie token works too', async () => {
-  const login = await fetchJSON('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
-  })
-  const token = extractTokenFromHeaders(login.headers)
-  assert.ok(token, 'should have extracted token from Set-Cookie header')
-  // This is just to ensure the cookie path works through the middleware-protected route /favorites.
+  const u = await setupTestUser({ role: 'buyer' })
+  // Cookie path through /favorites to verify middleware accepts the token.
   const favorites = await fetch(BASE + '/favorites', {
     redirect: 'manual',
-    headers: { Cookie: `token=${token}` },
+    headers: { Cookie: `token=${u.token}` },
   })
   assert.notEqual(favorites.status, 500)
   // Should redirect (307) to login if cookie token is bad, or 200 if valid.
@@ -281,17 +270,12 @@ test('POST /api/auth/register creates user as buyer when role=buyer', async () =
 })
 
 test('PATCH /api/products/[id] rejects malformed UUID', async () => {
-  const login = await fetchJSON('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'test@hermes.local', password: 'TestPassword123' }),
-  })
-  const token = extractTokenFromHeaders(login.headers)
+  const u = await setupTestUser({ role: 'seller' })
   const res = await fetchJSON('/api/products/not-a-uuid', {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${u.token}`,
     },
     body: JSON.stringify({ name: 'x' }),
   })

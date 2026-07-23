@@ -13,6 +13,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const path = require('node:path')
 const { loadEnv, getBase } = require('./_lib/env-loader')
 
 loadEnv()
@@ -260,6 +261,12 @@ function readDbUrl() {
   return process.env.DATABASE_URL || ''
 }
 
+const { setupTestVendor, wipeCiTestRows } = require('./_lib/seed')
+
+test('setup: wipe ci-test-* rows from previous runs', async () => {
+  await wipeCiTestRows()
+})
+
 test('migration 017 left no products without a product_photos row', async () => {
   // Run a direct DB query. We import pg only when needed so the file is still
   // safe to import in environments without DB access.
@@ -284,25 +291,12 @@ test('migration 017 left no products without a product_photos row', async () => 
   }
 })
 
-test('GET /api/vendors/{slug}/catalog returns products for a public slug', async () => {
-  // Pick the first vendor with a non-empty slug from the seed data.
-  const pg = require('pg')
-  const dbUrl = readDbUrl()
-  if (!dbUrl) return
-  const client = new pg.Client({ connectionString: dbUrl })
-  await client.connect()
-  let slug
-  try {
-    const { rows } = await client.query(
-      `SELECT slug FROM vendors WHERE slug IS NOT NULL AND slug <> '' LIMIT 1`
-    )
-    if (!rows[0]) return // no slug data, skip
-    slug = rows[0].slug
-  } finally {
-    await client.end()
-  }
+test('GET /api/vendors/{id}/catalog returns products for a public id', async () => {
+  // Create a fresh test vendor with a known id + slug + product + photo.
+  // This way the test doesn't depend on whatever data lives in the DB.
+  const v = await setupTestVendor()
 
-  const res = await fetchJSON(`/api/vendors/${slug}/catalog`)
+  const res = await fetchJSON(`/api/vendors/${v.vendorId}/catalog`)
   assert.equal(res.status, 200)
   assert.ok(res.body.vendor, 'response has vendor object')
   assert.ok(Array.isArray(res.body.products), 'response has products array')

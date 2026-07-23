@@ -55,18 +55,20 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          # schema.sql = base tables (users, vendors, products, ...).
-          # Migrations are DELTAS — they assume schema.sql ran first.
-          # Without schema.sql the DB is empty and POST /api/auth/register
-          # returns 500 "relation does not exist" → CI red.
-          echo "Applying schema.sql"
-          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f schema.sql
-          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f migrations/000_create_migrations_table.sql
-          # Apply other migrations (idempotent — guarded with IF NOT EXISTS where possible)
-          for m in migrations/*.sql; do
-            echo "Applying $m"
-            PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f "$m" || true
-          done
+          # schema.full.sql is the consolidated output of `pg_dump --schema-only`
+          # against a DB that has schema.sql + all migrations applied. It contains
+          # every table, function, trigger, view, index, and CHECK constraint the
+          # app needs, in one file.
+          #
+          # schema.sql is the original (incomplete) base; migrations/*.sql are
+          # deltas that assume schema.sql ran first. Some of them reference tables
+          # that schema.sql never created (product_photos, cities, orders, ...).
+          # schema.full.sql is regenerated when migrations change:
+          #   psql ... -f schema.sql
+          #   for m in migrations/*.sql; do psql ... -f "$m" || true; done
+          #   pg_dump --schema-only --no-owner --no-privileges > schema.full.sql
+          echo "Applying schema.full.sql"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f schema.full.sql
 
       - name: Provision .env for tests
         # Tests share a single env-loader that hardcodes `apps/web/.env`.

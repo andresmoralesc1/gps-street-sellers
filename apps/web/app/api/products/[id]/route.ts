@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
-
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+import { isUuid } from '@/lib/core/utils/slug'
+import { parseJsonBody } from '@/lib/parse-json'
 
 type RouteContext = {
   params: Promise<{ id: string }>
@@ -19,7 +18,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { id: productId } = await context.params
 
-    if (!productId || !UUID_RE.test(productId)) {
+    if (!productId || !isUuid(productId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
     }
 
@@ -39,13 +38,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Producto no encontrado o sin permiso' }, { status: 404 })
     }
 
-    const body = await req.json()
-    const { name, description, price, photo_url } = body as {
-      name?: string
-      description?: string
-      price?: number
-      photo_url?: string | null
+    const parsed = await parseJsonBody<{
+      name?: string; description?: string; price?: number;
+      photo_url?: string | null;
+    }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
+    const { name, description, price, photo_url } = parsed.body
 
     // Build dynamic SET clause from provided fields only
     const setClauses: string[] = []
@@ -77,9 +77,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       setClauses.push(`price = $${params.length}`)
     }
     if (photo_url !== undefined) {
-      // Allow null to clear photo, or a non-empty string to set it
-      if (photo_url !== null && (typeof photo_url !== 'string' || !photo_url.trim())) {
-        return NextResponse.json({ error: 'URL de foto inválida' }, { status: 400 })
+      // Allow null to clear photo, or a non-empty http(s) URL to set it.
+      if (photo_url !== null && (typeof photo_url !== 'string' || !/^https?:\/\//i.test(photo_url.trim()))) {
+        return NextResponse.json({ error: 'URL de foto inválida (debe ser http:// o https://)' }, { status: 400 })
       }
       params.push(photo_url === null ? null : photo_url.trim())
       setClauses.push(`photo_url = $${params.length}`)
@@ -114,7 +114,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const { id: productId } = await context.params
 
-    if (!productId || !UUID_RE.test(productId)) {
+    if (!productId || !isUuid(productId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
     }
 

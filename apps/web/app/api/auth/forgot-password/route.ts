@@ -5,6 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { sendPasswordResetEmail, hashToken } from '@/lib/email'
 import { randomBytes } from 'crypto'
+import { parseJsonBody } from '@/lib/parse-json'
 
 /**
  * POST /api/auth/forgot-password
@@ -36,7 +37,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email } = await req.json()
+    const parsed = await parseJsonBody<{ email?: unknown }>(req)
+    const email = parsed.ok ? parsed.body.email : undefined
     if (!email || typeof email !== 'string') {
       // Generic OK even on bad input — don't leak whether we expect an email.
       return NextResponse.json({

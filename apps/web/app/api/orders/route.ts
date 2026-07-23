@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
+import { isUuid } from '@/lib/core/utils/slug'
+import { parseJsonBody } from '@/lib/parse-json'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -93,22 +95,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solo compradores pueden crear órdenes' }, { status: 403 })
     }
 
-    const { vendorId, items } = await req.json()
+    const parsed = await parseJsonBody<{ vendorId?: string; items?: { productId?: unknown; quantity?: unknown }[] }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { vendorId, items } = parsed.body
 
     if (!vendorId || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
+    // CRIT-26: validate UUID early to prevent 500 on syntax error from Postgres.
+    if (!isUuid(vendorId)) {
+      return NextResponse.json({ error: 'vendorId debe ser un UUID válido' }, { status: 400 })
+    }
 
-    // Validate item shape (productId + quantity, both required)
+    // Validate item shape: each item must have productId (UUID) and quantity (1-999).
     for (const item of items) {
-      if (!item.productId || typeof item.quantity !== 'number' || item.quantity < 1 || item.quantity > 999) {
-        return NextResponse.json({ error: 'Cada item debe tener productId y quantity (1-999)' }, { status: 400 })
+      const { productId, quantity } = item
+      if (
+        typeof productId !== 'string' ||
+        !isUuid(productId) ||
+        typeof quantity !== 'number' ||
+        quantity < 1 ||
+        quantity > 999
+      ) {
+        return NextResponse.json(
+          { error: 'Cada item debe tener productId (UUID) y quantity (1-999)' },
+          { status: 400 }
+        )
       }
     }
 
     // SECURITY: fetch real prices + validate ownership in one query.
     // We DO NOT trust item.price from the client.
-    const productIds = items.map((i: any) => i.productId)
+    const productIds = items.map((i) => i.productId as string)
     const productsRes = await pool.query(
       `SELECT id, vendor_id, price
        FROM products
@@ -132,14 +152,15 @@ export async function POST(req: NextRequest) {
     // Compute total server-side using DB prices
     let total = 0
     for (const item of items) {
-      const product = priceMap.get(item.productId)
+      const productId = item.productId as string
+      const product = priceMap.get(productId)
       if (!product) {
-        return NextResponse.json({ error: `Producto ${item.productId} no encontrado` }, { status: 400 })
+        return NextResponse.json({ error: `Producto ${productId} no encontrado` }, { status: 400 })
       }
       if (product.vendorId !== vendorId) {
-        return NextResponse.json({ error: `Producto ${item.productId} no pertenece al vendedor` }, { status: 400 })
+        return NextResponse.json({ error: `Producto ${productId} no pertenece al vendedor` }, { status: 400 })
       }
-      total += product.price * item.quantity
+      total += product.price * (item.quantity as number)
     }
 
     // Transaction: create order + insert items atomically
@@ -158,9 +179,11 @@ export async function POST(req: NextRequest) {
       const placeholders: string[] = []
       let paramIdx = 1
       for (const item of items) {
-        const serverPrice = priceMap.get(item.productId)!.price
+        const productId = item.productId as string
+        const quantity = item.quantity as number
+        const serverPrice = priceMap.get(productId)!.price
         placeholders.push(`($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3})`)
-        itemsValues.push(order.id, item.productId, item.quantity, serverPrice)
+        itemsValues.push(order.id, productId, quantity, serverPrice)
         paramIdx += 4
       }
 

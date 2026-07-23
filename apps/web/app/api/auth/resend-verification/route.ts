@@ -4,6 +4,7 @@ import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
+import { parseJsonBody } from '@/lib/parse-json'
 
 /**
  * POST /api/auth/resend-verification
@@ -21,13 +22,9 @@ import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
 const TOKEN_TTL_HOURS = 24
 
 export async function POST(req: NextRequest) {
-  let body: { email?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
-  }
-  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const parsed = await parseJsonBody<{ email?: unknown }>(req)
+  const rawEmail = parsed.ok ? parsed.body.email : undefined
+  const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : ''
   if (!email) {
     return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
   }

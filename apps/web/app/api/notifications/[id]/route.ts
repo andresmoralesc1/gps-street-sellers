@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { isUuid } from '@/lib/core/utils/slug'
+import { parseJsonBody } from '@/lib/parse-json'
 
 
 // PATCH /api/notifications/[id] — mark as read
@@ -18,7 +20,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
     }
     // Defense: reject non-UUID up front so we never hit a 22P02 from PG.
-    if (!/^[0-9a-f-]{36}$/i.test(notifId)) {
+    if (!isUuid(notifId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
     }
 
@@ -33,10 +35,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Notificación no encontrada' }, { status: 404 })
     }
 
-    const { read } = await req.json()
+    const parsed = await parseJsonBody<{ read?: unknown }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const read = parsed.body.read
     const result = await pool.query(
       'UPDATE notifications SET read = $1 WHERE id = $2 RETURNING *',
-      [read !== undefined ? read : true, notifId]
+      [read !== undefined ? !!read : true, notifId]
     )
 
     return NextResponse.json({ notification: result.rows[0] })

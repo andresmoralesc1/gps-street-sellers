@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { parseVendorFilters, buildVendorWhereClause } from './filters'
 import { generateUniqueSlug } from '@/lib/vendor-slug'
+import { parseJsonBody } from '@/lib/parse-json'
 
 // Public: GET /api/vendors
 //
@@ -209,16 +210,15 @@ export async function POST(req: NextRequest) {
     //   )
     // }
 
-    let body: unknown
-    try {
-      body = await req.json()
-    } catch {
-      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    const parsed = await parseJsonBody<Record<string, unknown>>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
+    const body = parsed.body
     if (typeof body !== 'object' || body === null) {
       return NextResponse.json({ error: 'Body debe ser un objeto' }, { status: 400 })
     }
-    const bodyObj = body as Record<string, unknown>
+    const bodyObj = body
 
     // ── Field validation ────────────────────────────────────────────────
     const name = typeof bodyObj.name === 'string' ? bodyObj.name.trim() : ''

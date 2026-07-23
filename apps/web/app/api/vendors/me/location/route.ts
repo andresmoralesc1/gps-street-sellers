@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { parseJsonBody } from '@/lib/parse-json'
 
 
 // PATCH /api/vendors/me/location — update vendor GPS coordinates
@@ -23,16 +24,11 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    let body: unknown
-    try {
-      body = await req.json()
-    } catch {
-      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    const parsed = await parseJsonBody<{ latitude?: unknown; longitude?: unknown }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Body requerido' }, { status: 400 })
-    }
-    const { latitude, longitude } = body as { latitude?: unknown; longitude?: unknown }
+    const { latitude, longitude } = parsed.body
 
     if (
       typeof latitude !== 'number' || typeof longitude !== 'number' ||

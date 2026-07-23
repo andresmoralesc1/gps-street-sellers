@@ -19,6 +19,7 @@ import {
   normalizeEmail,
   normalizePhone,
 } from '@/lib/auth-helpers'
+import { parseJsonBody } from '@/lib/parse-json'
 
 // Top-50 most common passwords leaked in credential dumps. Lowercase; we
 // compare against password.toLowerCase(). Source: SecLists top-100, trimmed
@@ -45,7 +46,20 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, password, name, phone, cityId, role, acceptedTerms, acceptedPrivacy } = await req.json()
+    const parsed = await parseJsonBody<{
+      email?: unknown; password?: unknown; name?: unknown;
+      phone?: unknown; cityId?: unknown; role?: unknown;
+      acceptedTerms?: unknown; acceptedPrivacy?: unknown;
+    }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { email, password, name, phone, cityId, role, acceptedTerms, acceptedPrivacy } = parsed.body
+    // Narrow for downstream — the typed-as-unknown `password` would fail at
+    // .length / .toLowerCase() otherwise.
+    if (typeof password !== 'string') {
+      return NextResponse.json({ error: 'La contraseña es requerida' }, { status: 400 })
+    }
 
 // ── Required: name + role + password + at least one of (email, phone)
     // Name: trim, collapse internal whitespace, min 2 chars, max 100.
@@ -191,7 +205,7 @@ export async function POST(req: NextRequest) {
          VALUES ($1, $2, $3, $4, $5, $6, true)
          ON CONFLICT DO NOTHING
          RETURNING id, email, name, role, phone, city_id, email_verified`,
-        [cleanEmail, passwordHash, trimmedName, cleanPhone, cityId || null, roleValue]
+        [cleanEmail as string | null, passwordHash, trimmedName, cleanPhone as string | null, cityId || null, roleValue]
       )
 
       if (userResult.rows.length === 0) {
@@ -251,7 +265,7 @@ export async function POST(req: NextRequest) {
       if (roleValue === 'seller') {
         const firstName = trimmedName.split(' ')[0] || trimmedName || 'vendedor'
         const placeholderName = `Mi negocio de ${firstName}`
-        const slug = await generateUniqueSlug(client, placeholderName, cityId || null)
+        const slug = await generateUniqueSlug(client, placeholderName, (typeof cityId === 'string' ? cityId : null))
         await client.query(
           `INSERT INTO vendors (
             profile_id, name, slug, category, description,

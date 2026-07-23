@@ -6,6 +6,8 @@ import pool from '@/lib/db'
 import { notify } from '@/lib/push'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
+import { isUuid } from '@/lib/core/utils/slug'
+import { parseJsonBody } from '@/lib/parse-json'
 
 
 // PUT /api/vendors/[id]/location — update vendor location (owner only)
@@ -31,6 +33,10 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
 
     const vendorId = params.id
 
+    if (!isUuid(vendorId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     // Verify ownership
     const ownerCheck = await pool.query(
       'SELECT id FROM vendors WHERE id = $1 AND profile_id IN (SELECT id FROM profiles WHERE user_id = $2)',
@@ -40,16 +46,26 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
       return NextResponse.json({ error: 'No tienes permiso para actualizar esta ubicación' }, { status: 403 })
     }
 
-    const { latitude, longitude, isActive } = await req.json()
+    const parsed = await parseJsonBody<{
+      latitude?: string | number | null;
+      longitude?: string | number | null;
+      isActive?: boolean;
+    }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { latitude, longitude, isActive } = parsed.body
+    const latStr = latitude != null ? String(latitude) : null
+    const lngStr = longitude != null ? String(longitude) : null
 
     const updates: string[] = []
     const paramsList: unknown[] = []
 
-    if (latitude != null && longitude != null) {
+    if (latStr != null && lngStr != null) {
       // Validate coordinates for Colombia
-      const lat = parseFloat(latitude)
-      const lng = parseFloat(longitude)
-      if (lat < -4.2 || lat > 13.5 || lng < -79.1 || lng > -66.9) {
+      const lat = parseFloat(latStr)
+      const lng = parseFloat(lngStr)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -4.2 || lat > 13.5 || lng < -79.1 || lng > -66.9) {
         return NextResponse.json({ error: 'Coordenadas fuera de Colombia' }, { status: 400 })
       }
       paramsList.push(lat, lng)
@@ -69,9 +85,10 @@ export async function PUT(req: NextRequest, { params: paramsPromise }: { params:
     // We write to history inside the same transaction so partial failures
     // don't leave the live `vendors` row out of sync with history.
     const wantsHistoryWrite =
-      latitude != null && longitude != null &&
-      parseFloat(latitude) >= -4.2 && parseFloat(latitude) <= 13.5 &&
-      parseFloat(longitude) >= -79.1 && parseFloat(longitude) <= -66.9
+      latStr != null && lngStr != null &&
+      Number.isFinite(parseFloat(latStr)) && Number.isFinite(parseFloat(lngStr)) &&
+      parseFloat(latStr) >= -4.2 && parseFloat(latStr) <= 13.5 &&
+      parseFloat(lngStr) >= -79.1 && parseFloat(lngStr) <= -66.9
 
 const client = await pool.connect()
   let updated: unknown = null
@@ -106,8 +123,8 @@ const client = await pool.connect()
     // Only insert when the vendor is currently active to avoid logging
     // location while the seller is offline.
     if (wantsHistoryWrite && updatedRow?.is_active) {
-      const lat = parseFloat(latitude)
-      const lng = parseFloat(longitude)
+      const lat = parseFloat(latStr as string)
+      const lng = parseFloat(lngStr as string)
       await client.query(
         `INSERT INTO vendor_location_history (vendor_id, latitude, longitude)
          VALUES ($1, $2, $3)`,
@@ -126,11 +143,21 @@ const client = await pool.connect()
   // Push notification when seller transitions from inactive → active.
   // Notify every buyer who has this vendor in their favorites.
   // Fire-and-forget so push failures don't fail the location update.
+  //
+  // CRIT-28: rate-limit this fan-out so a buggy / malicious client cannot
+  // repeatedly toggle inactive→active to spam every favorites list with
+  // push notifications. Bucket is keyed by vendorId so a single seller
+  // spamming transitions cannot blast N buyers per minute.
   const updatedRow = updated as { is_active?: boolean } | null
   if (!wasActive && updatedRow?.is_active) {
-    void notifyFavoriteBuyers(vendorId, vendorName).catch((err) => {
-      logger.error(serializeErr(err), '[vendor location] push to favorites failed:')
-    })
+    const pushRl = await checkRateLimit(vendorId, 'vendor_active_push', 30, 60 * 1000)
+    if (!pushRl.allowed) {
+      logger.warn(`[vendor location] push fan-out rate-limited for vendor ${vendorId}`)
+    } else {
+      void notifyFavoriteBuyers(vendorId, vendorName).catch((err) => {
+        logger.error(serializeErr(err), '[vendor location] push to favorites failed:')
+      })
+    }
   }
 
   return NextResponse.json({ vendor: updated })

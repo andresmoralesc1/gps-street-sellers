@@ -5,6 +5,7 @@ import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { hashToken } from '@/lib/email'
+import { parseJsonBody } from '@/lib/parse-json'
 
 // Top-50 most common passwords — must match the list in register/route.ts.
 // ponytail: duplicate list is intentional to keep reset flow standalone
@@ -44,8 +45,12 @@ export async function POST(req: NextRequest) {
 
   const client = await pool.connect()
   try {
-    const { token, password } = await req.json()
-    if (!token || !password) {
+    const parsed = await parseJsonBody<{ token?: unknown; password?: unknown }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { token, password } = parsed.body
+    if (typeof token !== 'string' || typeof password !== 'string' || !token || !password) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 })
     }
 

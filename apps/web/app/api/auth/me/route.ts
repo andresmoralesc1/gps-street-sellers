@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { getCityById } from '@/lib/core/constants'
+import { parseJsonBody } from '@/lib/parse-json'
 async function getUserFromDb(userId: string) {
   const result = await pool.query(
     'SELECT id, email, name, role, phone, city_id, is_active, email_verified FROM users WHERE id = $1',
@@ -45,7 +46,13 @@ export async function PATCH(req: NextRequest) {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth
 
-    const { name, phone, cityId } = await req.json()
+    const parsed = await parseJsonBody<{
+      name?: unknown; phone?: unknown; cityId?: unknown;
+    }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { name, phone, cityId } = parsed.body
 
     // SECURITY: 'role' is intentionally NOT updatable here. Role is set once at
     // /api/auth/register and is immutable for the lifetime of the account. To

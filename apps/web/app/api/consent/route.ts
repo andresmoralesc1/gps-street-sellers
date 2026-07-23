@@ -4,6 +4,7 @@ import { verifyToken, getTokenFromRequest } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import pool from '@/lib/db'
+import { parseJsonBody } from '@/lib/parse-json'
 
 /**
  * POST /api/consent — record a consent event for Ley 1581/2012 compliance.
@@ -32,17 +33,13 @@ const DEFAULT_POLICY_VERSION = process.env.POLICY_VERSION || 'v1.0'
 
 export async function POST(request: NextRequest) {
   // 1. Parse + validate body.
-  let body: {
-    consentType?: string
-    granted?: boolean
-    policyVersion?: string
-    email?: string
+  const parsed = await parseJsonBody<{
+    consentType?: unknown; granted?: unknown; policyVersion?: unknown; email?: unknown;
+  }>(request)
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 })
   }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  const body = parsed.body
 
   const consentType = body.consentType as ConsentType | undefined
   if (!consentType || !VALID_TYPES.includes(consentType)) {
@@ -59,7 +56,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const policyVersion = body.policyVersion || DEFAULT_POLICY_VERSION
+  const policyVersion =
+    typeof body.policyVersion === 'string' && body.policyVersion.length > 0
+      ? body.policyVersion
+      : DEFAULT_POLICY_VERSION
 
   // 2. Identify the caller (optional — anonymous consents are valid).
   let userId: string | null = null
@@ -83,13 +83,14 @@ export async function POST(request: NextRequest) {
   // For anonymous consent, require an email so we can de-duplicate + audit.
   let email: string | null = null
   if (!userId) {
-    if (!body.email || typeof body.email !== 'string' || body.email.length > 255) {
+    const rawEmail = body.email
+    if (typeof rawEmail !== 'string' || rawEmail.length === 0 || rawEmail.length > 255) {
       return NextResponse.json(
         { error: 'email is required when caller is not authenticated' },
         { status: 400 }
       )
     }
-    email = body.email.toLowerCase().trim()
+    email = rawEmail.toLowerCase().trim()
   }
 
   // 3. Capture metadata.
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
        ON CONFLICT (COALESCE(user_id::text, email), consent_type, policy_version)
          WHERE user_id IS NOT NULL
        DO NOTHING`,
-      [userId, email, consentType, policyVersion, body.granted, ip, userAgent]
+      [userId, email, consentType, policyVersion, typeof body.granted === 'boolean' ? body.granted : false, ip, userAgent]
     )
   } catch (err) {
     logger.error(serializeErr(err), '[consent] insert failed:')

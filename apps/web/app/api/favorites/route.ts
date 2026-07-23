@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
+import { isUuid } from '@/lib/core/utils/slug'
+import { parseJsonBody } from '@/lib/parse-json'
 import pool from '@/lib/db'
 
 
@@ -17,9 +19,16 @@ export async function POST(req: NextRequest) {
       'SELECT token_version FROM profiles WHERE user_id = $1',
       [auth.userId]
     )
-    const { vendorId } = await req.json()
+    const parsed = await parseJsonBody<{ vendorId?: string }>(req)
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const { vendorId } = parsed.body
     if (!vendorId) {
       return NextResponse.json({ error: 'vendorId requerido' }, { status: 400 })
+    }
+    // CRIT-26: reject malformed UUIDs up front so we don't hand a non-UUID string
+    // to the uuid column (which would 500 with a syntax error from Postgres).
+    if (!isUuid(vendorId)) {
+      return NextResponse.json({ error: 'vendorId debe ser un UUID válido' }, { status: 400 })
     }
 
     const profileIdRes = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [auth.userId])
@@ -27,6 +36,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
     const buyerId = profileIdRes.rows[0].id
+
+    // Verify the vendor exists before attempting insert (avoids FK violation → 500).
+    const vendorCheck = await pool.query(
+      'SELECT id FROM vendors WHERE id = $1',
+      [vendorId]
+    )
+    if (vendorCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'Vendedor no encontrado' }, { status: 404 })
+    }
 
     // Upsert — ignore if already exists
     await pool.query(

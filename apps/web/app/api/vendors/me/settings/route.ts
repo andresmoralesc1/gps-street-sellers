@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { parseJsonBody } from '@/lib/parse-json'
 
 /**
  * PATCH /api/vendors/me/settings
@@ -50,16 +51,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Solo vendedores pueden editar su perfil' }, { status: 403 })
     }
 
-    let body: unknown
-    try {
-      body = await req.json()
-    } catch {
-      return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
+    let body: Record<string, unknown>
+    const parsed = await parseJsonBody<Record<string, unknown>>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
+    body = parsed.body
     if (typeof body !== 'object' || body === null) {
       return NextResponse.json({ error: 'Body debe ser un objeto' }, { status: 400 })
     }
-    const bodyObj = body as Record<string, unknown>
+    const bodyObj = body
 
     // ── Resolve which vendor we edit. Default = current active_vendor_id from
     // localStorage mirror on the client; here we just take the first vendor

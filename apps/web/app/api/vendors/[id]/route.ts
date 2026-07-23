@@ -4,6 +4,7 @@ import { verifyToken, getTokenFromRequest, requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
 import { isOpenNow } from '@/lib/business-hours'
+import { parseJsonBody } from '@/lib/parse-json'
 
 
 type RouteContext = {
@@ -168,6 +169,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { id: vendorId } = await context.params
 
+    if (!isUuid(vendorId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth
 
@@ -181,7 +186,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'No tienes permiso para editar este perfil' }, { status: 403 })
     }
 
-    const { name, description, category, photo_url, phone, is_active } = await req.json()
+    const parsed = await parseJsonBody<{
+      name?: string; description?: string; category?: string;
+      photo_url?: string; phone?: string; is_active?: boolean;
+    }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { name, description, category, photo_url, phone, is_active } = parsed.body
 
     const updates: string[] = []
     const params: unknown[] = []
@@ -199,6 +211,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       updates.push(`category = $${params.length}`)
     }
     if (photo_url !== undefined) {
+      // CRIT-25: photo_url is rendered into the page (src=). Allow only http(s)
+      // schemes to prevent stored XSS via javascript:/data: URLs. Validate
+      // here at the API boundary; the React render already encodes, but defense
+      // in depth is cheap.
+      if (typeof photo_url !== 'string') {
+        return NextResponse.json({ error: 'photo_url debe ser una cadena' }, { status: 400 })
+      }
+      if (!/^https?:\/\//i.test(photo_url)) {
+        return NextResponse.json({ error: 'photo_url debe comenzar con http:// o https://' }, { status: 400 })
+      }
       params.push(photo_url)
       updates.push(`photo_url = $${params.length}`)
     }

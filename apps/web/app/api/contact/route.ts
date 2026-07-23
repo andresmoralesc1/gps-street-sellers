@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
+import { parseJsonBody } from '@/lib/parse-json'
 
 export async function POST(req: NextRequest) {
   // Rate limit BEFORE doing any work — 5 messages per IP per hour.
@@ -17,9 +18,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, email, subject, message } = await req.json()
-
-    if (!name || !email || !message) {
+    const parsed = await parseJsonBody<{
+      name?: unknown; email?: unknown; subject?: unknown; message?: unknown;
+    }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { name, email, subject, message } = parsed.body
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof message !== 'string' || !name || !email || !message) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
@@ -33,11 +39,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mensaje demasiado largo (máx 2000 caracteres)' }, { status: 400 })
     }
 
+    const subjectStr = typeof subject === 'string' && subject.trim() ? subject : 'Sin asunto'
+
     // Store in DB
     await pool.query(
       `INSERT INTO contact_messages (name, email, subject, message, created_at)
        VALUES ($1, $2, $3, $4, NOW())`,
-      [name, email, subject || 'Sin asunto', message]
+      [name, email, subjectStr, message]
     )
 
     return NextResponse.json({ success: true })

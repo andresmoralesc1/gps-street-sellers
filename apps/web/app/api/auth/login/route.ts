@@ -6,6 +6,7 @@ import { signTokenSync } from '@/lib/auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { isEmail, normalizeEmail, normalizePhone } from '@/lib/auth-helpers'
+import { parseJsonBody } from '@/lib/parse-json'
 
 // Defense against user-enumeration via response timing:
 // On startup we hash a fixed string with bcrypt cost 12 so the dummy-hash path
@@ -30,7 +31,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { identifier, password } = await req.json()
+    const parsed = await parseJsonBody<{ identifier?: string; password?: string }>(req)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 })
+    }
+    const { identifier, password } = parsed.body
 
     if (!identifier || !password) {
       return NextResponse.json({ error: 'Faltan credenciales' }, { status: 400 })

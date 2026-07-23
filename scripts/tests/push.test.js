@@ -16,18 +16,7 @@ const Module = require('node:module')
 const path = require('node:path')
 
 // Load .env so the module under test sees VAPID keys.
-function loadEnv() {
-  const envPath = path.join(__dirname, '../../apps/web/.env')
-  const txt = require('node:fs').readFileSync(envPath, 'utf8')
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/)
-    if (m) {
-      let v = m[2].trim()
-      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1)
-      if (!process.env[m[1]]) process.env[m[1]] = v
-    }
-  }
-}
+const { loadEnv } = require('./_lib/env-loader')
 loadEnv()
 
 // Build a fake web-push module that records calls and lets us simulate errors.

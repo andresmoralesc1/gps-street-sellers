@@ -17,20 +17,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const Module = require('node:module')
 const path = require('node:path')
-const fs = require('node:fs')
-
-function loadEnv() {
-  const envPath = path.join(__dirname, '../../apps/web/.env')
-  const txt = fs.readFileSync(envPath, 'utf8')
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/)
-    if (m) {
-      let v = m[2].trim()
-      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1)
-      if (!process.env[m[1]]) process.env[m[1]] = v
-    }
-  }
-}
+const { loadEnv } = require('./_lib/env-loader')
 loadEnv()
 
 function installNextStub() {

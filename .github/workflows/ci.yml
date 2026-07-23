@@ -31,7 +31,11 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       JWT_SECRET: ci-test-secret-not-real-do-not-use-in-production
-      NODE_ENV: test
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BElZ2tExamplePublicKeyDummyValueForCIOnly1234567890
+      VAPID_PRIVATE_KEY: ExampleVapidPrivateKeyDummyValueForCIOnlyDoNotUse12345
+      ADMIN_EMAIL: admin@test.local
+      NEXT_TELEMETRY_DISABLED: 1
+      TEST_BASE_URL: http://localhost:3005
 
     steps:
       - uses: actions/checkout@v4
@@ -58,10 +62,46 @@ jobs:
             PGPASSWORD=postgres psql -h localhost -U postgres -d gps_street_sellers_test -f "$m" || true
           done
 
+      - name: Provision .env for tests
+        # Tests share a single env-loader that hardcodes `apps/web/.env`.
+        # We materialize the committed `.env.test` into that path so the
+        # loader has something to read; workflow env vars still win for
+        # any key they define.
+        run: cp apps/web/.env.test apps/web/.env
+
       - name: Build
-        run: npm run build
+        run: cd apps/web && npm run build
+
+      - name: Start Next.js server (background)
+        run: |
+          cd apps/web
+          # `npm start` blocks; run it in background and capture logs.
+          npm start > /tmp/next.log 2>&1 &
+          echo $! > /tmp/next.pid
+
+      - name: Wait for server ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:3005/api/health > /dev/null 2>&1; then
+              echo "Ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not become ready in 60s"
+          cat /tmp/next.log
+          kill "$(cat /tmp/next.pid)" 2>/dev/null || true
+          exit 1
 
       - name: Run tests
         run: node --test scripts/tests/*.test.js
-        # Note: integration tests hit the deployed site; they're guarded by env presence.
-        # For pure DB tests we'd need a separate test suite — TODO.
+
+      - name: Show Next.js log on failure
+        if: failure()
+        run: |
+          echo "--- last 80 lines of /tmp/next.log ---"
+          tail -80 /tmp/next.log || true
+
+      - name: Stop Next.js server
+        if: always()
+        run: kill "$(cat /tmp/next.pid)" 2>/dev/null || true

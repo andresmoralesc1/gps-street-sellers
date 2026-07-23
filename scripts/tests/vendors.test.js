@@ -6,25 +6,11 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const path = require('node:path')
-const fs = require('node:fs')
-
-function loadEnv() {
-  const envPath = path.join(__dirname, '../../apps/web/.env')
-  const txt = fs.readFileSync(envPath, 'utf8')
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/)
-    if (m) {
-      let v = m[2].trim()
-      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1)
-      if (!process.env[m[1]]) process.env[m[1]] = v
-    }
-  }
-}
+const { loadEnv, getBase } = require('./_lib/env-loader')
 
 loadEnv()
 
-const BASE = 'https://gps.andresmorales.com.co'
+const BASE = getBase()
 
 async function fetchJSON(path, options = {}) {
   const res = await fetch(BASE + path, options)

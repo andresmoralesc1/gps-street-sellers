@@ -67,10 +67,28 @@ export default function MapPage() {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm p-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-800">BarrioTech</h1>
-        <CitySelector />
+      {/* Header — Sprint 5 B-002: city selector gets priority on mobile
+          because users in the street need to confirm what city they're
+          browsing at a glance. Layout:
+            - mobile (<sm): CitySelector top-left, page title below (small)
+            - desktop: title + CitySelector side-by-side as before */}
+
+      <header className="bg-white shadow-sm p-3 sm:p-4 flex items-center justify-between gap-2">
+        {/* Mobile-only title — small, secondary. Hidden on sm+ because the
+            SiteHeader already shows it there. */}
+        <h1 className="text-sm font-medium text-gray-500 sm:hidden">
+          BarrioTech
+        </h1>
+        {/* Desktop-only title — prominent, primary. */}
+        <h1 className="hidden sm:block text-xl font-bold text-gray-800">
+          BarrioTech
+        </h1>
+        {/* CitySelector takes the remaining space on mobile so the city
+            name is the most prominent thing in the header. min-h-[44px]
+            for the trigger button so it meets Apple HIG tap targets. */}
+        <div className="flex-1 sm:flex-initial flex justify-end">
+          <CitySelector />
+        </div>
       </header>
 
       {/* Filtros */}

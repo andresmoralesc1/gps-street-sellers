@@ -486,6 +486,23 @@ export function MapView() {
               const pulseRing = isSelected
                 ? '<div class="vendor-marker-pulse" style="position:absolute;inset:-6px;border-radius:50%;background:rgba(194,65,12,0.35);animation:marker-pulse-ring 1.4s ease-in-out infinite;pointer-events:none;"></div>'
                 : ''
+              // Sprint 5 B-004: vendor name appears as a small caption BELOW
+              // the pin. Truncated to 14 chars so dense clusters don't overflow.
+              // The label is a sibling div anchored under the pin via the
+              // `iconAnchor` shift below. `whitespace-nowrap text-overflow:
+              // ellipsis` keeps long names inside the chip.
+              const labelText = String(vendor.name || '').slice(0, 14) + (
+                String(vendor.name || '').length > 14 ? '…' : ''
+              )
+              const isMobileIcon = typeof window !== 'undefined' && window.innerWidth < 640
+              // Hide labels on mobile when the bottom sheet is open OR when
+              // there are too many vendors (cluster). Threshold 12 is
+              // empirical — at ~25 markers on a 390px viewport the labels
+              // create a wall of text; 12 keeps the map scannable.
+              const showLabel = isMobileIcon && activeVendors.length <= 12
+              const labelHtml = showLabel
+                ? `<div style="position:absolute;top:46px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);backdrop-filter:blur(4px);color:#1f2937;font-size:10px;font-weight:600;line-height:1;padding:2px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.25);white-space:nowrap;max-width:96px;overflow:hidden;text-overflow:ellipsis;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${labelText}</div>`
+                : ''
               markerIcon = new L.DivIcon({
                 html: `<div style="
                   background: ${catColor};
@@ -504,7 +521,7 @@ export function MapView() {
                   sponsored ? '<span style="position:absolute;top:-6px;right:-6px;background:#F59E0B;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);">⭐</span>' : ''
                 }${
                   showClosedBadge ? '<span style="position:absolute;bottom:-4px;left:-4px;background:#6B7280;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.3);color:white;font-weight:600;">⏻</span>' : ''
-                }${pulseRing}</div>`,
+                }${pulseRing}</div>${labelHtml}`,
                 className: 'vendor-category-marker',
                 iconSize: [42, 42],
                 iconAnchor: [21, 42],

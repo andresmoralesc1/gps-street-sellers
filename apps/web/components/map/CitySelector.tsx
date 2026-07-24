@@ -78,11 +78,14 @@ export function CitySelector() {
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={`Ciudad seleccionada: ${selectedCity.name}. Click para cambiar.`}
-        className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium"
+        // Sprint 5 B-002: min-h-[44px] tap target + thicker border + primary
+        // tinted background on mobile. The old version blended in with the
+        // page background and got lost under the search bar.
+        className="flex items-center gap-2 min-h-[44px] px-3 py-2 bg-primary-50 border-2 border-primary-200 hover:bg-primary-100 rounded-lg shadow-sm transition-colors text-sm font-semibold text-primary-800"
       >
         <MapPin size={16} className="text-primary-700" aria-hidden="true" />
         <span>{selectedCity.name}</span>
-        <ChevronDown size={14} className={clsx('text-gray-400 transition-transform', open && 'rotate-180')} />
+        <ChevronDown size={14} className={clsx('text-primary-600 transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (

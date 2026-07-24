@@ -513,3 +513,80 @@ test('Sprint 7 B-AUTH-3: POST /api/auth/refresh does NOT require Origin header',
   const j = await res.json()
   assert.equal(j.expiresIn, 900, 'should report 900s expiry')
 })
+
+// --- Sprint 9 C.2: request id correlation tests ---------------------
+
+test('Sprint 9 C.2: response includes x-request-id header (generated when client omits it)', async () => {
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: 'x', password: 'x' }),
+  })
+  // We expect a 401 (bad credentials) but the response must still
+  // carry the request id header — log correlation must work for
+  // error responses too.
+  assert.equal(res.status, 401)
+  const requestId = res.headers.get('x-request-id')
+  assert.ok(requestId, 'response must include x-request-id header')
+  // Should be a UUID (36 chars with hyphens) since the client didn't
+  // send one and we generated a fresh one.
+  assert.match(requestId, /^[0-9a-f-]{36}$/i, 'should be a UUID')
+})
+
+test('Sprint 9 C.2: client-supplied x-request-id is echoed back', async () => {
+  const customId = 'my-custom-trace-id-12345'
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-request-id': customId,
+    },
+    body: JSON.stringify({ identifier: 'x', password: 'x' }),
+  })
+  assert.equal(res.status, 401)
+  assert.equal(res.headers.get('x-request-id'), customId,
+    'client-supplied x-request-id must be echoed back unchanged')
+})
+
+test('Sprint 9 C.2: x-request-id with disallowed characters is dropped and a fresh UUID is generated', async () => {
+  // The regex in getRequestId only allows [a-zA-Z0-9_-]{1,64}. Anything
+  // outside that character set (e.g. spaces, dots, slashes) is dropped
+  // and a new UUID is generated.
+  //
+  // Note: we can't actually test CRLF-injection attempts via Node's
+  // fetch because the Headers API rejects invalid header values before
+  // sending. That's actually a stronger defense — the OS / Node layer
+  // already strips CRLF, so the regex is belt-and-suspenders.
+  const invalid = 'has spaces and !@#$ chars'
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-request-id': invalid,
+    },
+    body: JSON.stringify({ identifier: 'x', password: 'x' }),
+  })
+  assert.equal(res.status, 401)
+  const echoed = res.headers.get('x-request-id')
+  assert.notEqual(echoed, invalid,
+    'invalid x-request-id must NOT be echoed')
+  assert.match(echoed, /^[0-9a-f-]{36}$/i, 'a fresh UUID should be generated instead')
+})
+
+test('Sprint 9 C.2: x-request-id too long (>64 chars) is dropped and a fresh UUID is generated', async () => {
+  // The regex caps at 64 chars. Anything longer is dropped.
+  const tooLong = 'a'.repeat(100)
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-request-id': tooLong,
+    },
+    body: JSON.stringify({ identifier: 'x', password: 'x' }),
+  })
+  assert.equal(res.status, 401)
+  const echoed = res.headers.get('x-request-id')
+  assert.notEqual(echoed, tooLong,
+    'over-long x-request-id must NOT be echoed')
+  assert.match(echoed, /^[0-9a-f-]{36}$/i, 'a fresh UUID should be generated instead')
+})

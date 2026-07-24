@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getTokenFromRequest, verifyTokenEdge } from '@/lib/auth-edge'
+import { getRequestId } from '@/lib/request-context'
 
 // Routes that require SELLER role
 const SELLER_ROUTES = ['/dashboard', '/profile/edit', '/products']
@@ -12,6 +13,11 @@ const AUTH_ROUTES = ['/settings', '/notifications', '/onboarding']
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
+
+  // Sprint 9 C.2: generate or forward a request id for log correlation.
+  // The id is attached to every downstream response and to the request
+  // headers (so route handlers can read it via getRequestId(req)).
+  const requestId = getRequestId(req)
 
   // Skip middleware for API routes, static files, and public routes
   if (
@@ -32,7 +38,9 @@ export async function proxy(req: NextRequest) {
     pathname === '/favicon.ico' ||
     pathname === '/favicon.svg'
   ) {
-    return NextResponse.next()
+    const passthrough = NextResponse.next()
+    passthrough.headers.set('x-request-id', requestId)
+    return passthrough
   }
 
   const token = getTokenFromRequest(req)
@@ -43,9 +51,13 @@ export async function proxy(req: NextRequest) {
     if (isProtectedAppRoute) {
       const loginUrl = new URL('/login', req.url)
       loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
+      const redirect = NextResponse.redirect(loginUrl)
+      redirect.headers.set('x-request-id', requestId)
+      return redirect
     }
-    return NextResponse.next()
+    const passthrough = NextResponse.next()
+    passthrough.headers.set('x-request-id', requestId)
+    return passthrough
   }
 
   const decoded = await verifyTokenEdge(token)
@@ -54,13 +66,16 @@ export async function proxy(req: NextRequest) {
     // Invalid or revoked token — clear cookie and redirect to login
     const response = NextResponse.redirect(new URL('/login', req.url))
     response.cookies.delete('token')
+    response.headers.set('x-request-id', requestId)
     return response
   }
 
   // Seller-only routes
   if (SELLER_ROUTES.some((r) => pathname.startsWith(r))) {
     if (decoded.role !== 'seller') {
-      return NextResponse.redirect(new URL('/map', req.url))
+      const redirect = NextResponse.redirect(new URL('/map', req.url))
+      redirect.headers.set('x-request-id', requestId)
+      return redirect
     }
   }
 
@@ -68,10 +83,16 @@ export async function proxy(req: NextRequest) {
   const requestHeaders = new Headers(req.headers)
   requestHeaders.set('x-user-id', decoded.userId)
   requestHeaders.set('x-user-role', decoded.role)
+  requestHeaders.set('x-request-id', requestId)
 
   return NextResponse.next({
     request: {
       headers: requestHeaders,
+    },
+    // Echo the request id back on the response so the client can see it
+    // (and paste it into bug reports alongside the timestamp).
+    headers: {
+      'x-request-id': requestId,
     },
   })
 }

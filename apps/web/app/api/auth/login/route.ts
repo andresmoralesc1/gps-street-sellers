@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
+import { withRequest, withRequestIdHeader, getRequestId, jsonWithRequestId } from '@/lib/request-context'
 import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { signTokenSync } from '@/lib/auth'
@@ -21,10 +22,15 @@ function getDummyHash(): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  // Sprint 9 C.2: child logger with the request id, so every line emitted
+  // by this handler shares the same correlation token. The id is also
+  // echoed back on the response so the client (and a log aggregator) can
+  // correlate browser + server logs for a single request.
+  const log = withRequest(req, 'POST /api/auth/login')
   const ip = getClientIp(req)
   const { allowed, remaining, retryAfter } = await checkRateLimit(ip, 'login', 10, 15 * 60 * 1000)
   if (!allowed) {
-    return NextResponse.json(
+    return jsonWithRequestId(req, 
       { error: 'Demasiados intentos. Intenta de nuevo más tarde.', retryAfter },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } }
     )
@@ -33,12 +39,12 @@ export async function POST(req: NextRequest) {
   try {
     const parsed = await parseJsonBody<{ identifier?: string; password?: string }>(req)
     if (!parsed.ok) {
-      return NextResponse.json({ error: parsed.error }, { status: 400 })
+      return jsonWithRequestId(req, { error: parsed.error }, { status: 400 })
     }
     const { identifier, password } = parsed.body
 
     if (!identifier || !password) {
-      return NextResponse.json({ error: 'Faltan credenciales' }, { status: 400 })
+      return jsonWithRequestId(req, { error: 'Faltan credenciales' }, { status: 400 })
     }
 
     const id = identifier.trim()
@@ -56,7 +62,7 @@ export async function POST(req: NextRequest) {
       15 * 60 * 1000
     )
     if (!accountLimit.allowed) {
-      return NextResponse.json(
+      return jsonWithRequestId(req, 
         { error: 'Demasiados intentos para esta cuenta. Intenta más tarde.', retryAfter: accountLimit.retryAfter },
         { status: 429, headers: { 'Retry-After': String(accountLimit.retryAfter) } }
       )
@@ -73,7 +79,7 @@ export async function POST(req: NextRequest) {
       const normalized = normalizeEmail(id)
       if (!normalized) {
         // Shouldn't happen given isEmail() passed, but be defensive.
-        return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+        return jsonWithRequestId(req, { error: 'Credenciales inválidas' }, { status: 401 })
       }
       lookupValue = normalized
     } else {
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
       // return 401 (don't leak whether the format is wrong vs the user doesn't exist).
       const normalized = normalizePhone(id)
       if (!normalized) {
-        return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+        return jsonWithRequestId(req, { error: 'Credenciales inválidas' }, { status: 401 })
       }
       lookupColumn = 'phone'
       lookupValue = normalized
@@ -116,7 +122,7 @@ export async function POST(req: NextRequest) {
     // same ("Credenciales inválidas") so neither path leaks which field is wrong.
     if (result.rows.length === 0) {
       await bcrypt.compare(password, await getDummyHash())
-      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+      return jsonWithRequestId(req, { error: 'Credenciales inválidas' }, { status: 401 })
     }
 
     const user = result.rows[0]
@@ -124,13 +130,13 @@ export async function POST(req: NextRequest) {
     if (!user.is_active) {
       // Same timing even for inactive users — hash to mask the deactivated branch.
       await bcrypt.compare(password, user.password_hash)
-      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+      return jsonWithRequestId(req, { error: 'Credenciales inválidas' }, { status: 401 })
     }
 
     const validPassword = await bcrypt.compare(password, user.password_hash)
 
     if (!validPassword) {
-      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
+      return jsonWithRequestId(req, { error: 'Credenciales inválidas' }, { status: 401 })
     }
 
     // Access token (15 min) — used by middleware + API routes.
@@ -201,9 +207,13 @@ export async function POST(req: NextRequest) {
       secure: isProd,
     })
 
-    return response
+    log.info({ userId: user.id, role: user.role }, 'login success')
+
+    // Sprint 9 C.2: echo the request id so the client can correlate logs.
+    return withRequestIdHeader(response, getRequestId(req))
   } catch (err) {
-    logger.error(serializeErr(err), 'Login error:')
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    log.error({ err: serializeErr(err) }, 'Login error:')
+    const errRes = NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    return withRequestIdHeader(errRes, getRequestId(req))
   }
 }

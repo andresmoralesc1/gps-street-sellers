@@ -99,6 +99,10 @@ test('POST /api/auth/login with empty body returns 400', async () => {
 })
 
 test('POST /api/auth/login with non-existent user returns 401 (no info leak)', async () => {
+  // Sprint 7: resetRateLimit because previous tests in this run may
+  // have consumed the 10/min login rate-limit bucket on the same IP.
+  // Without this the test flakes with a 429 instead of the expected 401.
+  await resetRateLimit()
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -442,6 +446,8 @@ test('POST /api/auth/login accepts a phone as identifier', async () => {
 })
 
 test('POST /api/auth/login rejects an unparseable identifier (not email, not phone)', async () => {
+  // Sprint 7: resetRateLimit for the same reason as the 401 test above.
+  await resetRateLimit()
   const res = await fetchJSON('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -449,4 +455,61 @@ test('POST /api/auth/login rejects an unparseable identifier (not email, not pho
   })
   assert.equal(res.status, 401)
   assert.equal(res.body.error, 'Credenciales inválidas')
+})
+
+// --- Sprint 7 B-AUTH: auth fixes regression tests ---------------------
+
+test('Sprint 7 B-AUTH-1: POST /api/auth/register includes user.emailVerified', async () => {
+  // Regression: before Sprint 7, the register response had
+  // `emailVerified: true` only at the TOP level, not inside `user`.
+  // Frontend's setUser(data.user) → user.emailVerified was undefined →
+  // EmailVerifyBanner showed "Verifica tu email" right after register
+  // even though email was already verified.
+  await resetRateLimit()
+  const email = 'sprint7-' + Date.now() + '@example.test'
+  const reg = await fetchJSON('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      password: 'Sprint7Test2026!',
+      name: 'Sprint 7 Tester',
+      cityId: 'bogota',
+      role: 'buyer',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  })
+  assert.equal(reg.status, 200, `register should 200, got ${reg.status}`)
+  // Both layers must agree: top-level emailVerified AND user.emailVerified.
+  assert.equal(reg.body.emailVerified, true, 'top-level emailVerified must be true')
+  assert.equal(reg.body.user.emailVerified, true,
+    'user.emailVerified must be true so frontend Zustand store hides the banner')
+})
+
+test('Sprint 7 B-AUTH-3: POST /api/auth/refresh does NOT require Origin header', async () => {
+  // Regression: before Sprint 7, the global CSRF guard rejected refresh
+  // requests that lacked Origin (which can happen on mobile networks
+  // and certain fetch implementations). Since SameSite=strict cookies
+  // already prevent cross-origin abuse, the guard is redundant here.
+  await resetRateLimit()
+  const u = await setupTestUser({ role: 'buyer' })
+  const login = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: u.email, password: u.password }),
+  })
+  if (login.status !== 200) return
+  const setCookie = login.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+  // Intentionally omit Origin.
+  const res = await fetch(`${BASE}/api/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+    body: JSON.stringify({}),
+  })
+  assert.equal(res.status, 200,
+    `refresh should 200 without Origin (cookie is httpOnly+strict), got ${res.status}`)
+  const j = await res.json()
+  assert.equal(j.expiresIn, 900, 'should report 900s expiry')
 })

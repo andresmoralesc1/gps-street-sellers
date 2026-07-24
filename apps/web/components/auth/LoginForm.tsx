@@ -67,7 +67,15 @@ export function LoginForm({ isLoading, error, setError, setIsLoading }: Props) {
         return
       }
 
-      setUser(data.user)
+      setUser({
+        ...data.user,
+        // Sprint 7 B-AUTH-1 (2026-07-23): defense in depth — fall back to
+        // top-level emailVerified for older API responses that don't yet
+        // include the flag inside the user object. LoginForm already gets
+        // the right field today, but the fallback makes the contract
+        // explicit so future refactors don't break the EmailVerifyBanner.
+        emailVerified: data.user.emailVerified ?? data.emailVerified ?? false,
+      })
       if (data.user.role === 'seller') {
         router.push('/dashboard')
       } else {

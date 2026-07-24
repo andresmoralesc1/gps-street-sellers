@@ -347,6 +347,13 @@ export async function POST(req: NextRequest) {
         cityId: user.city_id,
         role: user.role,
         avatarUrl: '',
+        // Sprint 7 B-AUTH-1 (2026-07-23): include the verification flag on
+        // the user object itself, not only at the top level. Frontend
+        // Zustand store calls `setUser(data.user)` and the EmailVerifyBanner
+        // hides only when `user.emailVerified === true`. Without this,
+        // the banner showed the "Verifica tu email" prompt right after
+        // registration even though the user was already verified.
+        emailVerified: true,
       },
     })
 

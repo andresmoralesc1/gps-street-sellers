@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useStore } from '@/store/useStore'
+import { authedFetch } from '@/lib/authed-fetch'
 
 /**
  * Blocks rendering of children until the store has rehydrated AND
@@ -15,6 +16,12 @@ import { useStore } from '@/store/useStore'
  *
  * Fix: components that need auth state wait for _hasHydrated before
  * rendering anything auth-dependent.
+ *
+ * Sprint 7 B-AUTH-2: switched the initial /api/auth/me call to
+ * `authedFetch` so a stale access token (15-min expiry) is
+ * silently refreshed from the 7-day refresh-token cookie. Before
+ * this, anyone who sat on the page for >15 min without action got
+ * logged out on the next API call.
  */
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -30,7 +37,7 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
 
     // Otherwise fetch from cookie and mark hydrated
     setHasHydrated(false)
-    fetch('/api/auth/me', { credentials: 'include' })
+    authedFetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((user) => {
         if (user) setUser(user)

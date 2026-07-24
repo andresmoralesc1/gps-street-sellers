@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest, signTokenSync } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
-import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/auth/refresh
  *
  * Re-issues a fresh access token (15min) using the current one, AS LONG AS:
- *   - the current token is still valid (signature + expiry OK)
- *   - the user's tokenVersion in DB still matches the one in the token
+ *  - the current token is still valid (signature + expiry OK)
+ *  - the user's tokenVersion in DB still matches the one in the token
  *
  * The access token lives in the 'token' cookie (read by middleware).
  * The 'refresh-token' cookie holds the same JWT but with a 7-day expiry,
@@ -19,9 +18,30 @@ import { requireSameOrigin } from '@/lib/csrf'
  * cookie instead. If both are gone, the user must log in again.
  *
  * Response: { token: string, expiresIn: 900 }
+ *
+ * Sprint 7 B-AUTH-3 (2026-07-23): explicitly SKIPPED the global CSRF
+ * Origin/Referer check (`requireSameOrigin`). Rationale:
+ *
+ *   1. The endpoint reads httpOnly + SameSite=strict cookies that the
+ *      browser only attaches on same-origin requests. Any cross-origin
+ *      attacker can't even send the cookie, so the body of the request
+ *      can never reach this handler in the first place.
+ *   2. The classic CSRF threat model assumes the attacker can ride on a
+ *      logged-in user's session. SameSite=strict cookies break that
+ *      primitive at the browser layer — Origin/Referer checks are belt and
+ *      suspenders from when Lax was the default. With Strict, they add
+ *      nothing for this endpoint while breaking the auto-refresh path
+ *      (some browsers / network layers strip Origin on fetch).
+ *   3. The endpoint is read-only on user state: it issues a new token but
+ *      doesn't write to the DB or take actions. Even if a CSRF bypass
+ *      existed, the worst case is "user's session gets refreshed" — which
+ *      is harmless.
+ *
+ * Other mutating endpoints (POST /api/vendors, /api/orders, etc.) keep
+ * the CSRF guard. The guard is opt-out per route via skipping the import
+ * + call, NOT a global toggle.
  */
 export async function POST(req: NextRequest) {
-    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     // Try access token first, fall back to refresh-token cookie.
     const accessToken = getTokenFromRequest(req)

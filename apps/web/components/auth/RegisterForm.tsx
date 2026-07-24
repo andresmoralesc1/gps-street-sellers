@@ -113,7 +113,16 @@ export function RegisterForm({
         return
       }
 
-      setUser(data.user)
+      setUser({
+        ...data.user,
+        // Sprint 7 B-AUTH-1 (2026-07-23): the register response puts
+        // emailVerified at the top level, but `setUser` expects it on
+        // the user object so Zustand store + EmailVerifyBanner work.
+        // Backward compatible — older /api/auth/login and other auth
+        // endpoints already return `emailVerified` inside `user`, so
+        // the spread overrides only when the server doesn't include it.
+        emailVerified: data.user.emailVerified ?? data.emailVerified ?? false,
+      })
       const target =
         redirectTo === 'onboarding' && data.user.role !== 'seller'
           ? '/map'

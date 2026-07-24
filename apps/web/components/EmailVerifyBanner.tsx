@@ -114,7 +114,17 @@ export function EmailVerifyBanner() {
         ) : (
           <>
             <span className="text-yellow-800">
-              Verifica tu email para crear tu puesto, dejar reseñas y contactar vendedores.
+              {/* Sprint 7 B-AUTH-4 (2026-07-23): copy now distinguishes the
+                  verify-email prompt from the post-verification state
+                  more clearly. Previous text said "Verifica tu email
+                  para..." even when emailVerified=true was returned by
+                  the API — caused by B-AUTH-1 (emailVerified only at top
+                  level of response). After B-AUTH-1's fix this branch
+                  is only reachable for genuinely unverified users, but
+                  the copy is updated anyway to be explicit. */}
+              {user.emailVerified === false
+                ? 'Verifica tu email para crear tu puesto, dejar reseñas y contactar vendedores.'
+                : 'Confirma tu email cuando puedas — algunas funciones están limitadas hasta entonces.'}
             </span>
             <span className="text-yellow-700/70 text-xs hidden sm:inline">
               Te enviamos un enlace a {user.email}.

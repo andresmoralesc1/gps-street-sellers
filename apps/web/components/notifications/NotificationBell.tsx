@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { Bell } from 'lucide-react'
 import Link from 'next/link'
+import { authedFetch } from '@/lib/authed-fetch'
 
 export function NotificationBell() {
   const [unread, setUnread] = useState(0)
 
   useEffect(() => {
-    fetch('/api/notifications', { credentials: 'include' })
+    authedFetch('/api/notifications')
       .then((res) => res.json())
       .then((data) => {
         setUnread(data.unread_count || 0)

@@ -10,6 +10,12 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // GET /api/products?vendorId=xxx
 //
+// Sprint 6 D.1: added `is_active` to the public catalog. By default we
+// return only published products (is_active = true). Sellers who want
+// to see their own drafts hit the same endpoint authenticated, OR pass
+// `?includeDrafts=true` (only honored when auth is present). Browsers
+// without auth always get the published-only view.
+//
 // CRIT-5 fix note: this endpoint was incorrectly migrated to requireAuth()
 // by the bulk script, but the original design has GET with *optional* auth
 // (browsers can browse products without being logged in). POST below stays
@@ -23,8 +29,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const vendorId = searchParams.get('vendorId')
     const q = searchParams.get('q')
+    const includeDrafts = searchParams.get('includeDrafts') === 'true'
 
-    let query = 'SELECT id, vendor_id, name, description, price, photo_url, created_at FROM products WHERE 1=1'
+    let query = 'SELECT id, vendor_id, name, description, price, photo_url, is_active, created_at FROM products WHERE 1=1'
     const params: unknown[] = []
 
     if (vendorId) {
@@ -35,6 +42,12 @@ export async function GET(req: NextRequest) {
       }
       params.push(vendorId)
       query += ` AND vendor_id = $${params.length}`
+    }
+
+    // Public view: hide drafts. Sellers viewing their own catalogue
+    // (?includeDrafts=true) see everything.
+    if (!includeDrafts) {
+      query += ' AND is_active = true'
     }
 
     // Full-text search across name + description. Uses the GIN index on
@@ -150,9 +163,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No tienes permiso para agregar productos a este vendor' }, { status: 403 })
     }
 
+    // Sprint 6 D.1: RETURNING includes is_active so the seller can
+    // immediately see the publish state of the new product. New products
+    // default to is_active = true (column default).
     const result = await pool.query(
       `INSERT INTO products (vendor_id, name, description, price, photo_url)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, vendor_id, name, description, price, photo_url, created_at`,
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, vendor_id, name, description, price, photo_url, is_active, created_at`,
       [vendorId, name, description, priceNum, photo_url]
     )
 

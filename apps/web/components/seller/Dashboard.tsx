@@ -12,6 +12,7 @@ import { SellerDashboard } from '@/components/seller/SellerDashboard'
 import { ConnectivityIndicator } from '@/components/seller/ConnectivityIndicator'
 import { FloatingActionButton } from '@/components/seller/FloatingActionButton'
 import { CopyPublicLink } from '@/components/seller/CopyPublicLink'
+import { ProductsMetricTile } from '@/components/seller/ProductsMetricTile'
 import { toast as notify } from '@/components/ui/Toast'
 import { VendorVisibility } from '@/components/seller/VendorVisibility'
 import { WhatsAppCatalog } from '@/components/seller/WhatsAppCatalog'
@@ -75,6 +76,9 @@ interface Product {
   description: string
   price: number
   photo_url: string | null
+  // Sprint 6 D.1: per-product publish flag. Dashboard fetches with
+  // includeDrafts=true so it sees hidden products too.
+  is_active: boolean
 }
 
 export function DashboardSkeleton() {
@@ -161,7 +165,7 @@ export function DashboardContent() {
       setVendorId(activeVendor.id)
       setVendorData(activeVendor)
 
-      const productsRes = await fetch(`/api/products?vendorId=${activeVendor.id}`, { credentials: 'include' })
+      const productsRes = await fetch(`/api/products?vendorId=${activeVendor.id}&includeDrafts=true`, { credentials: 'include' })
       if (productsRes.ok) {
         const productsData = await productsRes.json()
         setProducts(productsData.products ?? [])
@@ -501,19 +505,14 @@ export function DashboardContent() {
                 </Card>
               </Link>
 
-              {/* Editar productos */}
-              <Link href="/products">
-                <Card variant="outlined" className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Package size={24} className="text-gray-600" />
-                    <div>
-                      <span className="font-semibold">Editar productos</span>
-                      <p className="text-sm text-gray-500">{products.length} productos</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={20} className="text-gray-400" />
-                </Card>
-              </Link>
+              {/* Sprint 8 D.2: replaced the plain "Editar productos · N" tile with
+                  a richer metric tile that surfaces published/hidden counts.
+                  Seller now sees at a glance how many products are visible
+                  to buyers vs paused. */}
+              <ProductsMetricTile
+                totalCount={products.length}
+                hiddenCount={products.filter((p) => p.is_active === false).length}
+              />
 
               {/* N13: WhatsApp catalog */}
               <WhatsAppCatalog vendorId={vendorId} />

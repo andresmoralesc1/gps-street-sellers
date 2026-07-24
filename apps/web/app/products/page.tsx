@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Plus, Package, BarChart3, Settings } from 'lucide-react'
+import { Plus, Package, BarChart3, Settings, Camera, Sparkles } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProductsPageHeader } from '@/components/seller/ProductsPageHeader'
@@ -28,6 +28,8 @@ export default function ProductsPage() {
   const {
     vendorId,
     products,
+    // Sprint 8 D.2: hidden product count, surfaced in the header.
+    hiddenCount,
     loading,
     showForm,
     editingId,
@@ -102,7 +104,7 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-background-cream pb-20">
-      <ProductsPageHeader onBack={tryGoBack} productCount={products.length} />
+      <ProductsPageHeader onBack={tryGoBack} productCount={products.length} hiddenCount={hiddenCount} />
 
       <div className="p-4">
         {showForm ? (
@@ -137,11 +139,32 @@ export default function ProductsPage() {
         )}
 
         {products.length === 0 ? (
+          // Sprint 8 D.2: prominent empty state with the primary action
+          // right next to the copy. Previous version only had a small
+          // "Agregar productos" hint inside a card; the seller had to
+          // scroll up to find the actual button. Now the CTA is the
+          // primary button below the headline.
           <Card variant="outlined" className="p-8 text-center">
-            <Package size={48} className="mx-auto mb-4 text-gray-300" />
-            <h2 className="text-xl font-bold mb-2">Sin productos</h2>
-            <p className="text-gray-500 mb-4">
-              Agrega productos para que los compradores vean qué ofreces
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-50 flex items-center justify-center">
+              <Sparkles size={32} className="text-primary-700" aria-hidden="true" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Publica tu primer producto</h2>
+            <p className="text-gray-600 mb-6">
+              Los compradores te van a buscar por <strong>foto + nombre + precio</strong>.
+              <br />
+              Empieza con un producto — agregás más cuando quieras.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => setShowForm(true)}
+              className="mx-auto"
+              data-testid="empty-state-cta"
+            >
+              <Plus size={20} className="mr-2" aria-hidden="true" />
+              Agregar mi primer producto
+            </Button>
+            <p className="text-xs text-gray-500 mt-4">
+              💡 Tómale foto a tu producto estrella y nombrálo con una palabra.
             </p>
           </Card>
         ) : (

@@ -150,10 +150,12 @@ async function setupTestUser({
   registerCleanup()
   const suffix = uniqueSuffix()
   const email = `ci-test-${suffix}@ci.local`
-  const phone = String(3_100_000_000 + (Date.now() % 1_000_000_000)).padStart(
-    10,
-    '0'
-  ).slice(-10)
+  // Sprint 8 D.2: phone generator used to be `3_100_000_000 + (Date.now() %
+  // 1_000_000_000)`, but `3.1B + 900M = 4.0B`, which produces a 10-digit
+  // phone starting with `4` — not a valid Colombian mobile (MinTIC plan:
+  // mobile numbers start with `3`). Use `% 700_000_000` instead so the
+  // sum stays under 3.8B and always starts with `3`.
+  const phone = `3${String(Date.now() % 700_000_000).padStart(9, '0')}`
 
   const reg = await fetchJSON('/api/auth/register', {
     method: 'POST',

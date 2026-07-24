@@ -6,6 +6,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { hashToken } from '@/lib/email'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 // Top-50 most common passwords — must match the list in register/route.ts.
 // ponytail: duplicate list is intentional to keep reset flow standalone
@@ -33,6 +34,7 @@ const COMMON_PASSWORDS = new Set([
  * one tx with FOR UPDATE on the token row.
  */
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const ip = getClientIp(req)
 
   const { allowed, retryAfter } = await checkRateLimit(ip, 'reset_password', 10, 60 * 60 * 1000)

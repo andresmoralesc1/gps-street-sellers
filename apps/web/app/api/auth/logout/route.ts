@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
+import { requireSameOrigin } from '@/lib/csrf'
 
 function clearCookies(response: NextResponse) {
   const isProd = process.env.NODE_ENV === 'production'
@@ -9,19 +10,20 @@ function clearCookies(response: NextResponse) {
     httpOnly: true,
     path: '/',
     maxAge: 0,
-    sameSite: 'lax',
+    sameSite: 'strict', // S3-SEC-3 (audit 2026-07-23) — see login route
     secure: isProd,
   })
   response.cookies.set('refresh-token', '', {
     httpOnly: true,
     path: '/',
     maxAge: 0,
-    sameSite: 'lax',
+    sameSite: 'strict', // S3-SEC-3 (audit 2026-07-23) — see login route
     secure: isProd,
   })
 }
 
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const token = req.cookies.get('token')?.value
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * GET  /api/sponsorships          — list current user's sponsorships
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   // CRIT-23: prod guard. Sponsorships are a paid flow that should NOT be
   // callable from preview/staging deployments where the same Stripe / payment
   // gateway credentials would otherwise create real charges. The check uses

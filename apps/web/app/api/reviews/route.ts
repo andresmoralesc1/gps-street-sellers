@@ -5,10 +5,12 @@ import { isUuid } from '@/lib/core/utils/slug'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 // POST /api/reviews — submit a review (buyer only)
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   // Rate limit by IP (defense in depth — auth check happens next).
   // 10 reviews / hour per IP prevents scripted review bombing even
   // if a user authenticates with many accounts.

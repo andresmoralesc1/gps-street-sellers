@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * GET /api/account/export — ARCO right of access / portability.

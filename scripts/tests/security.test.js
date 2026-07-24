@@ -141,6 +141,35 @@ test('HSTS is disabled in dev (max-age=0)', async () => {
   delete require.cache[require.resolve('../../apps/web/next.config.js')]
 })
 
+
+test('S3-SEC-1: Permissions-Policy includes interest-cohort=() (FLoC opt-out)', async () => {
+  // Colombian Habeas Data (Law 1581/2012) + GDPR require explicit opt-out
+  // from browser-based tracking cohorting. Without `interest-cohort=()` the
+  // browser may assign the user to a topic group based on browsing history.
+  // S3-SEC-1 added this in Sprint 3.
+  const cfg = require('../../apps/web/next.config.js')
+  const result = await cfg.headers()
+  const pp = result[0].headers.find((h) => h.key === 'Permissions-Policy').value
+  assert.match(pp, /interest-cohort=\(\)/, 'FLoC/Topics opt-out missing')
+})
+
+test('S3-SEC-2: HSTS production includes preload directive', async () => {
+  // S3-SEC-2 added `preload` so the domain qualifies for the Chrome HSTS
+  // preload list (hstspreload.org). Next.js must agree with Caddy's HSTS
+  // so a misconfigured Caddy reload never drops the security guarantee.
+  const original = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+  delete require.cache[require.resolve('../../apps/web/next.config.js')]
+  const cfg = require('../../apps/web/next.config.js')
+  const result = await cfg.headers()
+  const hsts = result[0].headers.find((h) => h.key === 'Strict-Transport-Security').value
+  assert.match(hsts, /max-age=31536000/, 'max-age must be >= 1 year')
+  assert.match(hsts, /includeSubDomains/, 'must include subdomains (required for preload)')
+  assert.match(hsts, /preload/, 'must include preload directive for hstspreload.org submission')
+  process.env.NODE_ENV = original
+  delete require.cache[require.resolve('../../apps/web/next.config.js')]
+})
+
 // ---- Rate limit tests -------------------------------------------------------
 
 function installNextStub() {
@@ -405,4 +434,52 @@ test('Rate limit buckets are independent (contact != reviews != upload)', async 
     assert.notEqual(rOk.status, 429, 'reviews should NOT be blocked yet')
   })
   restore()
+})
+
+// ---- CSRF defense tests (S3-SEC-4) -----------------------------------------
+
+test('S3-SEC-4: POST /api/contact with cross-origin Origin is blocked (403)', async () => {
+  // A cross-origin attacker (`attacker.com`) trying to submit a contact
+  // form on behalf of a logged-in user must be blocked by the Origin check.
+  // This is defense-in-depth on top of SameSite=strict cookies. We send a
+  // POST with the evil Origin and expect a 403.
+  const base = process.env.TEST_BASE_URL || 'http://localhost:3005'
+  const res = await fetch(`${base}/api/contact`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Origin': 'https://attacker.com',
+    },
+    body: JSON.stringify({
+      name: 'Test User',
+      email: 'test@example.com',
+      subject: 'CSRF test',
+      message: 'should be blocked',
+    }),
+  })
+  assert.equal(res.status, 403, `expected 403 cross-origin, got ${res.status}`)
+  const body = await res.json()
+  assert.match(body.error || '', /CSRF|cross-origin/i)
+})
+
+test('S3-SEC-4: POST /api/contact with no Origin passes when CSRF_ALLOW_MISSING_ORIGIN=1', async () => {
+  // In test/CI mode the CSRF helper is intentionally permissive about
+  // missing Origin headers. Servers in production (.env.test is
+  // permissive, real .env is not) would return 403 here — but our test
+  // server has CSRF_ALLOW_MISSING_ORIGIN=1 set.
+  const base = process.env.TEST_BASE_URL || 'http://localhost:3005'
+  const res = await fetch(`${base}/api/contact`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Originless',
+      email: 'ol@example.com',
+      subject: 'no-origin test',
+      message: 'should pass CSRF, then hit rate limit OR succeed',
+    }),
+  })
+  assert.notEqual(res.status, 403, 'must NOT be 403 when CSRF_ALLOW_MISSING_ORIGIN=1')
+  // 400/422 (validation) or 200/201 are all acceptable. 429 is also OK
+  // because it ran AFTER CSRF.
+  assert.ok([200, 201, 400, 422, 429].includes(res.status), `unexpected ${res.status}`)
 })

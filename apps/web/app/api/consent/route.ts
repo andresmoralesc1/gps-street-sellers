@@ -5,6 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import pool from '@/lib/db'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/consent — record a consent event for Ley 1581/2012 compliance.
@@ -32,6 +33,7 @@ type ConsentType = (typeof VALID_TYPES)[number]
 const DEFAULT_POLICY_VERSION = process.env.POLICY_VERSION || 'v1.0'
 
 export async function POST(request: NextRequest) {
+    const csrf = requireSameOrigin(request); if (csrf) return csrf
   // 1. Parse + validate body.
   const parsed = await parseJsonBody<{
     consentType?: unknown; granted?: unknown; policyVersion?: unknown; email?: unknown;

@@ -5,6 +5,7 @@ import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { isSafePublicUrl } from '@/lib/safe-url'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 /**
@@ -17,6 +18,7 @@ import { isSafePublicUrl } from '@/lib/safe-url'
  * replaces the previous keys instead of leaking rows.
  */
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const ip = getClientIp(req)
   const { allowed, retryAfter } = await checkRateLimit(ip, 'push_subscribe', 10, 60 * 60 * 1000)
   if (!allowed) {
@@ -78,6 +80,7 @@ export async function POST(req: NextRequest) {
  * Body: { endpoint: string }
  */
 export async function DELETE(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const ip = getClientIp(req)
   const { allowed, retryAfter } = await checkRateLimit(ip, 'push_subscribe', 10, 60 * 60 * 1000)
   if (!allowed) {

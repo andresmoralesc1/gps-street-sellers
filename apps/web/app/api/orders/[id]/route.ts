@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { notify } from '@/lib/push'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 // PATCH /api/orders/[id] — change order status (vendor only)
@@ -12,6 +13,7 @@ import { notify } from '@/lib/push'
 // the export to PATCH to match the verb — callers hitting GET will now get
 // the proper 405 instead of a confusing 500 from a body parse failure.
 export async function PATCH(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const params = await paramsPromise
 
   try {

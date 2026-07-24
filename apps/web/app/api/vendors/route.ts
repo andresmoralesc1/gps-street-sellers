@@ -6,6 +6,7 @@ import pool from '@/lib/db'
 import { parseVendorFilters, buildVendorWhereClause } from './filters'
 import { generateUniqueSlug } from '@/lib/vendor-slug'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 // Public: GET /api/vendors
 //
@@ -194,6 +195,7 @@ export async function GET(req: NextRequest) {
  *   This endpoint closes that hole.
  */
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth

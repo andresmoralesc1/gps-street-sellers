@@ -8,10 +8,12 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { isUuid } from '@/lib/core/utils/slug'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 // PUT /api/vendors/[id]/location — update vendor location (owner only)
 export async function PUT(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const params = await paramsPromise
 
   try {

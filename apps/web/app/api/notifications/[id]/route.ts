@@ -4,11 +4,13 @@ import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 // PATCH /api/notifications/[id] — mark as read
 type RouteContext = { params: Promise<{ id: string }> }
 export async function PATCH(req: NextRequest, context: RouteContext) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const { id: notifId } = await context.params
 

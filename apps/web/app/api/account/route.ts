@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * DELETE /api/account — ARCO right of cancellation / suppression.
@@ -26,6 +27,7 @@ import pool from '@/lib/db'
 export const runtime = 'nodejs'
 
 export async function DELETE(request: NextRequest) {
+    const csrf = requireSameOrigin(request); if (csrf) return csrf
   // 1. Authenticate
   const auth = await requireAuth(request)
 

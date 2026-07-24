@@ -4,12 +4,14 @@ import { requireAuth } from '@/lib/auth'
 import { isUuid } from '@/lib/core/utils/slug'
 import { parseJsonBody } from '@/lib/parse-json'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 
 
 // POST /api/favorites — add a vendor to favorites
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const auth = await requireAuth(req)
 
@@ -101,6 +103,7 @@ export async function GET(req: NextRequest) {
 
 // DELETE /api/favorites?productId=X — removes a favorite
 export async function DELETE(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth

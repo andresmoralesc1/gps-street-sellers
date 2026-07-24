@@ -6,6 +6,7 @@ import { isUuid } from '@/lib/core/utils/slug'
 import { isOpenNow } from '@/lib/business-hours'
 import { parseJsonBody } from '@/lib/parse-json'
 import { normalizePhone } from '@/lib/auth-helpers'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 type RouteContext = {
@@ -166,6 +167,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
 // PATCH /api/vendors/[id] — update vendor profile (owner only)
 export async function PATCH(req: NextRequest, context: RouteContext) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const { id: vendorId } = await context.params
 

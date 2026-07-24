@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { isUuid } from '@/lib/core/utils/slug'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 type RouteContext = {
   params: Promise<{ id: string }>
@@ -15,6 +16,7 @@ type RouteContext = {
 // product silently destroyed it. Now it does a proper UPDATE with ownership
 // check. Only fields present in the body are touched.
 export async function PATCH(req: NextRequest, context: RouteContext) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const { id: productId } = await context.params
 
@@ -111,6 +113,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
 // DELETE /api/products/[id] — delete product (seller only, owner only)
 export async function DELETE(req: NextRequest, context: RouteContext) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const { id: productId } = await context.params
 

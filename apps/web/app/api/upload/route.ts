@@ -7,6 +7,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
+import { requireSameOrigin } from '@/lib/csrf'
 
 const STORAGE_DIR = path.join(process.cwd(), 'storage')
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
@@ -50,6 +51,7 @@ function matchesMagic(buf: Buffer, mime: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   // Rate limit BEFORE auth — uploads are expensive (disk I/O).
   // 20 uploads / hour / IP — generous for legit use, blocks storage abuse.
   const ip = getClientIp(req)

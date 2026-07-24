@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -19,6 +20,7 @@ export async function DELETE(
   req: NextRequest,
   { params: paramsPromise }: { params: Promise<{ id: string; photoId: string }> }
 ) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const params = await paramsPromise
   try {
     if (!params.id || !UUID_RE.test(params.id)) {

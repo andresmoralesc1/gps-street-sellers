@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * PATCH /api/vendors/me/settings
@@ -42,6 +43,7 @@ function parseHHMM(s: unknown): { h: number; m: number } | null {
 }
 
 export async function PATCH(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth

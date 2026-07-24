@@ -168,14 +168,36 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 15, // 15 minutes — matches access token expiry
-      sameSite: 'lax',
+      // S3-SEC-3 (audit 2026-07-23): changed SameSite from 'lax' to 'strict'.
+      // Lax allowed the auth cookies to ride along on top-level cross-site
+      // GET navigations (e.g. clicking a phishing link in email that 302's
+      // to gps.andresmorales.com.co). Strict drops the cookies on ANY
+      // cross-site request, including GET. The tradeoff: if we add OAuth
+      // (Google/Facebook) later, the OAuth callback POST won't include the
+      // session cookie — we'd need to either downgrade the relevant cookies
+      // to 'lax' temporarily, or use a separate 'csrf' cookie on the
+      // callback URL. We have no OAuth today, so strict is the right call.
+      // Defense in depth on top of the Origin/Referer CSRF check in
+      // lib/csrf.ts (S3-SEC-4 below).
+      sameSite: 'strict',
       secure: isProd,
     })
     response.cookies.set('refresh-token', refreshToken, {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
-      sameSite: 'lax',
+      // S3-SEC-3 (audit 2026-07-23): changed SameSite from 'lax' to 'strict'.
+      // Lax allowed the auth cookies to ride along on top-level cross-site
+      // GET navigations (e.g. clicking a phishing link in email that 302's
+      // to gps.andresmorales.com.co). Strict drops the cookies on ANY
+      // cross-site request, including GET. The tradeoff: if we add OAuth
+      // (Google/Facebook) later, the OAuth callback POST won't include the
+      // session cookie — we'd need to either downgrade the relevant cookies
+      // to 'lax' temporarily, or use a separate 'csrf' cookie on the
+      // callback URL. We have no OAuth today, so strict is the right call.
+      // Defense in depth on top of the Origin/Referer CSRF check in
+      // lib/csrf.ts (S3-SEC-4 below).
+      sameSite: 'strict',
       secure: isProd,
     })
 

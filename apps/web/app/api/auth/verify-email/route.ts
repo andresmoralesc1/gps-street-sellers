@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import pool from '@/lib/db'
 import { hashToken } from '@/lib/email'
 import { checkRateLimitFromRequest } from '@/lib/rate-limit'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/auth/verify-email
@@ -26,6 +27,7 @@ import { checkRateLimitFromRequest } from '@/lib/rate-limit'
  */
 
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   // Defense against DoS via connection-pool exhaustion: this endpoint runs
   // BEGIN + SELECT FOR UPDATE + 2 UPDATEs + COMMIT for every request (5
   // round-trips with a row lock). A flood of bogus tokens can saturate the

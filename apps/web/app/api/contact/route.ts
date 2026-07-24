@@ -4,8 +4,10 @@ import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   // Rate limit BEFORE doing any work — 5 messages per IP per hour.
   // Contact form is public; without this an attacker can flood contact_messages.
   const ip = getClientIp(req)

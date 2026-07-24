@@ -4,10 +4,12 @@ import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 
 // PATCH /api/vendors/me/location — update vendor GPS coordinates
 export async function PATCH(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth

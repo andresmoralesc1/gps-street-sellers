@@ -95,6 +95,12 @@ const nextConfig = {
     // https://github.com/w3c/webappsec-permissions-policy/blob/main/features.md
     // 'notifications' is NOT a valid feature name (it doesn't exist in spec).
     // Web push does NOT require Permissions-Policy declaration.
+    //
+    // S3-SEC-1 (audit 2026-07-23): added `interest-cohort=()` to opt out of
+    // FLoC / Topics tracking. Without it the browser may cohort the user
+    // into a "topic" group based on browsing history, which is a privacy
+    // violation under Colombian Habeas Data (Law 1581/2012) and EU GDPR.
+    // Always-empty tuple blocks the feature entirely.
     const permissionsPolicy = [
       `geolocation=(self)`, // required for "vendors nearby"
       `camera=()`,
@@ -104,17 +110,24 @@ const nextConfig = {
       `magnetometer=()`,
       `gyroscope=()`,
       `accelerometer=()`,
+      `interest-cohort=()`,
     ].join(', ')
 
     return [
       {
         source: '/(.*)',
         headers: [
-          // Strict transport security — 1 year, include subdomains, preload-ready
+          // Strict transport security — 1 year, include subdomains, preload-ready.
+          // S3-SEC-2 (audit 2026-07-23): added `preload` so the domain can be
+          // submitted to hstspreload.org. The Caddy vhost already emits this
+          // header, but Next.js must agree so a misconfigured Caddy reload (or
+          // direct hit to the Next.js port during debugging) doesn't drop the
+          // security guarantee. `preload` requires `includeSubDomains` and
+          // `max-age >= 31536000` — all three are present.
           {
             key: 'Strict-Transport-Security',
             value: isProd
-              ? 'max-age=31536000; includeSubDomains'
+              ? 'max-age=31536000; includeSubDomains; preload'
               : 'max-age=0',
           },
           // Clickjacking protection

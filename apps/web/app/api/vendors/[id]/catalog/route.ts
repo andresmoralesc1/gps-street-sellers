@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { isUuid } from '@/lib/core/utils/slug'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * GET /api/vendors/[id]/catalog — public catalog for sharing via WhatsApp.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/notifications/mark-all-read
@@ -14,6 +15,7 @@ import pool from '@/lib/db'
  * Auth: required.
  */
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 

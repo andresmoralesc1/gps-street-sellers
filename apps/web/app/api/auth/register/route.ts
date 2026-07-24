@@ -355,14 +355,22 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 15,
-      sameSite: 'lax',
+      // S3-SEC-3 (audit 2026-07-23): changed SameSite from 'lax' to 'strict'.
+      // See apps/web/app/api/auth/login/route.ts for rationale. Defense in
+      // depth on top of the Origin/Referer CSRF check in lib/csrf.ts
+      // (S3-SEC-4 below).
+      sameSite: 'strict',
       secure: isProd,
     })
     response.cookies.set('refresh-token', refreshToken, {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
-      sameSite: 'lax',
+      // S3-SEC-3 (audit 2026-07-23): changed SameSite from 'lax' to 'strict'.
+      // See apps/web/app/api/auth/login/route.ts for rationale. Defense in
+      // depth on top of the Origin/Referer CSRF check in lib/csrf.ts
+      // (S3-SEC-4 below).
+      sameSite: 'strict',
       secure: isProd,
     })
 

@@ -3,6 +3,7 @@ import pool from '@/lib/db'
 import { logger, serializeErr } from '@/lib/logger'
 import { getTokenFromRequest } from '@/lib/auth-edge'
 import { verifyToken } from '@/lib/auth'
+import { requireSameOrigin } from '@/lib/csrf'
 
 // M-001 D: audit trail for vendor contact CTAs (call / WhatsApp / directions).
 //
@@ -32,6 +33,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const { id: vendorId } = await params
 

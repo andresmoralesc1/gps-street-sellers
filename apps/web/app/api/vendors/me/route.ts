@@ -3,6 +3,7 @@ import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
 import { COLOMBIA_CITIES } from '@/lib/core/constants/cities'
+import { requireSameOrigin } from '@/lib/csrf'
 
 const VALID_CITY_IDS = new Set(COLOMBIA_CITIES.map((c) => c.id))
 
@@ -105,6 +106,7 @@ export async function GET(req: NextRequest) {
  * 'is_verified' is intentionally NOT here — only admins can verify vendors.
  */
 export async function PATCH(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     const auth = await requireAuth(req)
     if (auth instanceof NextResponse) return auth

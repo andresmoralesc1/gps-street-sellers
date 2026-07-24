@@ -5,6 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/trusted-ip'
 import { issueEmailVerificationToken, sendVerificationEmail } from '@/lib/email'
 import { parseJsonBody } from '@/lib/parse-json'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/auth/resend-verification
@@ -22,6 +23,7 @@ import { parseJsonBody } from '@/lib/parse-json'
 const TOKEN_TTL_HOURS = 24
 
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const parsed = await parseJsonBody<{ email?: unknown }>(req)
   const rawEmail = parsed.ok ? parsed.body.email : undefined
   const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : ''

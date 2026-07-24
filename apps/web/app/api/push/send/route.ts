@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { notify } from '@/lib/push'
 import { checkRateLimitFromRequest } from '@/lib/rate-limit'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/push/send — authenticated user-triggered push.
@@ -27,6 +28,7 @@ interface SendBody {
 }
 
 export async function POST(request: NextRequest) {
+    const csrf = requireSameOrigin(request); if (csrf) return csrf
   // 1. Authenticate
   const auth = await requireAuth(request)
 

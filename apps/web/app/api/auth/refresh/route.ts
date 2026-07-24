@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { verifyToken, getTokenFromRequest, signTokenSync } from '@/lib/auth'
 import { isTokenRevoked } from '@/lib/auth-db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * POST /api/auth/refresh
@@ -20,6 +21,7 @@ import { isTokenRevoked } from '@/lib/auth-db'
  * Response: { token: string, expiresIn: 900 }
  */
 export async function POST(req: NextRequest) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   try {
     // Try access token first, fall back to refresh-token cookie.
     const accessToken = getTokenFromRequest(req)
@@ -75,7 +77,11 @@ export async function POST(req: NextRequest) {
     response.cookies.set('token', freshAccessToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax',
+      // S3-SEC-3 (audit 2026-07-23): changed SameSite from 'lax' to 'strict'.
+      // See apps/web/app/api/auth/login/route.ts for rationale. Defense in
+      // depth on top of the Origin/Referer CSRF check in lib/csrf.ts
+      // (S3-SEC-4 below).
+      sameSite: 'strict',
       maxAge: 60 * 15, // 15 min — matches access token
       path: '/',
     })
@@ -84,7 +90,11 @@ export async function POST(req: NextRequest) {
       response.cookies.set('refresh-token', freshRefreshToken, {
         httpOnly: true,
         secure: isProd,
-        sameSite: 'lax',
+        // S3-SEC-3 (audit 2026-07-23): changed SameSite from 'lax' to 'strict'.
+      // See apps/web/app/api/auth/login/route.ts for rationale. Defense in
+      // depth on top of the Origin/Referer CSRF check in lib/csrf.ts
+      // (S3-SEC-4 below).
+      sameSite: 'strict',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/',
       })

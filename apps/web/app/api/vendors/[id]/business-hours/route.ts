@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { requireAuth } from '@/lib/auth'
 import pool from '@/lib/db'
+import { requireSameOrigin } from '@/lib/csrf'
 
 /**
  * GET /api/vendors/[id]/business-hours — get vendor's business hours config.
@@ -43,7 +44,11 @@ export async function GET(req: NextRequest, { params: paramsPromise }: { params:
 
 const VALID_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
-export async function PUT(req: NextRequest, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest,
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
+) {
+    const csrf = requireSameOrigin(req); if (csrf) return csrf
   const params = await paramsPromise
 
   try {

@@ -61,17 +61,23 @@ export function buildVendorWhereClause(filters: VendorFilters, startAt = 1): Whe
     i++
   }
   if (filters.active === 'true') {
-    // GPS-004: "Activo" now means BOTH `is_active = true` AND a fresh GPS
-    // ping (location_updated_at within the last 5 minutes). Without this
-    // filter the public listing kept returning vendors whose mobile app had
-    // been backgrounded for hours — they were "active in DB" but actually
-    // unreachable. The 5-min threshold matches the rule documented in the
-    // project context (vendors appear "Activo" only when timestamp <300s).
-    // We use `NOW() - INTERVAL '5 minutes'` rather than a Redis/cache TTL
-    // because PostgreSQL is the source of truth here; the freshness window
-    // is enforced on every read, not just at write time.
+    // SPRINT 11 B-AUTH-3 (2026-07-24): reverted the GPS-004 location_fresh
+    // requirement on the `active=true` filter. The original reasoning was
+    // sound (don't show vendors whose phone has been backgrounded for
+    // hours), but the implementation broke the seller funnel:
+    //   1. A new seller registers and the auto-bootstrap creates a vendor
+    //      row with `is_active = false` and no GPS ping.
+    //   2. The onboarding flow toggles the vendor `is_active = true` so
+    //      the buyer map can see them — but no GPS ping has happened yet.
+    //   3. The previous filter `is_active AND location_updated_at >= now-5m`
+    //      hid the seller from the map forever, until they happened to
+    //      get a GPS signal (which on a 3G phone in a barrio might take
+    //      ages).
+    // The "online recently" concern is now exposed separately as
+    // `locationFresh` in the response (see GET handler map). The map UI
+    // uses that for the "Online" badge; the public listing is filtered on
+    // the seller's manual toggle alone.
     w.push(`AND v.is_active = true`)
-    w.push(`AND v.location_updated_at >= NOW() - INTERVAL '5 minutes'`)
   }
   if (filters.withLocation) {
     w.push(`AND v.latitude IS NOT NULL AND v.longitude IS NOT NULL`)

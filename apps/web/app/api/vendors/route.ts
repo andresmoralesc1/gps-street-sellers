@@ -83,6 +83,21 @@ export async function GET(req: NextRequest) {
     // a vendor who toggled off 6 minutes ago should not show up as
     // isActive=true just because their cached coords are still in the
     // DB row).
+    // GPS-005 (original): `isActive` was the AND of `is_active` and
+    // `locationFresh`. Sprint 11 B-AUTH-3 (2026-07-24): changed to
+    // `is_active` alone. The previous AND meant that freshly-registered
+    // sellers (who haven't reported a GPS ping yet) never showed up on
+    // the buyer map, even after they explicitly toggled themselves
+    // active. That's a fundamental funnel break: a seller who finished
+    // onboarding but is in a coverage hole would be invisible for hours
+    // until their first GPS ping. The new behavior:
+    //   - `isActive` = the seller's manual toggle (the DB column)
+    //   - `locationFresh` = whether the seller pinged GPS in the last
+    //     5 min (an orthogonal concern)
+    // The buyer map filters on `isActive` (active vendors show up).
+    // The "online recently" badge in the map uses `locationFresh`
+    // separately. This decouples "I want to be visible" from "my
+    // phone has GPS signal right now".
     const FIVE_MINUTES_MS = 5 * 60 * 1000
     const now = Date.now()
     const vendors = result.rows.map((v) => {
@@ -99,7 +114,7 @@ export async function GET(req: NextRequest) {
         categoryLabel: v.category_label,
         latitude: v.latitude,
         longitude: v.longitude,
-        isActive: Boolean(v.is_active) && locationFresh,
+        isActive: Boolean(v.is_active),
         locationFresh,
         locationUpdatedAt: v.location_updated_at,
         isVerified: v.is_verified,

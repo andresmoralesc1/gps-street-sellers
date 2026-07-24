@@ -43,11 +43,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const parsed = await parseJsonBody<{
       name?: string; description?: string; price?: number;
       photo_url?: string | null;
+      // Sprint 6 D.1: sellers can publish/unpublish a single product
+      // without deleting it. Accepting either camelCase (client) or
+      // snake_case (raw API) avoids the migration footgun where the
+      // client posts `isActive` but the handler ignored it.
+      isActive?: boolean;
+      is_active?: boolean;
     }>(req)
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
     const { name, description, price, photo_url } = parsed.body
+    // isActive wins over is_active if both are sent (defensive — the
+    // client should only send one, but if a stale caller mixes them we
+    // want the snake_case from the raw API path to still be respected).
+    const isActiveRaw =
+      parsed.body.isActive !== undefined ? parsed.body.isActive : parsed.body.is_active
 
     // Build dynamic SET clause from provided fields only
     const setClauses: string[] = []
@@ -85,6 +96,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
       params.push(photo_url === null ? null : photo_url.trim())
       setClauses.push(`photo_url = $${params.length}`)
+    }
+    // Sprint 6 D.1: per-product publish/unpublish. Strict boolean — anything
+    // other than a real boolean is rejected so a typo (e.g. the string
+    // "true") doesn't silently fall back to either value.
+    if (isActiveRaw !== undefined) {
+      if (typeof isActiveRaw !== 'boolean') {
+        return NextResponse.json(
+          { error: 'isActive debe ser booleano (true o false)' },
+          { status: 400 },
+        )
+      }
+      params.push(isActiveRaw)
+      setClauses.push(`is_active = $${params.length}`)
     }
 
     if (setClauses.length === 0) {

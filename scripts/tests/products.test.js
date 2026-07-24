@@ -27,6 +27,25 @@ async function fetchJSON(path, options = {}) {
   return { status: res.status, body, headers: res.headers }
 }
 
+// Sprint 6 D.1 helper: log in the seeded test seller and return the
+// cookie header for downstream requests. Returns `{ cookieHeader: '' }`
+// if login failed, so the test can early-return.
+async function loginTestSeller() {
+  const res = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (res.status !== 200) return { cookieHeader: '' }
+  const setCookie = res.headers.get('set-cookie') || ''
+  // Same set-cookie parsing as the other tests in this file.
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+  return { cookieHeader }
+}
+
 // --- POST /api/products -----------------------------------------------------
 
 test('POST /api/products without auth returns 401', async () => {
@@ -129,10 +148,14 @@ test('GET /api/products response shape excludes columns not in allowlist', async
   // Audit fix: switched from SELECT * to an explicit column list so we don't
   // leak future internal columns (e.g. deleted_at, internal_notes).
   // The audit listed 7 public columns. Anything beyond must NOT be present.
+  // Sprint 6 D.1 added `is_active` so sellers can see which products are
+  // hidden in their own catalogue (the public catalog filter only returns
+  // is_active=true rows, but the column is still in the response so the
+  // seller UI can show a "Visible / Oculto" pill).
   const res = await fetchJSON('/api/products')
   assert.equal(res.status, 200)
   for (const p of res.body.products.slice(0, 3)) {
-    const allowed = ['id', 'vendor_id', 'name', 'description', 'price', 'photo_url', 'created_at']
+    const allowed = ['id', 'vendor_id', 'name', 'description', 'price', 'photo_url', 'is_active', 'created_at']
     const keys = Object.keys(p)
     for (const k of keys) {
       assert.ok(allowed.includes(k), `unexpected column ${k} leaked in GET /api/products`)
@@ -300,4 +323,109 @@ test('GET /api/vendors/{id}/catalog returns products for a public id', async () 
   assert.equal(res.status, 200)
   assert.ok(res.body.vendor, 'response has vendor object')
   assert.ok(Array.isArray(res.body.products), 'response has products array')
+})
+
+// --- Sprint 6 D.1: products.is_active toggle --------------------------------
+
+test('POST /api/products returns is_active=true (default) for new products (D.1)', async () => {
+  const login = await loginTestSeller()
+  if (!login.cookieHeader) return
+  const v = await setupTestVendor()
+  const res = await fetchJSON('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({
+      name: 'Test Toggle Product ' + Date.now(),
+      description: 'For testing is_active',
+      price: 1000,
+      vendor_id: v.vendorId,
+    }),
+  })
+  assert.equal(res.status, 201, `expected 201, got ${res.status}`)
+  assert.equal(res.body.product?.is_active, true,
+    'new products default to is_active=true (column default)')
+})
+
+test('PATCH /api/products/[id] toggles is_active (D.1)', async () => {
+  const login = await loginTestSeller()
+  if (!login.cookieHeader) return
+  const v = await setupTestVendor()
+  const created = await fetchJSON('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({
+      name: 'Toggle Target ' + Date.now(),
+      price: 500,
+      vendor_id: v.vendorId,
+    }),
+  })
+  if (created.status !== 201) return
+  const productId = created.body.product.id
+
+  const hide = await fetchJSON(`/api/products/${productId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ isActive: false }),
+  })
+  assert.equal(hide.status, 200)
+  assert.equal(hide.body.product?.is_active, false, 'should be hidden after PATCH isActive:false')
+
+  const show = await fetchJSON(`/api/products/${productId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ isActive: true }),
+  })
+  assert.equal(show.status, 200)
+  assert.equal(show.body.product?.is_active, true, 'should be visible after PATCH isActive:true')
+})
+
+test('PATCH /api/products/[id] rejects non-boolean isActive (D.1)', async () => {
+  const login = await loginTestSeller()
+  if (!login.cookieHeader) return
+  const v = await setupTestVendor()
+  const created = await fetchJSON('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ name: 'Strict Bool ' + Date.now(), price: 100, vendor_id: v.vendorId }),
+  })
+  if (created.status !== 201) return
+  const res = await fetchJSON(`/api/products/${created.body.product.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ isActive: 'true' }),
+  })
+  assert.equal(res.status, 400)
+  assert.match(res.body.error || '', /booleano/i,
+    'should reject string "true" with a clear boolean error')
+})
+
+test('GET /api/products (anonymous) hides products with is_active=false (D.1)', async () => {
+  const login = await loginTestSeller()
+  if (!login.cookieHeader) return
+  const v = await setupTestVendor()
+  const created = await fetchJSON('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ name: 'Draft Product ' + Date.now(), price: 100, vendor_id: v.vendorId }),
+  })
+  if (created.status !== 201) return
+  const productId = created.body.product.id
+
+  await fetchJSON(`/api/products/${productId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ isActive: false }),
+  })
+
+  const anon = await fetchJSON(`/api/products?vendorId=${v.vendorId}`)
+  assert.equal(anon.status, 200)
+  const anonIds = (anon.body.products || []).map((p) => p.id)
+  assert.ok(!anonIds.includes(productId),
+    'anonymous view must hide is_active=false products')
+
+  const anonWithFlag = await fetchJSON(`/api/products?vendorId=${v.vendorId}&includeDrafts=true`)
+  assert.equal(anonWithFlag.status, 200)
+  const anonFlagIds = (anonWithFlag.body.products || []).map((p) => p.id)
+  assert.ok(!anonFlagIds.includes(productId),
+    'includeDrafts=true should only work for authenticated sellers, not anonymous viewers')
 })

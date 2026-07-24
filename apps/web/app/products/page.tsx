@@ -43,6 +43,9 @@ export default function ProductsPage() {
     deleteId,
     deleteError,
     confirmDiscardOpen,
+    // Sprint 6 D.1: per-product publish/unpublish toggle state
+    togglingId,
+    toggleError,
     setFormName,
     setFormDescription,
     setFormPrice,
@@ -53,6 +56,7 @@ export default function ProductsPage() {
     handleAdd,
     handleEdit,
     handleDelete,
+    toggleActive,
     startEdit,
     tryCloseForm,
     tryGoBack,
@@ -148,11 +152,23 @@ export default function ProductsPage() {
                 product={product}
                 onEdit={startEdit}
                 onDelete={setDeleteId}
+                // Sprint 6 D.1: per-product publish toggle
+                onToggleActive={toggleActive}
+                isToggling={togglingId === product.id}
               />
             ))}
           </div>
         )}
       </div>
+
+      {toggleError && (
+        <div
+          role="alert"
+          className="fixed bottom-20 left-4 right-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl text-sm shadow-lg"
+        >
+          {toggleError}
+        </div>
+      )}
 
       <nav
         className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3"

@@ -12,6 +12,10 @@ export interface Product {
   description: string
   price: number
   photo_url: string | null
+  // Sprint 6 D.1: per-product publish/unpublish toggle. New products
+  // default to true (column default). Sellers hide a product by setting
+  // this to false via PATCH /api/products/[id].
+  is_active: boolean
 }
 
 export interface ProductFormSnapshot {
@@ -53,6 +57,9 @@ interface UseProductsPage {
   confirmDiscardOpen: boolean
   // derived
   isFormDirty: boolean
+  // Sprint 6 D.1: per-product toggle state
+  togglingId: string | null
+  toggleError: string
   // form setters
   setFormName: (v: string) => void
   setFormDescription: (v: string) => void
@@ -65,6 +72,10 @@ interface UseProductsPage {
   handleAdd: () => Promise<void>
   handleEdit: (productId: string) => Promise<void>
   handleDelete: () => Promise<void>
+  // Sprint 6 D.1: toggle a product's is_active flag. Optimistic UI —
+  // we flip the local state immediately, then reconcile when the API
+  // returns. On error we revert and surface the message.
+  toggleActive: (productId: string, nextActive: boolean) => Promise<void>
   startEdit: (product: Product) => void
   resetForm: () => void
   tryCloseForm: () => void
@@ -352,6 +363,62 @@ export function useProductsPage(): UseProductsPage {
     resetForm()
   }, [resetForm])
 
+  // Sprint 6 D.1: toggle a product's is_active flag with optimistic UI.
+  // The flow:
+  //   1. flip the local state immediately (UI feels instant)
+  //   2. send PATCH /api/products/[id]
+  //   3. on success, reconcile the local state with the server response
+  //   4. on failure, revert and surface the error
+  // We guard against double-taps by setting togglingId for the duration
+  // of the network round-trip.
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string>('')
+
+  const toggleActive = useCallback(
+    async (productId: string, nextActive: boolean) => {
+      // Prevent double-tap.
+      if (togglingId) return
+      const prevSnapshot = products
+      // Optimistic update
+      setProducts((curr) =>
+        curr.map((p) => (p.id === productId ? { ...p, is_active: nextActive } : p)),
+      )
+      setTogglingId(productId)
+      setToggleError('')
+      try {
+        const res = await fetch(`/api/products/${productId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ isActive: nextActive }),
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({} as { error?: string }))
+          throw new Error(j.error || `HTTP ${res.status}`)
+        }
+        // Reconcile with server response (it may include other fields
+        // we don't display but consistency matters).
+        const j = await res.json() as { product?: { is_active?: boolean } }
+        if (j.product && typeof j.product.is_active === 'boolean') {
+          setProducts((curr) =>
+            curr.map((p) =>
+              p.id === productId ? { ...p, is_active: j.product!.is_active! } : p,
+            ),
+          )
+        }
+      } catch (err) {
+        // Revert optimistic update.
+        setProducts(prevSnapshot)
+        setToggleError(
+          err instanceof Error ? err.message : 'No se pudo cambiar la visibilidad del producto',
+        )
+      } finally {
+        setTogglingId(null)
+      }
+    },
+    [togglingId, products],
+  )
+
   return {
     // data
     vendorId,
@@ -376,6 +443,9 @@ export function useProductsPage(): UseProductsPage {
     confirmDiscardOpen,
     // derived
     isFormDirty,
+    // Sprint 6 D.1: per-product toggle state
+    togglingId,
+    toggleError,
     // setters
     setFormName,
     setFormDescription,
@@ -388,6 +458,8 @@ export function useProductsPage(): UseProductsPage {
     handleAdd,
     handleEdit,
     handleDelete,
+    // Sprint 6 D.1: per-product publish/unpublish toggle
+    toggleActive,
     startEdit,
     resetForm,
     tryCloseForm,

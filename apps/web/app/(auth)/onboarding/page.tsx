@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useStore } from '@/store/useStore'
 import { SellerOnboardingSlider } from './components/SellerOnboardingSlider'
@@ -55,6 +55,58 @@ export default function OnboardingPage() {
     router.push('/login')
   }
 
+  // Sprint 4 B8: swipe gesture (mobile). Tracks the first touch X and
+  // commits the change once the user has moved past SWIPE_THRESHOLD
+  // pixels AND the horizontal displacement dominates the vertical (to
+  // not steal vertical scrolls).
+  //
+  // Sprint 4 B9: each completed swipe fires navigator.vibrate(10) — a
+  // subtle 10ms haptic confirmation. iOS Safari doesn't support
+  // navigator.vibrate (returns true and silently ignores), so this is
+  // Android-only in practice. We intentionally cap at 10ms because the
+  // swipe already provides visual feedback (slide transitions); heavy
+  // vibration is fatiguing on a 3-slide onboarding.
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const SWIPE_THRESHOLD = 80
+
+  const triggerHaptic = () => {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(10) } catch { /* unsupported, silent */ }
+    }
+  }
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    touchStartX.current = t.clientX
+    touchStartY.current = t.clientY
+  }
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const startX = touchStartX.current
+    const startY = touchStartY.current
+    touchStartX.current = null
+    touchStartY.current = null
+    if (startX === null || startY === null) return
+
+    const t = e.changedTouches[0]
+    const dx = t.clientX - startX
+    const dy = t.clientY - startY
+
+    // Reject if vertical movement dominates (a vertical scroll, not a swipe)
+    if (Math.abs(dy) > Math.abs(dx) * 1.4) return
+
+    if (dx <= -SWIPE_THRESHOLD) {
+      // swipe-left → next
+      triggerHaptic()
+      handleNext()
+    } else if (dx >= SWIPE_THRESHOLD && step > 0) {
+      // swipe-right → previous (only if there's a previous slide)
+      triggerHaptic()
+      setStep(step - 1)
+    }
+  }
+
   // Show seller onboarding if user is a seller
   if (mounted && user?.role === 'seller') {
     return (
@@ -71,13 +123,31 @@ export default function OnboardingPage() {
   const progressPct = ((step + 1) / totalSteps) * 100
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-6 bg-white"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Progress bar (top, fixed position). The `role="progressbar"` plus
           aria-valuenow/min/max makes this readable by VoiceOver / TalkBack
           and turns the visual fill into semantic progress info. The fill
           uses a CSS transform rather than a width change so the GPU can
           composite it without triggering layout on every step. */}
       <div className="fixed top-0 left-0 right-0 z-50 px-6 pt-3 pointer-events-none">
+        {/* Sprint 4 B8: a visible "back" affordance on mobile (sm:hidden) so
+            the swipe-back gesture isn't invisible to users who haven't
+            discovered it. Pointer-events-auto on the button so it captures
+            the tap even though the bar above is pointer-events-none. */}
+        {step > 0 && (
+          <button
+            type="button"
+            onClick={() => setStep(step - 1)}
+            aria-label="Volver al paso anterior"
+            className="sm:hidden pointer-events-auto absolute left-4 top-3 inline-flex items-center justify-center h-11 w-11 rounded-full bg-white/80 backdrop-blur text-stone-700 hover:bg-white active:scale-95 transition shadow-sm border border-stone-200"
+          >
+            <ChevronLeft size={20} aria-hidden="true" />
+          </button>
+        )}
         <div
           className="w-full max-w-sm mx-auto h-1.5 bg-stone-200 rounded-full overflow-hidden"
           role="progressbar"

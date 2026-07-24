@@ -54,36 +54,64 @@ export async function GET(req: NextRequest) {
 
     // Map snake_case → camelCase for the client. Anything not listed here is
     // intentionally omitted (e.g. internal flags, raw IDs).
-    const vendors = result.rows.map((v) => ({
-      id: v.id,
-      name: v.name,
-      slug: v.slug,
-      description: v.description,
-      category: v.category,
-      phone: v.phone,
-      photoUrl: v.photo_url,
-      vehicleType: v.vehicle_type,
-      vehiclePhotoUrl: v.vehicle_photo_url,
-      stationType: v.station_type,
-      isActive: v.is_active,
-      isVerified: v.is_verified || false,
-      businessHoursEnabled: v.business_hours_enabled || false,
-      businessHoursStart: v.business_hours_start,
-      businessHoursEnd: v.business_hours_end,
-      businessDays: v.business_days || [],
-      latitude: v.latitude,
-      longitude: v.longitude,
-      cityId: v.city_id,
-      createdAt: v.created_at,
-      locationUpdatedAt: v.location_updated_at,
-      // Geo mode + zone (added so the dashboard can show the active GPS
-      // cadence badge and so the client can pass the zone center back to
-      // the periodic pinger without a second round-trip).
-      geoMode: v.geo_mode || 'precise',
-      geoZoneLat: v.geo_zone_lat,
-      geoZoneLng: v.geo_zone_lng,
-      geoZoneRadiusM: v.geo_zone_radius_m,
-    }))
+    //
+    // Sprint 4 (UX mobile finishing, B6): each mapped vendor now carries a
+    // `completionPercent` and `missingFields[]` so the SellerOnboardingBanner
+    // (apps/web/components/SellerOnboardingBanner.tsx) can show "Tu puesto
+    // está 40% completo — falta descripción y foto" instead of a generic
+    // "completá el registro" CTA. The seller in the street doesn't have
+    // bandwidth to open the dashboard and figure out what's missing.
+    //
+    // Scoring weights sum to 100. Anything that's checked but NULL on a
+    // placeholder vendor counts as missing.
+    const vendors = result.rows.map((v) => {
+      const checks: Array<[string, boolean]> = [
+        ['name', typeof v.name === 'string' && !v.name.startsWith('Mi negocio de ')],
+        ['description', typeof v.description === 'string' && v.description.length >= 20],
+        ['category', typeof v.category === 'string' && v.category.length > 0],
+        ['phone', typeof v.phone === 'string' && v.phone.length >= 7],
+        ['photo', typeof v.photo_url === 'string' && v.photo_url.length > 0],
+        ['city', typeof v.city_id === 'string' && v.city_id.length > 0],
+        ['location', typeof v.latitude === 'number' && typeof v.longitude === 'number'],
+      ]
+      const missingFields = checks.filter(([, ok]) => !ok).map(([name]) => name)
+      const completionPercent = Math.round(
+        ((checks.length - missingFields.length) / checks.length) * 100,
+      )
+      return {
+        id: v.id,
+        name: v.name,
+        slug: v.slug,
+        description: v.description,
+        category: v.category,
+        phone: v.phone,
+        photoUrl: v.photo_url,
+        vehicleType: v.vehicle_type,
+        vehiclePhotoUrl: v.vehicle_photo_url,
+        stationType: v.station_type,
+        isActive: v.is_active,
+        isVerified: v.is_verified || false,
+        businessHoursEnabled: v.business_hours_enabled || false,
+        businessHoursStart: v.business_hours_start,
+        businessHoursEnd: v.business_hours_end,
+        businessDays: v.business_days || [],
+        latitude: v.latitude,
+        longitude: v.longitude,
+        cityId: v.city_id,
+        createdAt: v.created_at,
+        locationUpdatedAt: v.location_updated_at,
+        // Geo mode + zone (added so the dashboard can show the active GPS
+        // cadence badge and so the client can pass the zone center back to
+        // the periodic pinger without a second round-trip).
+        geoMode: v.geo_mode || 'precise',
+        geoZoneLat: v.geo_zone_lat,
+        geoZoneLng: v.geo_zone_lng,
+        geoZoneRadiusM: v.geo_zone_radius_m,
+        // Sprint 4 additions — see comment block above.
+        completionPercent,
+        missingFields,
+      }
+    })
 
     return NextResponse.json({ vendors })
   } catch (err) {

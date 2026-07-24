@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
+import { PullToRefresh } from '@/components/ui/PullToRefresh'
 import 'leaflet/dist/leaflet.css'
 import { Frown, LogIn, X } from 'lucide-react'
 
@@ -344,7 +345,22 @@ export function MapView() {
 
 
   return (
-    <div className="relative w-full h-full">
+    // Sprint 4 B12: pull-to-refresh wraps the entire map. The wrapper's
+    // touch handlers only fire when the user starts the gesture within
+    // TOUCH_START_TOP_PX of the container's top — i.e. they're pulling
+    // down from the address bar area. Otherwise the gesture is ignored
+    // and Leaflet handles the touch as a map pan/zoom.
+    <PullToRefresh
+      onRefresh={async () => {
+        await fetchActiveVendors()
+        // Trigger haptic confirmation if the device supports it. Sprint 4
+        // B9 keeps it consistent with the onboarding swipe haptic.
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          try { navigator.vibrate(15) } catch { /* unsupported */ }
+        }
+      }}
+      className="relative w-full h-full"
+    >
       <LeafletTouchTargetOverride />
       <MapContainer
         center={center}
@@ -672,6 +688,6 @@ export function MapView() {
           </div>
         </div>
       )}
-    </div>
+    </PullToRefresh>
   )
 }

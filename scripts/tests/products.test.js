@@ -148,10 +148,14 @@ test('GET /api/products response shape excludes columns not in allowlist', async
   // Audit fix: switched from SELECT * to an explicit column list so we don't
   // leak future internal columns (e.g. deleted_at, internal_notes).
   // The audit listed 7 public columns. Anything beyond must NOT be present.
+  // Sprint 6 D.1 added `is_active` so sellers can see which products are
+  // hidden in their own catalogue (the public catalog filter only returns
+  // is_active=true rows, but the column is still in the response so the
+  // seller UI can show a "Visible / Oculto" pill).
   const res = await fetchJSON('/api/products')
   assert.equal(res.status, 200)
   for (const p of res.body.products.slice(0, 3)) {
-    const allowed = ['id', 'vendor_id', 'name', 'description', 'price', 'photo_url', 'created_at']
+    const allowed = ['id', 'vendor_id', 'name', 'description', 'price', 'photo_url', 'is_active', 'created_at']
     const keys = Object.keys(p)
     for (const k of keys) {
       assert.ok(allowed.includes(k), `unexpected column ${k} leaked in GET /api/products`)

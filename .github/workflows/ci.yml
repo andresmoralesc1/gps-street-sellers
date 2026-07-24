@@ -36,6 +36,13 @@ jobs:
       ADMIN_EMAIL: admin@test.local
       NEXT_TELEMETRY_DISABLED: 1
       TEST_BASE_URL: http://localhost:3005
+      # Sprint 3 CSRF defense (S3-SEC-4): test server runs in NODE_ENV=production
+      # (default for `next start`). The CSRF helper throws if no APP_ORIGIN
+      # is set, so we mirror the canonical origin. Tests use
+      # CSRF_ALLOW_MISSING_ORIGIN=1 to bypass Origin checks; APP_ORIGIN
+      # must still be set so cross-origin Origin headers validate correctly
+      # in security.test.js assertions.
+      APP_ORIGIN: http://127.0.0.1:3005
 
     steps:
       - uses: actions/checkout@v4

@@ -192,23 +192,17 @@ export function SiteHeader() {
             ) : null}
           </div>
 
-          {/* Mobile hamburger + inline auth CTA (so sign-up is reachable in 1 tap on mobile, not 2) */}
+          {/* Mobile hamburger + inline auth CTA. Sprint 5 B-006: dropped the
+              inline "Registrarme" button on mobile to reduce crowding.
+              Three buttons (notification + login + hamburger) is the
+              Apple-recommended max for a header. "Registrarme" stays
+              reachable inside the hamburger menu and on every form. */}
           <div className="flex items-center gap-2 md:hidden">
             <NotificationBell />
-            {!isLoggedIn && !isAuthPage && !onRegister && (
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-gradient-to-b from-primary to-primary-600 text-white text-sm font-semibold shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.97] transition-all"
-                aria-label="Registrarme gratis"
-              >
-                <User size={15} aria-hidden="true" />
-                <span>Registrarme</span>
-              </Link>
-            )}
             {!isLoggedIn && !isAuthPage && !onLogin && (
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-gray-100 text-gray-600 hover:bg-primary/10 hover:text-primary active:scale-[0.97] transition-all"
+                className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-xl bg-gray-100 text-gray-600 hover:bg-primary/10 hover:text-primary active:scale-[0.97] transition-all"
                 aria-label="Ingresar"
               >
                 <LogIn size={18} aria-hidden="true" />
@@ -216,7 +210,7 @@ export function SiteHeader() {
             )}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`p-2.5 rounded-xl transition-all duration-200 ${
+              className={`inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-xl transition-all duration-200 ${
                 menuOpen
                   ? 'bg-primary text-white shadow-lg shadow-primary/30'
                   : 'bg-gray-100 text-gray-600 hover:bg-primary/10 hover:text-primary'

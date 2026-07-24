@@ -149,6 +149,18 @@ export function MapFitBounds({ vendors }: { vendors: Vendor[] }) {
       (v) => typeof v.latitude === 'number' && typeof v.longitude === 'number'
     )
     if (valid.length === 0) return
+
+    // Sprint 5 B-001: padding accounts for the mobile bottom sheet
+    // (MobileBottomSheet sits at the bottom 35% of the viewport on
+    // <sm breakpoints). Without extra bottom padding, the bottom-most
+    // markers fall under the sheet on first fit. The width padding
+    // (40) keeps a slim margin around the side controls.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+    const bottomPad = isMobile
+      ? Math.max(120, window.innerHeight * 0.35) // sheet height + a little
+      : 40
+    const padding: [number, number] = [40, bottomPad]
+
     if (valid.length === 1) {
       // Single vendor: just center on it. Preserve the user's zoom if they
       // already zoomed in (e.g. on city change), only set the floor to 15.
@@ -159,7 +171,11 @@ export function MapFitBounds({ vendors }: { vendors: Vendor[] }) {
       const bounds = L.latLngBounds(
         valid.map((v) => [v.latitude as number, v.longitude as number])
       )
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: true })
+      // maxZoom drops to 13 on mobile so a single-vendor case doesn't
+      // pin the camera too tightly. The previous 15 was triggering
+      // markers-out-of-viewport when sellers were 5–15 km apart.
+      const maxZoom = isMobile ? 13 : 15
+      map.fitBounds(bounds, { padding, maxZoom, animate: true })
     }
   }, [map, vendors])
   return null

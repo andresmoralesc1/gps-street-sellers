@@ -9,6 +9,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer'
 import { VendorDetailHeader } from '@/components/vendor/VendorDetailHeader'
 import { VendorStatusBadges } from '@/components/vendor/VendorStatusBadges'
 import { VendorContactActions } from '@/components/vendor/VendorContactActions'
+import { VendorContactBar } from '@/components/vendor/VendorContactBar'
 import { VendorReviewForm } from '@/components/vendor/VendorReviewForm'
 import { VendorNotificationCta } from '@/components/vendor/VendorNotificationCta'
 import { useVendorDetail } from '@/hooks/useVendorDetail'
@@ -133,7 +134,13 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
           />
         )}
 
-        <VendorContactActions vendor={adaptedVendor} />
+        {/* data-vendor-cta-anchor is the sentinel the floating
+            VendorContactBar observes (IntersectionObserver). When this
+            block scrolls out of view, the floating bar slides up from
+            the bottom of the viewport. */}
+        <div data-vendor-cta-anchor>
+          <VendorContactActions vendor={adaptedVendor} />
+        </div>
 
         <VendorProducts products={products} extraPhotos={productPhotos} onAddToCart={handleAddToCart} />
 
@@ -155,6 +162,13 @@ export function VendorDetailClient({ vendorId, vendorSlug }: Props) {
 
         <VendorNotificationCta isLoggedIn={!!user} />
       </div>
+
+      {/* Sprint 5 B-009: floating contact bar on mobile. md:hidden hides
+          it on desktop because the inline VendorContactActions covers
+          that case. The bar observes [data-vendor-cta-anchor] (above)
+          via IntersectionObserver and slides up when the inline CTA
+          scrolls off-screen. */}
+      <VendorContactBar vendor={adaptedVendor} />
 
       <CartDrawer
         vendorPhone={vendor.phone}

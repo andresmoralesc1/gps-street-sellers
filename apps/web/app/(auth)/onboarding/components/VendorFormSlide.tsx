@@ -35,21 +35,48 @@ export function VendorFormSlide({ onCreated, initialName = '' }: VendorFormSlide
     setError('')
 
     try {
-      // POST /api/vendors creates a vendor owned by the authenticated seller.
-      // (Previously this hit /api/vendors/me which has no POST handler — that
-      //  405 silently broke the entire seller onboarding funnel.)
-      const res = await fetch('/api/vendors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Sprint 11 B-AUTH-3 (2026-07-24): the register flow auto-creates a
+      // placeholder vendor row ("Mi negocio de {firstName}") in the same
+      // transaction. Before this fix, the onboarding form always tried to
+      // POST /api/vendors which returned 409 Conflict, leaving the form
+      // stuck on the "Continuar" button with no error message.
+      //
+      // New flow: GET /api/vendors/me first; if a vendor already exists
+      // (the auto-bootstrap case), PATCH it with the form values AND
+      // set isActive=true so the vendor becomes visible on the map.
+      // If no vendor exists (defensive — shouldn't happen since register
+      // auto-creates one), POST as before.
+      const existing = await fetch('/api/vendors/me', {
         credentials: 'include',
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim(),
-          category,
-          phone: phone.replace(/\D/g, ''),
-          city_id: cityId || 'bogota',
-        }),
       })
+      const existingData = existing.ok ? await existing.json() : { vendors: [] }
+      const existingVendor = existingData.vendors?.[0] ?? null
+
+      const payload: Record<string, unknown> = {
+        name: name.trim(),
+        description: description.trim(),
+        category,
+        phone: phone.replace(/\D/g, ''),
+        cityId: cityId || 'bogota',
+        // Activate the vendor so the buyer map picks it up. Without
+        // this, the vendor row stays is_active=false (the auto-bootstrap
+        // default) and never shows on /map.
+        isActive: true,
+      }
+
+      const res = existingVendor
+        ? await fetch(`/api/vendors/${existingVendor.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+          })
+        : await fetch('/api/vendors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+          })
 
       const data = await res.json()
 
@@ -59,7 +86,10 @@ export function VendorFormSlide({ onCreated, initialName = '' }: VendorFormSlide
         return
       }
 
-      onCreated(data.vendor.id)
+      // PATCH returns { vendor }; POST returns { vendor } too — both shapes
+      // agree on the inner vendor key, so we can read either.
+      const vendor = data.vendor
+      onCreated(vendor.id)
     } catch {
       setError('Error de conexión')
       setSubmitting(false)

@@ -191,11 +191,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const parsed = await parseJsonBody<{
       name?: string; description?: string; category?: string;
       photo_url?: string; phone?: string; is_active?: boolean;
+      // Sprint 11 B-AUTH-3 (2026-07-24): accept camelCase too. The frontend
+      // (VendorFormSlide) sends `isActive`; the on-call admin tooling
+      // sends `is_active`. Both must work.
+      isActive?: boolean;
     }>(req)
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
-    const { name, description, category, photo_url, phone, is_active } = parsed.body
+    // isActive wins over is_active if both are sent — defensive against
+    // a stale caller mixing them.
+    const isActiveRaw =
+      parsed.body.isActive !== undefined ? parsed.body.isActive : parsed.body.is_active
+    const { name, description, category, photo_url, phone } = parsed.body
 
     const updates: string[] = []
     const params: unknown[] = []
@@ -248,8 +256,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       params.push(cleanPhone)
       updates.push(`phone = $${params.length}`)
     }
-    if (is_active !== undefined) {
-      params.push(is_active)
+    if (isActiveRaw !== undefined) {
+      if (typeof isActiveRaw !== 'boolean') {
+        return NextResponse.json(
+          { error: 'isActive debe ser booleano (true o false)' },
+          { status: 400 },
+        )
+      }
+      params.push(isActiveRaw)
       updates.push(`is_active = $${params.length}`)
     }
 

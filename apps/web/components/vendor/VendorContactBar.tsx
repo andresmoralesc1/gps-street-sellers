@@ -95,12 +95,18 @@ export function VendorContactBar({ vendor }: Props) {
   // document.body on the client.
   if (!mounted) return null
 
-  // Sprint 5 B-009 follow-up: portal the bar to document.body because the
-  // root layout in apps/web/app/template.tsx wraps `{children}` with
-  // `animate-slide-up`, which applies a CSS transform to the ancestor.
-  // CSS transforms establish a new "containing block" for `position: fixed`
-  // children, so a fixed bar rendered inside that wrapper anchors to the
-  // wrapper instead of the viewport. createPortal escapes the wrapper.
+  // Sprint 8 5.5: portal the bar to document.body. Originally needed
+  // because apps/web/app/template.tsx wrapped {children} with
+  // `animate-slide-up`, which applied a CSS transform (`translateY(8px)`)
+  // to the ancestor. CSS transforms create a new "containing block" for
+  // `position: fixed` children, so the bar anchored to the wrapper
+  // instead of the viewport. The transform was removed in Sprint 8 5.5
+  // (replaced with `clip-path` which doesn't create a containing block),
+  // so the portal is technically no longer required. We keep it as
+  // defense-in-depth — if any future animation accidentally introduces
+  // a transform on an ancestor, the bar still works. Portaling also
+  // shields the bar from z-index stacking-context battles with the
+  // page content.
   return createPortal(
     <div
       // md:hidden so this never appears on desktop where the inline CTA

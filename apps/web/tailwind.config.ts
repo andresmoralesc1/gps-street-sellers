@@ -91,9 +91,18 @@ const config: Config = {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        // Sprint 8 5.5: previously `transform: translateY(8px)`, but
+        // CSS transforms on the root layout wrapper create a new
+        // "containing block" for `position: fixed` descendants. This
+        // silently broke every fixed-positioned UI (the floating
+        // contact bar in /vendor/[id] had to be portaled to document.body
+        // as a workaround). Dropping the transform keeps the fade-in
+        // polish without poisoning fixed positioning. Slide-up effect
+        // is preserved by `clip-path: inset(0 0 8px 0)` which animates
+        // without creating a containing block.
         slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', 'clip-path': 'inset(8px 0 0 0)' },
+          '100%': { opacity: '1', 'clip-path': 'inset(0 0 0 0)' },
         },
         pulseSoft: {
           '0%, 100%': { opacity: '1' },

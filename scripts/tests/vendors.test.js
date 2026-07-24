@@ -221,6 +221,52 @@ test('GET /api/vendors/me with logged-in seller returns at least one vendor for 
     'first vendor must expose a non-empty id')
 })
 
+// ─── Sprint 4 B6: completion stats on /api/vendors/me ───────────────────
+test('GET /api/vendors/me returns completionPercent and missingFields (B6)', async () => {
+  // Sprint 4 UX finishing added `completionPercent` (0-100) and
+  // `missingFields[]` to each vendor entry so the SellerOnboardingBanner
+  // can show concrete progress instead of a generic "completá el registro".
+  const loginRes = await fetchJSON('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      identifier: 'frutas.donjaime@gps.test',
+      password: 'TestPass2026!',
+    }),
+  })
+  if (loginRes.status !== 200) return
+  const setCookie = loginRes.headers.get('set-cookie') || ''
+  const cookieHeader = setCookie.split(',').map((c) => c.split(';')[0]).join('; ')
+
+  const res = await fetchJSON('/api/vendors/me', {
+    headers: { Cookie: cookieHeader },
+  })
+  assert.equal(res.status, 200)
+  assert.ok(Array.isArray(res.body.vendors))
+  if (res.body.vendors.length === 0) return
+
+  const v = res.body.vendors[0]
+  // completionPercent is an integer 0..100
+  assert.equal(typeof v.completionPercent, 'number',
+    'completionPercent must be a number')
+  assert.ok(Number.isInteger(v.completionPercent),
+    'completionPercent must be an integer')
+  assert.ok(v.completionPercent >= 0 && v.completionPercent <= 100,
+    `completionPercent must be in [0, 100], got ${v.completionPercent}`)
+  // missingFields is an array of strings from a known set
+  assert.ok(Array.isArray(v.missingFields),
+    'missingFields must be an array')
+  const KNOWN = new Set(['name', 'description', 'category', 'phone', 'photo', 'city', 'location'])
+  for (const f of v.missingFields) {
+    assert.ok(KNOWN.has(f), `unknown missing field: ${f}`)
+  }
+  // Invariant: 100% means no missing fields
+  if (v.completionPercent === 100) {
+    assert.equal(v.missingFields.length, 0,
+      '100% completion must have zero missing fields')
+  }
+})
+
 // ─── POST /api/vendors — funnel fix ─────────────────────────────────────
 //
 // Regression: VendorFormSlide (in /onboarding) called POST /api/vendors/me,

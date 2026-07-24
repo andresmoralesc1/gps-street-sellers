@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger, serializeErr } from '@/lib/logger'
 import { withRequest, withRequestIdHeader, getRequestId, jsonWithRequestId } from '@/lib/request-context'
+import { captureApiError, readRequestId } from '@/lib/sentry-helpers'
 import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { signTokenSync } from '@/lib/auth'
@@ -212,6 +213,15 @@ export async function POST(req: NextRequest) {
     // Sprint 9 C.2: echo the request id so the client can correlate logs.
     return withRequestIdHeader(response, getRequestId(req))
   } catch (err) {
+    // Sprint 10 C.3: forward to Sentry with full context. captureApiError
+    // is a no-op when SENTRY_DSN isn't set, so dev/test are unaffected.
+    // The `await` ensures the event is queued before we return 500.
+    await captureApiError(err, {
+      route: 'POST /api/auth/login',
+      requestId: readRequestId(req),
+      userId: null, // we don't have the user — login failed
+      body: null, // never log passwords
+    })
     log.error({ err: serializeErr(err) }, 'Login error:')
     const errRes = NextResponse.json({ error: 'Error interno' }, { status: 500 })
     return withRequestIdHeader(errRes, getRequestId(req))

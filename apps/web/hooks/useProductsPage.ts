@@ -36,6 +36,9 @@ interface UseProductsPage {
   // data
   vendorId: string | null
   products: Product[]
+  // Sprint 8 D.2: derived count of is_active=false products, so the header
+  // can show a "Tienes N ocultos" hint when the seller has paused items.
+  hiddenCount: number
   loading: boolean
   // form state
   showForm: boolean
@@ -423,6 +426,10 @@ export function useProductsPage(): UseProductsPage {
     // data
     vendorId,
     products,
+    // Sprint 8 D.2: derived count of is_active=false products.
+    // Recomputed on every render — it's just a filter on `products`, so
+    // we don't memoize. With ≤100 products per vendor the cost is trivial.
+    hiddenCount: products.filter((p) => !p.is_active).length,
     loading,
     // form state
     showForm,

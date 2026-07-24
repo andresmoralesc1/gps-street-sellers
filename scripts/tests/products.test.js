@@ -429,3 +429,59 @@ test('GET /api/products (anonymous) hides products with is_active=false (D.1)', 
   assert.ok(!anonFlagIds.includes(productId),
     'includeDrafts=true should only work for authenticated sellers, not anonymous viewers')
 })
+
+// --- Sprint 8 D.2: products metric tile regression tests --------------
+
+test('Sprint 8 D.2: GET /api/products?vendorId=X&includeDrafts=true returns hidden products with is_active=false', async () => {
+  // The dashboard fetches with includeDrafts=true so it can show the
+  // published/hidden breakdown. The previous default filtered to
+  // is_active=true only — sellers couldn't see their paused items in
+  // the dashboard metric.
+  const login = await loginTestSeller()
+  if (!login.cookieHeader) return
+  const v = await setupTestVendor()
+  // Create a product, hide it.
+  const created = await fetchJSON('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ name: 'Hidden Test ' + Date.now(), price: 100, vendor_id: v.vendorId }),
+  })
+  if (created.status !== 201) return
+  await fetchJSON(`/api/products/${created.body.product.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Cookie: login.cookieHeader },
+    body: JSON.stringify({ isActive: false }),
+  })
+
+  // Anonymous with includeDrafts=true should NOT see the hidden product.
+  const anon = await fetchJSON(`/api/products?vendorId=${v.vendorId}&includeDrafts=true`)
+  assert.equal(anon.status, 200)
+  const anonIds = (anon.body.products || []).map((p) => p.id)
+  assert.ok(!anonIds.includes(created.body.product.id),
+    'anonymous viewers still must NOT see drafts even with includeDrafts=true')
+
+  // Authenticated seller with includeDrafts=true SHOULD see it.
+  const seller = await fetchJSON(`/api/products?vendorId=${v.vendorId}&includeDrafts=true`, {
+    headers: { Cookie: login.cookieHeader },
+  })
+  assert.equal(seller.status, 200)
+  const sellerIds = (seller.body.products || []).map((p) => p.id)
+  assert.ok(sellerIds.includes(created.body.product.id),
+    'authenticated seller should see their own hidden product with includeDrafts=true')
+  // And the hidden product carries is_active=false so the dashboard can
+  // count it.
+  const hidden = seller.body.products.find((p) => p.id === created.body.product.id)
+  assert.equal(hidden.is_active, false, 'is_active=false should be in the response')
+})
+
+test('Sprint 8 D.2: GET /api/products allowlist includes is_active (response shape guard)', async () => {
+  // Regression: if a future refactor drops is_active from the SELECT
+  // list, the ProductsMetricTile would silently show hiddenCount=0 and
+  // sellers wouldn't know they have paused items. This test catches that.
+  const res = await fetchJSON('/api/products')
+  assert.equal(res.status, 200)
+  for (const p of res.body.products.slice(0, 3)) {
+    assert.ok('is_active' in p, 'is_active must always be present in the response shape')
+    assert.equal(typeof p.is_active, 'boolean', 'is_active must be a boolean')
+  }
+})
